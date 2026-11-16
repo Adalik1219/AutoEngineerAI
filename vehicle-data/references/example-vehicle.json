@@ -1,0 +1,149 @@
+{
+  "schema_version": "1.0.0",
+  "vehicle_id": "mazda-mx5-nd-20-184-softtop-6mt-eu",
+  "identity": {
+    "make": "Mazda",
+    "model": "MX-5",
+    "generation": "ND (ND2, facelift 2019+)",
+    "trim": "2.0 SkyActiv-G 184, soft-top (roadster), 6MT",
+    "model_years": "2019–2023",
+    "body": "2-door roadster soft-top",
+    "market": "EU"
+  },
+  "meta": {
+    "created": "2026-11-16",
+    "updated": "2026-11-16",
+    "authors": ["AutoEngineerAI reference agent"],
+    "status": "draft",
+    "base_unit_system": "SI",
+    "supersedes": null
+  },
+  "dimensions": {
+    "length": { "value": 3915, "unit": "mm", "source": "Wikipedia Mazda MX-5 (ND); shodné ultimatespecs/auto-data", "source_type": "aggregator", "confidence": 0.95, "notes": "Tovární rozměr, shoda více zdrojů." },
+    "width_excl_mirrors": { "value": 1735, "unit": "mm", "source": "ultimatespecs ND 2.0 184; Arnold Clark 1735", "source_type": "aggregator", "confidence": 0.9, "notes": "Wikipedia uvádí 1730; rozdíl 5 mm = zaokrouhlení/výbava. Použito 1735." },
+    "width_incl_mirrors": { "value": 1918, "unit": "mm", "source": "ultimatespecs / Arnold Clark", "source_type": "aggregator", "confidence": 0.85, "notes": null },
+    "height": { "value": 1230, "unit": "mm", "source": "ultimatespecs 1230; Wikipedia 1235", "source_type": "aggregator", "confidence": 0.85, "notes": "Rozptyl 1230–1235 dle zdroje/výbavy." },
+    "wheelbase": { "value": 2310, "unit": "mm", "source": "Wikipedia Mazda MX-5 (ND); shodné Mazda brožury", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "track_front": { "value": 1495, "unit": "mm", "source": "ultimatespecs ND 2.0 184 (58.86 in)", "source_type": "aggregator", "confidence": 0.85, "notes": null },
+    "track_rear": { "value": 1505, "unit": "mm", "source": "ultimatespecs ND 2.0 184 (59.25 in)", "source_type": "aggregator", "confidence": 0.85, "notes": null },
+    "ground_clearance": { "value": 135, "unit": "mm", "source": "ultimatespecs 2023: 135; starší 141 — odhad pro EU 6MT", "source_type": "estimate", "confidence": 0.5, "notes": "ODHAD: zdroje se liší 135–141 dle roku/trhu." },
+    "turning_circle": { "value": 10.4, "unit": "m", "source": "Arnold Clark (kerb-to-kerb 10.4); ultimatespecs 9.4–10.4", "source_type": "aggregator", "confidence": 0.7, "notes": "Rozptyl dle metodiky měření." }
+  },
+  "mass": {
+    "curb_weight": { "value": 1075, "unit": "kg", "source": "odhad z pásma: ultimatespecs 1107–1116; Arnold Clark min kerb 1041; Wikipedia ~1000–1050 dle výbavy", "source_type": "estimate", "confidence": 0.6, "notes": "ODHAD: pohotovostní hmotnost závisí na výbavě/trhu; EU soft-top 6MT typicky 1041–1116 kg. Zvolen střed 1075 kg." },
+    "dry_weight": { "value": 1000, "unit": "kg", "source": "ultimatespecs dry 1000", "source_type": "aggregator", "confidence": 0.6, "notes": "Definice 'dry' není sjednocená." },
+    "gross_vehicle_weight": { "value": 1260, "unit": "kg", "source": "Arnold Clark GVW 1260", "source_type": "aggregator", "confidence": 0.75, "notes": null },
+    "payload_max": { "value": 219, "unit": "kg", "source": "Arnold Clark max loading 219", "source_type": "aggregator", "confidence": 0.75, "notes": null },
+    "weight_distribution_front_pct": { "value": 52, "unit": "%", "source": "odhad dle literatury MX-5 ND (~50:50 až 52:48)", "source_type": "estimate", "confidence": 0.45, "notes": "ODHAD: Mazda přesné % pro tento trim nezveřejňuje; simulace citlivá — ověřit vážením." },
+    "cog_height": { "value": 460, "unit": "mm", "source": "odhad pro nízký roadster této hmotnosti", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD: tovární údaj neexistuje; pouze pro fyzikální model, nutno kalibrovat testem." },
+    "yaw_inertia": { "value": null, "unit": "kg·m²", "source": "neznámé — dopočítat z geometrie v Physics Analysis", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: dopočítat obdélníkovou aproximací a kalibrovat." },
+    "fuel_tank_capacity": { "value": 45, "unit": "l", "source": "Mazda AU/NZ brožury; shodné agregátory", "source_type": "factory", "confidence": 1.0, "notes": null }
+  },
+  "wheels_tires": {
+    "tire_front": {
+      "designation": { "value": "205/45 R17", "unit": "designation", "source": "ultimatespecs ND 2.0 184; auto-data", "source_type": "aggregator", "confidence": 0.9, "notes": "Základ 2.0 184 má i 195/50 R16 dle trhu; 205/45 R17 je vyšší výbava." },
+      "width_mm": { "value": 205, "unit": "mm", "source": "z designace 205/45 R17", "source_type": "factory", "confidence": 1.0, "notes": null },
+      "aspect_ratio_pct": { "value": 45, "unit": "%", "source": "z designace 205/45 R17", "source_type": "factory", "confidence": 1.0, "notes": null },
+      "rim_in": { "value": 17, "unit": "in", "source": "z designace 205/45 R17", "source_type": "factory", "confidence": 1.0, "notes": null },
+      "diameter_mm": { "value": 616, "unit": "mm", "source": "výpočet 17in + 2×45%×205 (616.3)", "source_type": "estimate", "confidence": 0.95, "notes": "Vypočteno, tolerance dezénu ±5 mm." }
+    },
+    "tire_rear": {
+      "designation": { "value": "205/45 R17", "unit": "designation", "source": "ultimatespecs ND 2.0 184", "source_type": "aggregator", "confidence": 0.9, "notes": null },
+      "width_mm": { "value": 205, "unit": "mm", "source": "z designace", "source_type": "factory", "confidence": 1.0, "notes": null },
+      "aspect_ratio_pct": { "value": 45, "unit": "%", "source": "z designace", "source_type": "factory", "confidence": 1.0, "notes": null },
+      "rim_in": { "value": 17, "unit": "in", "source": "z designace", "source_type": "factory", "confidence": 1.0, "notes": null },
+      "diameter_mm": { "value": 616, "unit": "mm", "source": "výpočet", "source_type": "estimate", "confidence": 0.95, "notes": null }
+    },
+    "wheel_front": { "value": "17×7J", "unit": "in", "source": "odhad dle OEM výbavy 205/45 R17", "source_type": "estimate", "confidence": 0.5, "notes": "ODHAD: šíře ráfku se liší výbavou; ověřit dle konkrétního vozu." },
+    "wheel_rear": { "value": "17×7J", "unit": "in", "source": "odhad dle OEM výbavy", "source_type": "estimate", "confidence": 0.5, "notes": null }
+  },
+  "engine": {
+    "code": "PE-VPS (SkyActiv-G)",
+    "configuration": "R4 DOHC 16V",
+    "displacement": { "value": 1998, "unit": "cm³", "source": "Mazda brožury; Wikipedia; ultimatespecs", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "bore": { "value": 83.5, "unit": "mm", "source": "Mazda brožury; ultimatespecs", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "stroke": { "value": 91.2, "unit": "mm", "source": "Mazda brožury; ultimatespecs", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "compression_ratio": { "value": 13.0, "unit": ":1", "source": "Mazda brožury", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "aspiration": "naturally-aspirated",
+    "fuel_system": "direct injection",
+    "valvetrain": "DOHC 16V S-VT",
+    "orientation": "longitudinal",
+    "position": "front (front-midship)",
+    "max_power": { "value": 135, "unit": "kW", "source": "Mazda; Wikipedia (135 kW / 184 PS)", "source_type": "factory", "confidence": 1.0, "notes": "184 PS = 135 kW = 181 hp." },
+    "max_power_rpm": { "value": 7000, "unit": "rpm", "source": "Mazda; ultimatespecs; auto-data", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "max_torque": { "value": 205, "unit": "Nm", "source": "Mazda; ultimatespecs; auto-data", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "max_torque_rpm": { "value": 4000, "unit": "rpm", "source": "Mazda; ultimatespecs; auto-data", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "redline_rpm": { "value": 7500, "unit": "rpm", "source": "Wikipedia (redline 7500 od 2019); auto-data max engine speed 7500", "source_type": "aggregator", "confidence": 0.9, "notes": null },
+    "idle_rpm": { "value": 800, "unit": "rpm", "source": "odhad pro SkyActiv-G (750–850)", "source_type": "estimate", "confidence": 0.4, "notes": "ODHAD: tovární údaj volnoběhu není v brožuře." },
+    "fuel_min_octane_ron": { "value": 95, "unit": "RON", "source": "Mazda AU brožury (95RON+)", "source_type": "factory", "confidence": 0.95, "notes": null }
+  },
+  "torque_curve": {
+    "points": [
+      { "rpm": 800, "torque_nm": 120, "point_type": "estimated" },
+      { "rpm": 2000, "torque_nm": 175, "point_type": "estimated" },
+      { "rpm": 4000, "torque_nm": 205, "point_type": "factory" },
+      { "rpm": 7000, "torque_nm": 184, "point_type": "estimated" },
+      { "rpm": 7500, "torque_nm": 165, "point_type": "estimated" }
+    ],
+    "interpolation": "linear",
+    "curve_source": { "source": "kotvy factory (205 Nm/4000; 135 kW/7000 → 184 Nm), zbytek odhad tvaru atmosférického motoru", "source_type": "estimate", "confidence": 0.4, "notes": "ODHAD: plná křivka momentu není veřejná; bod 7000 rpm dopočítán z výkonu P=184 Nm. Nenahrazovat měřením z brzdy." }
+  },
+  "transmission": {
+    "type": "6-speed SkyActiv-MT manual",
+    "gears_count": 6,
+    "gear_ratios": [
+      { "gear": 1, "ratio": { "value": 5.087, "unit": ":1", "source": "Mazda AU/NZ brožury; US 2019 spec", "source_type": "factory", "confidence": 1.0, "notes": null } },
+      { "gear": 2, "ratio": { "value": 2.991, "unit": ":1", "source": "Mazda AU/NZ brožury; US 2019 spec", "source_type": "factory", "confidence": 1.0, "notes": null } },
+      { "gear": 3, "ratio": { "value": 2.035, "unit": ":1", "source": "Mazda AU/NZ brožury; US 2019 spec", "source_type": "factory", "confidence": 1.0, "notes": null } },
+      { "gear": 4, "ratio": { "value": 1.594, "unit": ":1", "source": "Mazda AU/NZ brožury; US 2019 spec", "source_type": "factory", "confidence": 1.0, "notes": null } },
+      { "gear": 5, "ratio": { "value": 1.286, "unit": ":1", "source": "Mazda AU/NZ brožury; US 2019 spec", "source_type": "factory", "confidence": 1.0, "notes": null } },
+      { "gear": 6, "ratio": { "value": 1.0, "unit": ":1", "source": "Mazda AU/NZ brožury; US 2019 spec", "source_type": "factory", "confidence": 1.0, "notes": null } }
+    ],
+    "reverse_ratio": { "value": 4.696, "unit": ":1", "source": "Mazda brožury", "source_type": "factory", "confidence": 1.0, "notes": null },
+    "final_drive": { "value": 2.866, "unit": ":1", "source": "Mazda brožury (2.0 MT); US spec 2.866", "source_type": "factory", "confidence": 1.0, "notes": "Pozor: 1.5 MT má jiný stálý převod dle trhu; pro 2.0 MT je 2.866." },
+    "shift_time_s": { "value": 0.4, "unit": "s", "source": "odhad manuálního řazení pro simulaci", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD: pouze parametr simulace, ne tovární údaj." }
+  },
+  "drivetrain": {
+    "layout": "front-midship engine, RWD",
+    "driven_axle": "RWD",
+    "differential_front": "n/a (RWD)",
+    "differential_rear": { "value": "limited-slip ( conical / sport LSD dle výbavy)", "unit": "type", "source": "Mazda výbavy + Wikipedia 12R LSD; agregátory", "source_type": "aggregator", "confidence": 0.7, "notes": "Základní výbavy mohou mít otevřený diferenciál — ověřit dle VIN/výbavy." },
+    "differential_center": null,
+    "torque_split_f_r": { "value": "0/100", "unit": "%", "source": "RWD odvozeno", "source_type": "factory", "confidence": 1.0, "notes": null }
+  },
+  "performance": {
+    "vmax": { "value": 219, "unit": "km/h", "source": "auto-data; ultimatespecs 219", "source_type": "factory", "confidence": 0.9, "notes": null },
+    "accel_0_100": { "value": 6.5, "unit": "s", "source": "auto-data; ultimatespecs; Wikipedia 6.5–7.9", "source_type": "factory", "confidence": 0.85, "notes": "Tovární údaj; reálná měření se liší o ±0.5 s." },
+    "accel_0_60mph": { "value": 6.2, "unit": "s", "source": "auto-data", "source_type": "aggregator", "confidence": 0.7, "notes": null },
+    "braking_100_0": { "value": 37, "unit": "m", "source": "odhad z magazínových testů ND (typicky 36–39 m)", "source_type": "estimate", "confidence": 0.45, "notes": "ODHAD: tovární údaj neexistuje; pouze orientační cíl pro validaci." }
+  },
+  "brakes": {
+    "front_type": "ventilated discs",
+    "front_disc_diameter": { "value": 280, "unit": "mm", "source": "auto-data; ultimatespecs (11.02 in)", "source_type": "aggregator", "confidence": 0.85, "notes": null },
+    "rear_type": "solid discs",
+    "rear_disc_diameter": { "value": 280, "unit": "mm", "source": "auto-data; ultimatespecs (11.02 in)", "source_type": "aggregator", "confidence": 0.85, "notes": null },
+    "abs": true,
+    "brake_bias_front_pct": { "value": 65, "unit": "%", "source": "odhad pro RWD roadster", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD: tovární rozdělení není veřejné; kalibrovat testem." }
+  },
+  "suspension": {
+    "front_type": "independent double wishbone, coil springs",
+    "rear_type": "multilink, coil springs",
+    "front_arb": true,
+    "rear_arb": true,
+    "spring_rate_front": { "value": null, "unit": "N/mm", "source": "neznámé — továrně nezveřejněno", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: určit měřením nebo převodem z aftermarket dat; nevymýšlet." },
+    "spring_rate_rear": { "value": null, "unit": "N/mm", "source": "neznámé", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: viz výše." },
+    "damper_note": "tovární tlumiče (Sport/Bilstein dle výbavy); křivky tlumení nezveřejněny"
+  },
+  "alignment": {
+    "camber_front_deg": { "value": -0.5, "unit": "deg", "source": "odhad z dílenských tolerancí ND", "source_type": "estimate", "confidence": 0.35, "notes": "ODHAD: tovární geometrie není v brožuře; ověřit dílenským manuálem." },
+    "camber_rear_deg": { "value": -1.0, "unit": "deg", "source": "odhad z dílenských tolerancí ND", "source_type": "estimate", "confidence": 0.35, "notes": "ODHAD: viz výše." },
+    "caster_front_deg": { "value": 7.0, "unit": "deg", "source": "odhad z dílenských dat ND", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD." },
+    "toe_front_deg": { "value": 0.05, "unit": "deg", "source": "odhad (mírná sbíhavost)", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD." },
+    "toe_rear_deg": { "value": 0.1, "unit": "deg", "source": "odhad (mírná sbíhavost)", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD." }
+  },
+  "aero": {
+    "drag_coefficient_cd": { "value": null, "unit": "-", "source": "neznámé — Mazda Cx pro ND oficiálně neuvádí", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: agregátory uvádějí prázdné; nepřebírat cizí odhady bez zdroje. Pro simulaci použít kalibrační parametr." },
+    "frontal_area": { "value": 1.9, "unit": "m²", "source": "odhad 0.85 × šířka × výška (1.735×1.23)", "source_type": "estimate", "confidence": 0.4, "notes": "ODHAD: geometrická aproximace." },
+    "downforce_note": "sériový roadster bez přítlačných prvků; přítlak zanedbatelný"
+  }
+}

@@ -1,0 +1,262 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/vehicle-reference-v1.json",
+  "title": "AutoEngineerAI Vehicle Reference v1",
+  "description": "Referenční profil jednoho reálného vozidla (konkrétní generace + motorizace + převodovka + karoserie). Každá měřitelná hodnota je objekt {value, unit, source, source_type, confidence, notes}. Kanonické jednotky SI + mm/kg.",
+  "type": "object",
+  "required": ["schema_version", "vehicle_id", "identity", "meta"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "vehicle_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Stabilní ID profilu, např. mazda-mx5-nd-20-184-softtop-6mt-eu."
+    },
+    "identity": {
+      "type": "object",
+      "required": ["make", "model", "generation", "trim", "model_years", "body", "market"],
+      "additionalProperties": false,
+      "properties": {
+        "make": { "type": "string" },
+        "model": { "type": "string" },
+        "generation": { "type": "string" },
+        "trim": { "type": "string" },
+        "model_years": { "type": "string" },
+        "body": { "type": "string" },
+        "market": { "type": "string" }
+      }
+    },
+    "meta": {
+      "type": "object",
+      "required": ["created", "updated", "authors", "status", "base_unit_system"],
+      "additionalProperties": false,
+      "properties": {
+        "created": { "type": "string", "format": "date" },
+        "updated": { "type": "string", "format": "date" },
+        "authors": { "type": "array", "items": { "type": "string" } },
+        "status": { "enum": ["draft", "review", "approved"] },
+        "base_unit_system": { "const": "SI" },
+        "supersedes": { "type": ["string", "null"] }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "length": { "$ref": "#/$defs/valued" },
+        "width_excl_mirrors": { "$ref": "#/$defs/valued" },
+        "width_incl_mirrors": { "$ref": "#/$defs/valued" },
+        "height": { "$ref": "#/$defs/valued" },
+        "wheelbase": { "$ref": "#/$defs/valued" },
+        "track_front": { "$ref": "#/$defs/valued" },
+        "track_rear": { "$ref": "#/$defs/valued" },
+        "ground_clearance": { "$ref": "#/$defs/valued" },
+        "turning_circle": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "mass": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "curb_weight": { "$ref": "#/$defs/valued" },
+        "dry_weight": { "$ref": "#/$defs/valued" },
+        "gross_vehicle_weight": { "$ref": "#/$defs/valued" },
+        "payload_max": { "$ref": "#/$defs/valued" },
+        "weight_distribution_front_pct": { "$ref": "#/$defs/valued" },
+        "cog_height": { "$ref": "#/$defs/valued" },
+        "yaw_inertia": { "$ref": "#/$defs/valued" },
+        "fuel_tank_capacity": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "wheels_tires": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tire_front": { "$ref": "#/$defs/tire" },
+        "tire_rear": { "$ref": "#/$defs/tire" },
+        "wheel_front": { "$ref": "#/$defs/valued" },
+        "wheel_rear": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "engine": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string" },
+        "configuration": { "type": "string" },
+        "displacement": { "$ref": "#/$defs/valued" },
+        "bore": { "$ref": "#/$defs/valued" },
+        "stroke": { "$ref": "#/$defs/valued" },
+        "compression_ratio": { "$ref": "#/$defs/valued" },
+        "aspiration": { "type": "string" },
+        "fuel_system": { "type": "string" },
+        "valvetrain": { "type": "string" },
+        "orientation": { "type": "string" },
+        "position": { "type": "string" },
+        "max_power": { "$ref": "#/$defs/valued" },
+        "max_power_rpm": { "$ref": "#/$defs/valued" },
+        "max_torque": { "$ref": "#/$defs/valued" },
+        "max_torque_rpm": { "$ref": "#/$defs/valued" },
+        "redline_rpm": { "$ref": "#/$defs/valued" },
+        "idle_rpm": { "$ref": "#/$defs/valued" },
+        "fuel_min_octane_ron": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "torque_curve": {
+      "type": "object",
+      "required": ["points", "interpolation", "curve_source"],
+      "additionalProperties": false,
+      "properties": {
+        "points": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "required": ["rpm", "torque_nm", "point_type"],
+            "additionalProperties": false,
+            "properties": {
+              "rpm": { "type": "number" },
+              "torque_nm": { "type": ["number", "null"] },
+              "point_type": { "enum": ["factory", "measured", "interpolated", "estimated"] }
+            }
+          }
+        },
+        "interpolation": { "enum": ["linear", "cubic", "none"] },
+        "curve_source": { "$ref": "#/$defs/sourced" }
+      }
+    },
+    "transmission": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": { "type": "string" },
+        "gears_count": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "gear_ratios": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["gear", "ratio"],
+            "additionalProperties": false,
+            "properties": {
+              "gear": { "type": "integer" },
+              "ratio": { "$ref": "#/$defs/valued" }
+            }
+          }
+        },
+        "reverse_ratio": { "$ref": "#/$defs/valued" },
+        "final_drive": { "$ref": "#/$defs/valued" },
+        "shift_time_s": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "drivetrain": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "layout": { "type": "string" },
+        "driven_axle": { "enum": ["FWD", "RWD", "AWD"] },
+        "differential_front": { "type": ["string", "object", "null"] },
+        "differential_rear": { "type": ["string", "object", "null"] },
+        "differential_center": { "type": ["string", "object", "null"] },
+        "torque_split_f_r": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "performance": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vmax": { "$ref": "#/$defs/valued" },
+        "accel_0_100": { "$ref": "#/$defs/valued" },
+        "accel_0_60mph": { "$ref": "#/$defs/valued" },
+        "braking_100_0": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "brakes": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "front_type": { "type": "string" },
+        "front_disc_diameter": { "$ref": "#/$defs/valued" },
+        "rear_type": { "type": "string" },
+        "rear_disc_diameter": { "$ref": "#/$defs/valued" },
+        "abs": { "type": "boolean" },
+        "brake_bias_front_pct": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "suspension": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "front_type": { "type": "string" },
+        "rear_type": { "type": "string" },
+        "front_arb": { "type": "boolean" },
+        "rear_arb": { "type": "boolean" },
+        "spring_rate_front": { "$ref": "#/$defs/valued" },
+        "spring_rate_rear": { "$ref": "#/$defs/valued" },
+        "damper_note": { "type": "string" }
+      }
+    },
+    "alignment": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "camber_front_deg": { "$ref": "#/$defs/valued" },
+        "camber_rear_deg": { "$ref": "#/$defs/valued" },
+        "caster_front_deg": { "$ref": "#/$defs/valued" },
+        "toe_front_deg": { "$ref": "#/$defs/valued" },
+        "toe_rear_deg": { "$ref": "#/$defs/valued" }
+      }
+    },
+    "aero": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "drag_coefficient_cd": { "$ref": "#/$defs/valued" },
+        "frontal_area": { "$ref": "#/$defs/valued" },
+        "downforce_note": { "type": "string" }
+      }
+    }
+  },
+  "$defs": {
+    "sourced": {
+      "type": "object",
+      "required": ["source", "source_type", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "source": { "type": "string" },
+        "source_type": {
+          "enum": ["factory", "measurement", "aggregator", "estimate"]
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "valued": {
+      "type": "object",
+      "required": ["value", "unit", "source", "source_type", "confidence"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": ["number", "string", "null"] },
+        "unit": { "type": "string" },
+        "source": { "type": "string" },
+        "source_type": {
+          "enum": ["factory", "measurement", "aggregator", "estimate"]
+        },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "notes": { "type": ["string", "null"] }
+      }
+    },
+    "tire": {
+      "type": "object",
+      "required": ["designation"],
+      "additionalProperties": false,
+      "properties": {
+        "designation": { "$ref": "#/$defs/valued" },
+        "width_mm": { "$ref": "#/$defs/valued" },
+        "aspect_ratio_pct": { "$ref": "#/$defs/valued" },
+        "rim_in": { "$ref": "#/$defs/valued" },
+        "diameter_mm": { "$ref": "#/$defs/valued" }
+      }
+    }
+  }
+}
