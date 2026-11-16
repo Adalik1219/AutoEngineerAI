@@ -13,6 +13,16 @@ Tdrive - Tbrake - R*Fx (princip KT §2.4 Wheel) + hold pri stani.
 Karoserie vertikalne: pruzina+tlumic na roh (princip KT §2.4),
 kolo sleduje vozovku, Fz >= 0 (lift -> 0).
 Rizeni: rate-limit + rychlostni orez + Ackermann (princip KT §2.2).
+
+LIMIT (QA vlna 2, R5 — zamerne nemodelovano, nemeni se bez koordinace):
+  `_engine_rpm` se pocita z rychlosti vozu (aproximace sepnute spojky),
+  ne z otacek kol — pri prokluzu by otacky kol kmitaly a razeni
+  cyklovalo. Prokluz se uplatni jen pres silovou saturaci pneumatik.
+  Dusledek (S3): trvaly wheelspin zadku ve straight_accel
+  (|slip| > 0.5 po vetsinu stopy) a lokalni rozpor vykonu
+  m*a*v vs P_motor (az +20 kW v okne t in [7.38, 11.97]);
+  globalni bilance zustava v toleranci (pomer ~0.85). Hnaci moment
+  se navic neomezuje trakcnim stropem mu*Fz*R.
 """
 
 import math
@@ -252,8 +262,16 @@ def step(state, ctrl, params, dt, road_l, road_r):
         t_drive = [0.0, 0.0, tau_shaft / 2.0, tau_shaft / 2.0]
     elif trans["drive"] == "FWD":
         t_drive = [tau_shaft / 2.0, tau_shaft / 2.0, 0.0, 0.0]
-    else:
-        t_drive = [tau_shaft / 4.0] * 4
+    else:  # AWD: split pres src/Physics/diff (front_bias/lock_center),
+        # ne tau_shaft/4 natvrdo (QA-R3). Klice chybi ve starych
+        # konfiguracich -> defaulty 0.5/0.0 (zpetna kompatibilita).
+        _om = {"FL": state["omega"][0], "FR": state["omega"][1],
+               "RL": state["omega"][2], "RR": state["omega"][3]}
+        t_drive = phys.distribute_drive_torque(
+            tau_shaft, "AWD", front_bias=trans.get("front_bias", 0.5),
+            lock_front=trans.get("lock_front", 0.0),
+            lock_rear=trans.get("lock_rear", 0.0),
+            lock_center=trans.get("lock_center", 0.0), omega=_om)
 
     # --- brzdy: rozdeleni predni/zadni (princip KT §2.4 Brakes)
     bias = p["brakes"]["bias_front"]

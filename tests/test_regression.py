@@ -9,6 +9,8 @@ Kostra je spustitelna: kontroluje strukturu zaznamu, pravidla
 append-only historie a detekci regrese na syntetickych datech.
 Napojeni na VariantStore z vlny 1 je oznaceno PENDING.
 """
+import os
+import tempfile
 import unittest
 
 try:
@@ -134,9 +136,28 @@ class TestStoredBaseline(unittest.TestCase):
 
     def test_variant_store_append_only(self):
         mod, _ = try_import("Optimizer")
+        if mod is None:
+            mod, _ = try_import("src.Optimizer")
         if mod is None or not hasattr(mod, "VariantStore"):
             self.skipTest("PENDING: Optimizer.VariantStore ve vlne 1 "
                           "zatim neexistuje")
+        # Prvni vetva skipu je zastarala: VariantStore existuje (viz T6),
+        # proto skutecne overeni append-only chovani na docasnem adresari.
+        with tempfile.TemporaryDirectory() as d:
+            store = mod.VariantStore(d)
+            store.append({"event": "attempt", "config_id": "cfg_0001",
+                          "decision": {"accept": True}})
+            store.append({"event": "attempt", "config_id": "cfg_0002",
+                          "decision": {"accept": False}})
+            store.set_best({"config_id": "cfg_0001"}, {"total": 0.9})
+            store.log_rollback("cfg_0001", "cfg_0002", "test")
+            self.assertEqual(store.best_config_id, "cfg_0001")
+            self.assertEqual(store.counts(),
+                             {"tested": 2, "accepted": 1, "rejected": 1})
+            # Rollback je novy zaznam, historie se nemaze.
+            self.assertEqual(len(store.records), 3)
+            self.assertTrue(os.path.exists(
+                os.path.join(d, "history.jsonl")))
         self.skipTest("PENDING: VariantStore existuje, regresni napojeni "
                       "zatim neovereno proti realnym datum")
 

@@ -161,6 +161,15 @@ def main():
         ideal_b["verdicts"], unstable["verdicts"], greedy["verdicts"]))
 
     checks = [
+        ("schema_version 1.0.0",
+         ideal.get("schema_version") == "1.0.0"
+         and unstable.get("schema_version") == "1.0.0"
+         and greedy.get("schema_version") == "1.0.0"),
+        ("score v 0..1 (kontrakt test_result.schema.json)",
+         all(0.0 <= r.get("score", -1) <= 1.0
+             for r in (ideal, unstable, greedy))),
+        ("score monotonni k TotalScore (unstable horsi nez ideal)",
+         unstable["score"] < ideal_b["score"]),
         ("ideal neni unstable", not ideal_b["metrics"]["unstable"]),
         ("ideal bez baseline prijat (A2/A3 vuci targetum)",
          ideal["verdicts"]["accepted"]),

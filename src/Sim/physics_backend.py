@@ -47,18 +47,58 @@ try:  # absolutni fallback pri prime ceste (root repo na sys.path)
 except Exception:
     pass
 
+# Sdileny eps-guard sjednoceny na TIRE_EPS_MPS z Physics (QA-R4).
+# Poradi: src/Physics/api (po Fix-Api prebira backend hodnotu z api),
+# pak primo src/Physics/tires (api.py v dobe tohoto behu chybi),
+# pak literalni fallback 0.5.
+_TIRE_EPS_MPS = 0.5
+if _ext is not None and hasattr(_ext, "TIRE_EPS_MPS"):
+    try:
+        _TIRE_EPS_MPS = float(_ext.TIRE_EPS_MPS)
+    except Exception:
+        pass
+if _TIRE_EPS_MPS == 0.5:
+    try:
+        from ..Physics import tires as _tires_mod  # noqa: F401
+        _TIRE_EPS_MPS = float(_tires_mod.TIRE_EPS_MPS)
+    except Exception:
+        try:
+            from src.Physics import tires as _tires_mod2  # noqa: F401
+            _TIRE_EPS_MPS = float(_tires_mod2.TIRE_EPS_MPS)
+        except Exception:
+            pass
+TIRE_EPS_MPS = _TIRE_EPS_MPS
+
+# Diferencialy: preferovane src/Physics/diff (primo, api.py zatim chybi).
+_diff = None
+try:
+    from ..Physics import diff as _diff  # noqa: F401
+except Exception:
+    _diff = None
+if _diff is None:
+    try:
+        from src.Physics import diff as _diff2  # noqa: F401
+        _diff = _diff2
+        del _diff2
+    except Exception:
+        pass
+
 
 def backend_name():
     return _backend_name
 
 
 # ------------------------------------------------------------- slip (KT §2.1)
-def tire_slip(vx_w, vy_w, omega, radius_m, steer_rad, eps=1.0):
+def tire_slip(vx_w, vy_w, omega, radius_m, steer_rad, eps=None):
     """Skluz: kappa = (w*R - vx)/max(|vx|, eps); alpha = steer - atan(vy/denom).
 
     Overeny princip z KNOWLEDGE-TRANSFER §2.1 (TireSlip.luau). eps-guard
-    chrani rozjezd/stani (neni to fyzika couvani).
+    chrani rozjezd/stani (neni to fyzika couvani). Sdileny s
+    src/Physics/tires.TIRE_EPS_MPS (QA-R4); explicitni eps=... zustava
+    pro zpetnou kompatibilitu.
     """
+    if eps is None:
+        eps = _TIRE_EPS_MPS
     if _ext is not None:
         return _ext.tire_slip(vx_w, vy_w, omega, radius_m, steer_rad)
     denom = abs(vx_w)
@@ -154,6 +194,38 @@ def gear_output(torque_in_Nm, ratio, final_drive, efficiency):
         return _ext.gear_output(torque_in_Nm, ratio, final_drive, efficiency)
     total = ratio * final_drive
     return torque_in_Nm * total * efficiency, total
+
+
+def distribute_drive_torque(torque_shaft_nm, drive, front_bias=0.5,
+                            lock_front=0.0, lock_rear=0.0,
+                            lock_center=0.0, omega=None):
+    """Rozdeleni hnaciho momentu prevodovky na kola [FL, FR, RL, RR] [Nm].
+
+    Preferuje src/Physics/diff.distribute (pres src/Physics/api, je-li
+    k dispozici, jinak primo src/Physics/diff); fallback je rovnomerny
+    split, nehnana naprava = 0. Ucinnost se zde jiz neuplatnuje
+    (efficiency=1.0) — je zapoctena v gear_output.
+    """
+    om = dict(omega) if omega else {}
+    for _w in ("FL", "FR", "RL", "RR"):
+        om.setdefault(_w, 0.0)
+    _dist = getattr(_ext, "distribute", None) if _ext is not None else None
+    if callable(_dist):
+        _d = _dist(torque_shaft_nm, drive, front_bias,
+                   lock_front, lock_rear, lock_center, om, 1.0)
+        return [_d["FL"], _d["FR"], _d["RL"], _d["RR"]]  # type: ignore[index]
+    if _diff is not None:
+        _d = _diff.distribute(torque_shaft_nm, drive, front_bias,
+                              lock_front, lock_rear, lock_center, om, 1.0)
+        return [_d["FL"], _d["FR"], _d["RL"], _d["RR"]]  # type: ignore[index]
+    if drive == "FWD":
+        half = torque_shaft_nm / 2.0
+        return [half, half, 0.0, 0.0]
+    if drive == "RWD":
+        half = torque_shaft_nm / 2.0
+        return [0.0, 0.0, half, half]
+    quarter = torque_shaft_nm / 4.0
+    return [quarter, quarter, quarter, quarter]
 
 
 def fail_if_nonfinite(name, value):

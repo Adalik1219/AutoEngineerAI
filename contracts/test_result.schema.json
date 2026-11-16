@@ -25,6 +25,11 @@
     "deviations_vs_target": { "type": "object" },
     "score": { "type": "number", "minimum": 0, "maximum": 1 },
     "reproduced_runs": { "type": "integer", "minimum": 1 },
-    "raw_telemetry_ref": { "type": "string", "minLength": 1 }
+    "raw_telemetry_ref": { "type": "string", "minLength": 1 },
+    "total_score": { "type": "number", "description": "Interní lower-better skóre (nižší = lepší); veřejné score je jeho mapování do 0..1 vyšší = lepší." },
+    "group_scores": { "type": "object" },
+    "baseline_total_score": { "type": ["number", "null"] },
+    "protected": { "type": "object" },
+    "verdicts": { "type": "object" }
   }
 }

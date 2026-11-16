@@ -13,7 +13,14 @@ from .statistics import describe, mann_whitney_less
 from .acceptance import acceptance_decision
 from .store import VariantStore
 
+# Zpetna kompatibilita s ARCHITECTURE §5.2: `propose(history, space)` je
+# dokumentovany alias jednorazoveho kroku `propose_candidates(best_config,
+# space, ...)`. Plna historie se cte v run_optimization (best + rollback),
+# primy jednorazovy krok dostava aktualni best_config jako prvni argument.
+propose = propose_candidates
+
 __all__ = [
+    "propose",
     "propose_candidates",
     "run_optimization",
     "safety_filter",

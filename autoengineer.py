@@ -42,7 +42,16 @@ def load_json(path):
 
 
 def normalize_config(doc):
-    """Doplni povinna pole VehicleConfig minimalnim schematem (neprepisuje)."""
+    """Doplni povinna pole VehicleConfig minimalnim schematem (neprepisuje).
+
+    Fail-fast: vstup bez `parameters` (napr. bohaty DB zaznam misto
+    VehicleConfig) je odmitnut ValueError — tiche michani cizich
+    poli do VehicleConfig je zakazano.
+    """
+    if not isinstance(doc, dict) or not isinstance(doc.get("parameters"), dict):
+        raise ValueError(
+            "vstup neni VehicleConfig: chybi objekt 'parameters' "
+            "(bohaty DB zaznam/reference sem nepatri)")
     cfg = copy.deepcopy(doc)
     cfg.setdefault("schema_version", "1.0.0")
     cfg.setdefault("config_id", "cfg_input_base")
@@ -73,7 +82,11 @@ def default_out_dir(root):
 
 
 def cmd_run(args):
-    config = normalize_config(load_json(args.config))
+    try:
+        config = normalize_config(load_json(args.config))
+    except ValueError as exc:
+        print("CHYBA: %s: %s" % (args.config, exc), file=sys.stderr)
+        return 2
     targets = load_reference_targets(args.reference)
     if not targets:
         print("CHYBA: reference neobsahuje zadne bodovane metriky", file=sys.stderr)
@@ -166,7 +179,11 @@ def cmd_selftest(args):
 
 def cmd_plan(args):
     diagnosis = load_json(args.diagnosis)
-    config = normalize_config(load_json(args.config))
+    try:
+        config = normalize_config(load_json(args.config))
+    except ValueError as exc:
+        print("CHYBA: %s: %s" % (args.config, exc), file=sys.stderr)
+        return 2
     plan = plan_from_diagnosis(diagnosis, config,
                                max_iterations=args.max_iterations)
     print(json.dumps(plan, ensure_ascii=False, indent=2))

@@ -54,8 +54,13 @@ def _standardized_pool(cand, best):
             z_best.append(0.0 if sd_b < 1e-12 else (float(v) - mu_b) / sd_b)
         for v in totals_c:
             if sd_b < 1e-12:
+                # Nulovy rozptyl best-behu: kazda odchylka je maximalne
+                # vyznamna. Znamenko shodne s obecnou definici
+                # z = (t - mu_b)/sd (zaporne = lepsi, lower-better),
+                # aby jednostranny Mann-Whitney (cand < best) hodnotil
+                # zlepseni na spravne strane.
                 z_cand.append(0.0 if abs(float(v) - mu_b) < 1e-9
-                              else (10.0 if float(v) < mu_b else -10.0))
+                              else (-10.0 if float(v) < mu_b else +10.0))
             else:
                 z_cand.append((float(v) - mu_b) / sd_b)
     return z_cand, z_best, skipped

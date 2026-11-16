@@ -443,9 +443,36 @@ class TestTelemetryMetrics(unittest.TestCase):
         self.assertAlmostEqual(total, 1400.0 * G, delta=1.0)
 
     def test_evaluate_wrapper_pending(self):
-        self.skipTest("PENDING: ARCH §5.3 'evaluate()->TestResult(score, "
-                      "environment.mode)' nad compute_metrics ve vlne 1 "
-                      "zatim neexistuje (Agent F)")
+        mod = need("src.Telemetry.evaluate")
+        if mod is None:
+            self.skipTest("PENDING: src/Telemetry.evaluate ve vlne 1 "
+                          "zatim neexistuje")
+        self.assertTrue(callable(getattr(mod, "evaluate", None)),
+                        "evaluate() chybi")
+        rows = _synthetic_rows()
+        with tempfile.NamedTemporaryFile("w", suffix=".csv",
+                                         delete=False, newline="",
+                                         encoding="utf-8") as fh:
+            w = csv.writer(fh)
+            w.writerow(self.mx.TELEMETRY_COLUMNS)
+            w.writerows(rows)
+            path = fh.name
+        try:
+            res = mod.evaluate(path, {
+                "config_id": "cfg_test",
+                "scenario_id": "S1_accel",
+                "target_metrics": [
+                    {"metric": "t_0_100_s", "target": 6.9,
+                     "tolerance": 0.2},
+                ],
+            })
+        finally:
+            os.unlink(path)
+        for key in ("config_id", "scenario_id", "environment", "metrics",
+                    "deviations_vs_target", "score", "reproduced_runs",
+                    "raw_telemetry_ref"):
+            self.assertIn(key, res, "TestResult postrada %s" % key)
+        self.assertEqual(res["reproduced_runs"], 1)
 
 
 class TestReferenceProvenance(unittest.TestCase):
@@ -517,8 +544,17 @@ class TestOptimizerContract(unittest.TestCase):
         if mod is None:
             self.skipTest("PENDING: modul Optimizer (Faze 10) ve vlne 1 "
                           "zatim neexistuje (ARCH §5.2, TESTING §5)")
-        for fn in ("propose", "acceptance_decision"):
+        # Skutecne API (overeno ctenim src/Optimizer/__init__.py):
+        # propose_candidates + acceptance_decision. Jmeno 'propose'
+        # z ARCH §5.2 je pripadny alias — nevyzaduje se, je-li
+        # pritomen, musi byt volatelny.
+        for fn in ("propose_candidates", "acceptance_decision"):
             self.assertTrue(hasattr(mod, fn), "Optimizer.%s chybi" % fn)
+            self.assertTrue(callable(getattr(mod, fn)),
+                            "Optimizer.%s neni volatelny" % fn)
+        if hasattr(mod, "propose"):
+            self.assertTrue(callable(mod.propose),
+                            "Optimizer.propose alias neni volatelny")
 
 
 if __name__ == "__main__":

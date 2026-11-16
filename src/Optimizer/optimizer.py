@@ -21,6 +21,31 @@ def _cfg_id(counter):
     return "cfg_%04d" % counter
 
 
+def _initial_counter(initial_config):
+    """Startovni citac bez kolize s ID zakladni konfigurace.
+
+    Kdyby best mela tvar cfg_NNNN (napr. cfg_0001 z drivejsi kampane),
+    zacina citac na N+1, aby prvni kandidat neprepsal/duplikoval best ID.
+    Jinak (cfg_selftest_base, cfg_input_base, ...) se zacina od 1.
+    """
+    import re
+    start = 1
+    seen = set()
+    node = initial_config
+    while isinstance(node, dict) and node.get("config_id"):
+        cid = node.get("config_id")
+        seen.add(cid)
+        m = re.fullmatch(r"cfg_(\d+)", str(cid))
+        if m:
+            start = max(start, int(m.group(1)) + 1)
+        node = node.get("parent_config_id")
+        if not isinstance(node, dict):
+            break
+    while _cfg_id(start) in seen:
+        start += 1
+    return start
+
+
 def safety_filter(candidate_diff, best_config, space, step_scale=1.0):
     """Kontrola kandidata pred testem: meze + max_step. Vraci (ok, duvod).
 
@@ -217,7 +242,7 @@ def run_optimization(initial_config, space, evaluate_config, store,
     })
     store.set_best(best_config, best_stats)
 
-    counter = 1
+    counter = _initial_counter(initial_config)
     evaluations = 0
     attempt_no = 0
     step_scale = 1.0

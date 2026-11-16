@@ -2,6 +2,11 @@
 
 evaluate(telemetry_csv, reference_profile) -> TestResult (dict, JSON-serializovatelny).
 Skore: nizsi TotalScore = lepsi (soucet vazenych normalizovanych odchylek + penalizace).
+Vystupni `score` (kontrakt contracts/test_result.schema.json, 0..1, vyssi=lepsi)
+je monotoni zobrazeni TotalScore: score = 1/(1+exp(total)).
+total=0 -> 0.5, total->-inf -> 1 (lepsi nez cil), total->+inf -> 0 (horsi).
+Mapovani je ryze monotonni (poradi kandidatu shodne s TotalScore); vnitrni
+rozhodovani (A1), optimizer i reporty dale pracuji s TotalScore (lower-better).
 Chranene metriky: kandidat nesmi zhorsit nad hard_limit ani pri lepsim skore (A2).
 """
 
@@ -104,6 +109,20 @@ def _total_for(metrics_dict, targets, weights, unstable):
     return total, group_scores
 
 
+def _total_to_score(total):
+    """Monotonni zobrazeni TotalScore (lower-better) do 0..1 (higher-better).
+
+    score = 1/(1+exp(total)); ryze klesajici v total, tj. poradi kandidatu
+    je shodne s TotalScore. Krajni hodnoty oriznuty pro exp-overflow.
+    """
+    total = float(total)
+    if total >= 30.0:
+        return 0.0
+    if total <= -30.0:
+        return 1.0
+    return 1.0 / (1.0 + math.exp(total))
+
+
 def evaluate(telemetry_csv, reference_profile):
     """Spocita metriky z RAW CSV a vrati TestResult dle §3.5.
 
@@ -189,6 +208,7 @@ def evaluate(telemetry_csv, reference_profile):
         digest = hashlib.sha1(fh.read()).hexdigest()[:8]
 
     return {
+        "schema_version": "1.0.0",
         "result_id": "tr_" + digest,
         "config_id": reference_profile.get("config_id", "cfg_unknown"),
         "scenario_id": reference_profile.get("scenario_id", "unknown"),
@@ -200,7 +220,7 @@ def evaluate(telemetry_csv, reference_profile):
         "metrics": metrics,
         "deviations_vs_target": deviations,
         "group_scores": group_scores,
-        "score": total,
+        "score": _total_to_score(total),
         "total_score": total,
         "baseline_total_score": baseline_total,
         "protected": protected,

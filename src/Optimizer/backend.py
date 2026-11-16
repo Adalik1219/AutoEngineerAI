@@ -145,10 +145,12 @@ def load_reference_targets(path_or_doc):
 def find_external_sim():
     """Hledani src/Sim (Agent C). Vraci (fn|None, info).
 
-    fn(config, scenario, seed, out_csv) -> out_csv; povinne overeni vystupu
-    hlavickou Agenta F, jinak se povazuje za nefunkcni.
+    fn(config_path, scenario_id, dt, seed, out_dir) -> (csv, manifest, manifest_dict)
+    dle src/Sim/run.py::run_scenario; povinne overeni vystupu hlavickou
+    Agenta F, jinak se povazuje za nefunkcni.
     """
     candidates = [
+        ("src.Sim.run", "run_scenario"),
         ("src.Sim.api", "run_scenario"),
         ("src.Sim.simulation", "run_scenario"),
         ("src.Sim.engine", "run_scenario"),
@@ -163,6 +165,77 @@ def find_external_sim():
         except Exception:
             continue
     return None, {"module": None, "reason": "src.Sim.run_scenario nenalezeno"}
+
+
+# Pevny krok skutecneho backendu src/Sim (default run.py, 240 Hz).
+SIM_DT = 1.0 / 240.0
+
+
+def _sim_scenario_id(scenario):
+    """Mapovani optimizer scenario_id -> id skutecneho src/Sim scenare.
+
+    Optimizer matice pouziva zkratky (S1_accel, S3_brake) s `kind` shodnym
+    s realnym id src/Sim/scenarios.py (straight_accel, straight_brake_100_0).
+    """
+    for key in ("scenario_id", "kind"):
+        sid = (scenario.get(key) if isinstance(scenario, dict) else None)
+        if sid:
+            try:
+                from src.Sim.scenarios import SCENARIOS as SIM_SCENARIOS
+            except Exception:
+                break
+            if sid in SIM_SCENARIOS:
+                return sid
+    if isinstance(scenario, dict) and scenario.get("kind"):
+        return scenario["kind"]
+    return scenario.get("scenario_id") if isinstance(scenario, dict) else scenario
+
+
+def _call_external_sim(ext_fn, config, sim_scenario_id, seed, csv_path):
+    """Adapter: VehicleConfig dict -> src/Sim/run.py::run_scenario.
+
+    Config se ulozi na docasny JSON, run_scenario bezí do docasneho out_dir
+    a vznikle telemetry.csv se prekopiruje na pozadovane csv_path.
+    Podporovan je i legacy tvar (config, scenario, seed, out_csv).
+    """
+    import json as _json
+    import shutil as _shutil
+    import tempfile as _tempfile
+
+    tel_dir = os.path.dirname(os.path.abspath(csv_path))
+    fd, tmp_cfg = _tempfile.mkstemp(prefix="ext_cfg_", suffix=".json",
+                                    dir=tel_dir)
+    tmp_out = _tempfile.mkdtemp(prefix="ext_sim_", dir=tel_dir)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            _json.dump(config, fh)
+        try:
+            res = ext_fn(tmp_cfg, sim_scenario_id, SIM_DT, seed, tmp_out)
+        except TypeError:
+            # Legacy tvar (config, scenario, seed, out_csv).
+            res = ext_fn(config, {"scenario_id": sim_scenario_id}, seed,
+                         csv_path)
+            return res
+        produced = None
+        if isinstance(res, (tuple, list)) and res:
+            produced = res[0]
+        elif isinstance(res, str):
+            produced = res
+        if produced is None:
+            produced = os.path.join(tmp_out, "telemetry.csv")
+        if os.path.abspath(produced) != os.path.abspath(csv_path):
+            _shutil.copyfile(produced, csv_path)
+        return res
+    finally:
+        try:
+            os.remove(tmp_cfg)
+        except OSError:
+            pass
+        try:
+            import shutil as _sh2
+            _sh2.rmtree(tmp_out, ignore_errors=True)
+        except Exception:
+            pass
 
 
 def _scenario_seed(base_seed, scenario_id, rep):
@@ -195,7 +268,8 @@ def make_evaluator(out_dir, targets, repeats=5, base_seed=7, code_version="optim
         used = backend
         if ext_fn is not None:
             try:
-                ext_fn(config, scenario, seed, csv_path)
+                _call_external_sim(ext_fn, config,
+                                   _sim_scenario_id(scenario), seed, csv_path)
                 _validate_csv(csv_path)
             except Exception:
                 used = "fallback-synth-v0"

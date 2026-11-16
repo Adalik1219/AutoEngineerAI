@@ -46,6 +46,7 @@
   },
   "$defs": {
     "proven": {
+      "$comment": "proven-null-confidence-0: ARCH §3.2 — value:null (chybějící údaj) ⇒ confidence:0.",
       "type": "object",
       "required": ["value", "source", "confidence"],
       "additionalProperties": false,
@@ -54,7 +55,25 @@
         "source": { "type": "string", "minLength": 1 },
         "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
         "uncertainty": { "type": "string" }
-      }
+      },
+      "allOf": [
+        {
+          "description": "Je-li value null, confidence musí být 0; jinak je value číslo nebo řetězec.",
+          "anyOf": [
+            {
+              "properties": {
+                "value": { "type": "null" },
+                "confidence": { "const": 0 }
+              }
+            },
+            {
+              "properties": {
+                "value": { "type": ["number", "string"] }
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 }

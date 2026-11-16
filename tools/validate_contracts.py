@@ -63,6 +63,12 @@ EXAMPLE_FOR_SCHEMA = {
     "manifest": "manifest.valid.json",
 }
 
+# Značka v contracts/reference_profile.schema.json ($defs/proven, $comment):
+# ARCH §3.2 — value:null (chybějící údaj) ⇒ confidence:0.
+_PROVEN_NULL_CONFIDENCE_COMMENT = (
+    "proven-null-confidence-0: ARCH §3.2 — value:null (chybějící údaj) ⇒ confidence:0."
+)
+
 # Ke každému schématu 1 nevalidní příklad (musí selhat aspoň 1 chybou).
 INVALID_SAMPLES = {
     "vehicle_profile": {
@@ -216,6 +222,19 @@ def _validate(value: object, schema: dict, root: dict, path: str) -> list[str]:
         errs.extend(_validate(value, target, root, path))
         schema = {k: v for k, v in schema.items() if k != "$ref"}
 
+    if (
+        isinstance(value, dict)
+        and schema.get("$comment") == _PROVEN_NULL_CONFIDENCE_COMMENT
+        and "value" in value
+        and value["value"] is None
+        and "confidence" in value
+        and value["confidence"] != 0
+    ):
+        errs.append(
+            f"{path or '$'}: je-li value null (chybějící údaj), "
+            f"confidence musí být 0 (ARCH §3.2), je {value['confidence']!r}"
+        )
+
     want = schema.get("type")
     if want is not None:
         wants = [want] if isinstance(want, str) else list(want)
@@ -356,7 +375,8 @@ def check_file(data_path: Path, schema_path: Path) -> list[str]:
 
 
 def run_selftest() -> tuple[int, int, list[str]]:
-    """Selftest: ke každému schématu 1 validní + 1 nevalidní příklad.
+    """Selftest: ke každému schématu 1 validní + 1 nevalidní příklad,
+    plus kontrola ARCH §3.2 (reference_profile: null⇒confidence 0).
 
     Vrací (počet_kontrol, počet_chyb, výstupní_řádky).
     """
@@ -395,6 +415,64 @@ def run_selftest() -> tuple[int, int, list[str]]:
             failures += 1
         else:
             lines.append(f"[OK] {name}: nevalidní příklad správně zamítnut ({len(errs)} chyb)")
+
+    # 3) ARCH §3.2: value:null (chybějící údaj) ⇒ confidence:0 (reference_profile).
+    ref_schema, err = load_json(CONTRACTS / SCHEMA_FILES["reference_profile"])
+    if err is not None or not isinstance(ref_schema, dict):
+        lines.append(f"[CHYBA] reference_profile: schéma nelze načíst pro kontrolu null⇒0: {err}")
+        failures += 1
+    else:
+        base_doc = {
+            "schema_version": "1.0.0",
+            "vehicle": {"make": "Mazda", "model": "MX-5", "year": 2020},
+            "specs": {},
+            "target_metrics": [
+                {"metric": "brake_100_0_m", "target": 37.0, "tolerance": 2.0, "weight": 0.9}
+            ],
+        }
+
+        # 3a) null + confidence 0.5 musí být INVALID
+        checks += 1
+        bad_doc = dict(base_doc)
+        bad_doc["specs"] = {
+            "brake_100_0_m": {
+                "value": None,
+                "source": "neznámé — tovární údaj neexistuje",
+                "confidence": 0.5,
+            }
+        }
+        errs = validate_against_schema(bad_doc, ref_schema)
+        if not errs:
+            lines.append(
+                "[CHYBA] reference_profile: null+0.5 prošel, "
+                "ačkoli ARCH §3.2 vyžaduje confidence 0"
+            )
+            failures += 1
+        else:
+            lines.append(
+                f"[OK] reference_profile: null+0.5 správně zamítnut ({len(errs)} chyb)"
+            )
+
+        # 3b) null + confidence 0 musí být VALID
+        checks += 1
+        good_doc = dict(base_doc)
+        good_doc["specs"] = {
+            "brake_100_0_m": {
+                "value": None,
+                "source": "neznámé — tovární údaj neexistuje",
+                "confidence": 0,
+            }
+        }
+        errs = validate_against_schema(good_doc, ref_schema)
+        if errs:
+            lines.append(
+                f"[CHYBA] reference_profile: null+0 neprošel ({len(errs)} chyb):"
+            )
+            lines.extend(f"    {e}" for e in errs[:5])
+            failures += 1
+        else:
+            lines.append("[OK] reference_profile: null+0 prošel (chybějící údaj)")
+
     return checks, failures, lines
 
 
@@ -460,7 +538,7 @@ def main(argv: list[str] | None = None) -> int:
 
     total_checks = 0
     total_failures = 0
-    print("== Selftest schémat (1 validní + 1 nevalidní příklad ke každému) ==")
+    print("== Selftest schémat (1 validní + 1 nevalidní příklad ke každému + null⇒0) ==")
     checks, failures, lines = run_selftest()
     total_checks += checks
     total_failures += failures

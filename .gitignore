@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 vehicle-data/runs/selftest_*
 vehicle-data/telemetry/selftest_*
+vehicle-data/runs/opt_selftest_*
+vehicle-data/runs/fixverify_*
+vehicle-data/runs/

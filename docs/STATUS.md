@@ -33,8 +33,9 @@ Otevřené body před implementací:
 - Známé mezery k opravě (potvrdí QA vlna 2): (1) test_propose_api — Optimizer nemá export `propose`; (2) example-vehicle.json — 4× null s confidence 0.2 místo 0; (3) test_run_scenario_api — `run_scenario` není na package úrovni src/Sim; (4) Sim běží na builtin-v1 (src/Physics v době běhu C neexistovalo, přepnutí připraveno); (5) G selftest exit 0 bez stdout — prověřit; (6) C tvrdí 33 sloupců vs specifikace/F 30 — reálně naměřeno 30, prověřit.
 - [x] Vlna 2 (QA) DODÁNA: fyzika CONDITIONAL_PASS, kontrakty conditional-pass, integrace FAIL (10+5+4 nálezů, vše v qa/*.md).
 - [x] Koordinátorské rychlé opravy: 23× null-confidence→0 ve 3 profilech, pbrake_bias→unknown, VEHICLE-DATA škála sladěna s ARCH §3.2.
-- [ ] Opravná vlna (5 agentů): Fix-Api (Physics/api.py), Fix-Sim, Fix-TO (telemetrie+optimalizátor+pipeline), Fix-Con (schéma null→0), Fix-Tests (stale testy/PENDING)
-- [ ] Re-verifikace: H suite 0 FAIL + QA re-check + commit/push + závěrečný report milníku
+- [x] Opravná vlna DODÁNA 2026-11-16: Fix-Api (api.py, backend=src.Physics.api), Fix-Sim (re-export run_scenario, AWD→diff, eps, R5 limit), Fix-TO (schema-validní TestResult, externí Sim v kampani, propose export, __main__, fail-fast, čítač), Fix-Con (null→0 strojně, 23 kontrol), Fix-Tests (propose_candidates, skipy).
+- [x] Koordinátorská verifikace: H suite 102 běhů = 99 PASS / 0 FAIL / 3 PENDING (oprávněné); živý TestResult (Sim→evaluate) striktně validní vůči schématu; backend kampaně = external-src.Sim (žádný fallback). Zbytková mezera: test_result.schema.json rozšířena o 5 interních volitelných polí (total_score, group_scores, baseline_total_score, protected, verdicts) — živý výstup by jinak neprošel additionalProperties:false.
+- [ ] QA re-check (nezávislí auditoři): potvrdit opravy + integrační verdikt celého řetězce
 - [ ] Koordinátor: verifikace, commit/push každé vlny, závěrečný report, definice další fáze (Studio harness)
 
 ## Další kroky (koordinátor po dodání)
