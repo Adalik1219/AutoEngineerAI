@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "result_id": "tr_0100",
+  "config_id": "cfg_0042",
+  "scenario_id": "straight_brake_100_0",
+  "environment": { "mode": "local-sim", "seed": 1234, "code_version": "b7fbd5c" },
+  "metrics": { "accel_0_100_s": 7.8, "vmax_kmh": 228.0, "brake_100_0_m": 41.2, "stability_index": 0.93 },
+  "deviations_vs_target": { "accel_0_100_s": 1.3, "vmax_kmh": 9.0, "brake_100_0_m": 4.2 },
+  "score": 0.91,
+  "reproduced_runs": 3,
+  "raw_telemetry_ref": "telemetry/tr_0100.csv"
+}

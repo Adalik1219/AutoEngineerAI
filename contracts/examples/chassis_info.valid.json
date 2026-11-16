@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "chassis_id": "a-chassis-ac6c-demo",
+  "adapter_id": "achassis-v1",
+  "detection_confidence": 0.92,
+  "parameters": [
+    { "name": "Tune.Gearing.FinalDrive", "unit": ":1", "description": "Stálý převod" },
+    { "name": "Tune.Grip.GripLong", "unit": "-", "description": "Podélný grip" },
+    { "name": "Tune.Suspension.SpringF", "unit": "N/m", "description": "Tuhost předních pružin" }
+  ],
+  "limits": ["nelze nastavit AWD bez zásahu do skriptů", "momentová křivka jen škálováním"]
+}

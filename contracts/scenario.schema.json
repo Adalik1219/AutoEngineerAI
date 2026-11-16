@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/scenario-v1.json",
+  "title": "Scenario v1",
+  "description": "Testovací scénář (ARCHITECTURE §5.3): pevný seed a tolerance reprodukovatelnosti. Výčet druhů dle §5.3.",
+  "type": "object",
+  "required": ["schema_version", "scenario_id", "kind", "seed"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "scenario_id": { "type": "string", "minLength": 1 },
+    "kind": {
+      "enum": ["straight_accel", "straight_brake_100_0", "slalom", "constant_radius_turn", "bump_section", "surface_change"]
+    },
+    "seed": { "type": "integer" },
+    "description": { "type": "string" },
+    "duration_s": { "type": "number", "exclusiveMinimum": 0 },
+    "tolerances": { "type": "object" }
+  }
+}

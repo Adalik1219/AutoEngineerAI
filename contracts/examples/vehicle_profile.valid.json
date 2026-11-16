@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0.0",
+  "profile_id": "vp_2026_mx5_demo",
+  "source_model_hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "chassis": { "chassis_id": "a-chassis-ac6c-demo" },
+  "hierarchy": {
+    "root": "Chassis",
+    "wheels": ["FL", "FR", "RL", "RR"],
+    "constraints": ["FL_Hub", "FR_Hub", "RL_Hub", "RR_Hub"]
+  },
+  "dimensions": { "wheelbase_m": 2.31, "track_f_m": 1.495, "track_r_m": 1.505 },
+  "mass": {
+    "total_kg": 1075,
+    "center_of_mass": [0.0231, 0.0, 0.46],
+    "inertia": [420.0, 1450.0, 1500.0]
+  },
+  "wheels": [
+    { "id": "FL", "radius_m": 0.308, "width_m": 0.205, "position": [1.155, 0.7475, 0.308], "camber_deg": -0.5, "toe_deg": 0.05 },
+    { "id": "FR", "radius_m": 0.308, "width_m": 0.205, "position": [1.155, -0.7475, 0.308], "camber_deg": -0.5, "toe_deg": 0.05 },
+    { "id": "RL", "radius_m": 0.308, "width_m": 0.205, "position": [-1.155, 0.7525, 0.308], "camber_deg": -1.0, "toe_deg": 0.1 },
+    { "id": "RR", "radius_m": 0.308, "width_m": 0.205, "position": [-1.155, -0.7525, 0.308], "camber_deg": -1.0, "toe_deg": 0.1 }
+  ],
+  "suspension": {
+    "FL": { "spring_Npm": 28000, "damper_Nspm": 2500, "travel_m": 0.12 },
+    "FR": { "spring_Npm": 28000, "damper_Nspm": 2500, "travel_m": 0.12 },
+    "RL": { "spring_Npm": 24000, "damper_Nspm": 2200, "travel_m": 0.13 },
+    "RR": { "spring_Npm": 24000, "damper_Nspm": 2200, "travel_m": 0.13 }
+  },
+  "steering": { "max_angle_deg": 35.0, "ackermann_ratio": 1.0 },
+  "powertrain": { "drive_type": "RWD", "gears": [5.087, 2.991, 2.035, 1.594, 1.286, 1.0], "final_drive": 2.866 },
+  "brakes": { "bias_front": 0.65 },
+  "scripts": [
+    { "path": "Tune", "hash": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" }
+  ]
+}

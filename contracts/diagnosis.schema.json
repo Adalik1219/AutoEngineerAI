@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/diagnosis-v1.json",
+  "title": "Diagnosis v1",
+  "description": "Technická diagnóza (výstup PhysicsAnalysis, ARCHITECTURE §5.1): seznam oblastí s příčinou, ne jen projevem (požadavek 5.5).",
+  "type": "object",
+  "required": ["schema_version", "diagnosis_id", "profile_id", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "diagnosis_id": { "type": "string", "pattern": "^dg_[A-Za-z0-9_]+$" },
+    "profile_id": { "type": "string", "pattern": "^vp_[A-Za-z0-9_]+$" },
+    "reference_id": { "type": "string" },
+    "chassis_info_ref": { "type": "string" },
+    "items": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["area", "symptom", "probable_cause"],
+        "additionalProperties": true,
+        "properties": {
+          "area": { "type": "string", "minLength": 1 },
+          "symptom": { "type": "string", "minLength": 1 },
+          "probable_cause": { "type": "string", "minLength": 1 },
+          "evidence_metrics": { "type": "object" }
+        }
+      }
+    }
+  }
+}

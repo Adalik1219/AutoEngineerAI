@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0.0",
+  "config_id": "cfg_0042",
+  "parent_config_id": "cfg_0041",
+  "vehicle_profile_id": "vp_2026_mx5_demo",
+  "chassis_adapter": "achassis-v1",
+  "parameters": {
+    "engine": { "peak_torque_nm": 205, "peak_power_kw": 135 },
+    "transmission": { "gears": [5.087, 2.991, 2.035, 1.594, 1.286, 1.0], "final_drive": 2.866, "shift_rpm": 7000 },
+    "tires": { "grip_long": 1.0, "grip_lat": 1.0 },
+    "suspension": { "spring_f_Npm": 28000, "damper_f_Nspm": 2500, "spring_r_Npm": 24000, "damper_r_Nspm": 2200 },
+    "steering": { "max_angle_deg": 35 },
+    "brakes": { "bias_front": 0.65, "torque_Nm": 4000 },
+    "geometry_overrides": null
+  },
+  "rationale": "Výchozí konfigurace z kroku plan_0012/s1: tovární převody a odhadnuté tuhosti, cíl ověřit základní akceleraci.",
+  "model_patch_ref": "patches/cfg_0042.patch"
+}

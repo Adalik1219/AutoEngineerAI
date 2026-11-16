@@ -3,3 +3,5 @@
 !docs/*.md
 __pycache__/
 *.pyc
+vehicle-data/runs/selftest_*
+vehicle-data/telemetry/selftest_*

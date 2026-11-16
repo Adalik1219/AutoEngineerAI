@@ -1,0 +1,11 @@
+{
+  "schema_version": "1.0.0",
+  "run_id": "run_2026_001",
+  "code_version": "b7fbd5c",
+  "seed": 1234,
+  "scenario_versions": { "straight_brake_100_0": "1.0.0", "straight_accel": "1.0.0" },
+  "artifacts": [
+    { "kind": "vehicle_config", "path": "configurations/cfg_0042.json", "id": "cfg_0042" },
+    { "kind": "test_result", "path": "results/tr_0100.json", "id": "tr_0100" }
+  ]
+}

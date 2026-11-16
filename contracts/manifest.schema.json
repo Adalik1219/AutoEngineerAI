@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/manifest-v1.json",
+  "title": "Manifest v1",
+  "description": "Manifest běhu (ARCHITECTURE §6): co se kdy spustilo, s code_version a seedy. Bez něj je výsledek neplatný pro srovnání.",
+  "type": "object",
+  "required": ["schema_version", "run_id", "code_version", "seed", "scenario_versions", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "run_id": { "type": "string", "pattern": "^run_[A-Za-z0-9_]+$" },
+    "code_version": { "type": "string", "minLength": 1 },
+    "seed": { "type": "integer" },
+    "scenario_versions": { "type": "object", "minProperties": 1 },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "path"],
+        "additionalProperties": true,
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "path": { "type": "string", "minLength": 1 },
+          "id": { "type": "string" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/vehicle_config-v1.json",
+  "title": "VehicleConfig v1",
+  "description": "Nastavitelná konfigurace varianty vozidla.",
+  "type": "object",
+  "required": ["schema_version", "config_id", "vehicle_profile_id", "chassis_adapter", "parameters", "rationale"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "config_id": { "type": "string", "pattern": "^cfg_[A-Za-z0-9_]+$" },
+    "parent_config_id": { "type": ["string", "null"] },
+    "vehicle_profile_id": { "type": "string", "pattern": "^vp_[A-Za-z0-9_]+$" },
+    "chassis_adapter": { "type": "string", "minLength": 1 },
+    "parameters": {
+      "type": "object",
+      "required": ["engine", "transmission", "tires", "suspension", "steering", "brakes", "geometry_overrides"],
+      "additionalProperties": false,
+      "properties": {
+        "engine": { "type": "object" },
+        "transmission": { "type": "object" },
+        "tires": { "type": "object" },
+        "suspension": { "type": "object" },
+        "steering": { "type": "object" },
+        "brakes": { "type": "object" },
+        "geometry_overrides": { "type": ["object", "null"] }
+      }
+    },
+    "rationale": { "type": "string", "minLength": 1 },
+    "model_patch_ref": { "type": "string" }
+  }
+}

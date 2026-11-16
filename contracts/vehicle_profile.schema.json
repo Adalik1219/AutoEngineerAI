@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/vehicle_profile-v1.json",
+  "title": "VehicleProfile v1",
+  "description": "Naměřený stav vstupního vozidla (výstup Analyzeru, ARCHITECTURE §3.1). Neměnný artefakt, jednotky SI + stupně. Odpovídá tvaru §3.1.",
+  "type": "object",
+  "required": ["schema_version", "profile_id", "source_model_hash", "chassis", "hierarchy", "dimensions", "mass", "wheels", "powertrain", "brakes"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "profile_id": { "type": "string", "pattern": "^vp_[A-Za-z0-9_]+$" },
+    "source_model_hash": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "chassis": {
+      "type": "object",
+      "required": ["chassis_id"],
+      "additionalProperties": true,
+      "properties": {
+        "chassis_id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "hierarchy": {
+      "type": "object",
+      "required": ["root", "wheels"],
+      "additionalProperties": true,
+      "properties": {
+        "root": { "type": "string", "minLength": 1 },
+        "wheels": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "constraints": { "type": "array" }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "required": ["wheelbase_m", "track_f_m", "track_r_m"],
+      "additionalProperties": false,
+      "properties": {
+        "wheelbase_m": { "type": "number", "exclusiveMinimum": 0 },
+        "track_f_m": { "type": "number", "exclusiveMinimum": 0 },
+        "track_r_m": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "mass": {
+      "type": "object",
+      "required": ["total_kg", "center_of_mass"],
+      "additionalProperties": false,
+      "properties": {
+        "total_kg": { "type": "number", "exclusiveMinimum": 0 },
+        "center_of_mass": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": { "type": "number" },
+          "description": "Těžiště [x vpřed, y vlevo, z vzhůru] v metrech vůči středu rozvoru."
+        },
+        "inertia": {
+          "type": "array", "minItems": 3, "maxItems": 3,
+          "items": { "type": "number", "minimum": 0 },
+          "description": "[Ixx, Iyy, Izz] v kg·m²."
+        }
+      }
+    },
+    "wheels": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "radius_m", "width_m", "position"],
+        "additionalProperties": true,
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "radius_m": { "type": "number", "exclusiveMinimum": 0 },
+          "width_m": { "type": "number", "exclusiveMinimum": 0 },
+          "position": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+          "camber_deg": { "type": "number" },
+          "toe_deg": { "type": "number" }
+        }
+      }
+    },
+    "suspension": { "type": "object", "description": "Tuhosti/tlumení/zdvihy po kolech, volná struktura dle adaptéru." },
+    "steering": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "max_angle_deg": { "type": "number", "minimum": 0, "maximum": 90 },
+        "ackermann_ratio": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "powertrain": {
+      "type": "object",
+      "required": ["drive_type"],
+      "additionalProperties": true,
+      "properties": {
+        "drive_type": { "enum": ["RWD", "FWD", "AWD"] },
+        "gears": { "type": "array", "minItems": 1, "items": { "type": "number", "exclusiveMinimum": 0 } },
+        "final_drive": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "brakes": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "bias_front": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "scripts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "hash"],
+        "additionalProperties": true,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "hash": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

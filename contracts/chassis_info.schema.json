@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/chassis_info-v1.json",
+  "title": "ChassisInfo v1",
+  "description": "Identifikace fyzikálního systému (výstup ChassisIntelligence, ARCHITECTURE §2 a §5.4): typ, nastavitelné parametry, známá omezení.",
+  "type": "object",
+  "required": ["schema_version", "chassis_id", "adapter_id", "detection_confidence", "limits"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "chassis_id": { "type": "string", "minLength": 1 },
+    "adapter_id": { "type": "string", "minLength": 1 },
+    "detection_confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+    "parameters": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "unit": { "type": "string" },
+          "description": { "type": "string" }
+        }
+      }
+    },
+    "limits": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

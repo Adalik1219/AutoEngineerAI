@@ -29,7 +29,8 @@ Otevřené body před implementací:
 ## Probíhající milník: matematická simulace + optimalizátor (vlastní brief uživatele, QA systém)
 
 - [x] FÁZE 3 schválena → implementace spuštěna. Stack: Python 3, pouze stdlib. Souřadnice x vpřed / y vlevo / z vzhůru, SI, dt=1/240.
-- [ ] Vlna 1 (8 implementačních agentů, disjunktní vlastnictví): A kontrakty, B fyzika, C sim-engine, D A-Chassis adaptér, E reference, F telemetrie, G optimalizátor+pipeline, H testy+CI
+- [x] Vlna 1 (8 implementačních agentů) DODÁNA 2026-11-16. Vlastní verifikace koordinátora: A exit 0 (21 kontrol), B exit 0, C exit 0 (3 scénáře + determinismus sha), D exit 0, E exit 0, F exit 0 (12 kontrol), G exit 0; H tests/run_all.py: 102 testů, 95 PASS, 3 FAIL, 4 PENDING/skipped (exit 1).
+- Známé mezery k opravě (potvrdí QA vlna 2): (1) test_propose_api — Optimizer nemá export `propose`; (2) example-vehicle.json — 4× null s confidence 0.2 místo 0; (3) test_run_scenario_api — `run_scenario` není na package úrovni src/Sim; (4) Sim běží na builtin-v1 (src/Physics v době běhu C neexistovalo, přepnutí připraveno); (5) G selftest exit 0 bez stdout — prověřit; (6) C tvrdí 33 sloupců vs specifikace/F 30 — reálně naměřeno 30, prověřit.
 - [ ] Vlna 2 (nezávislé QA, oddělení agenti): QA-fyzika (B+C), QA-kontrakty/data (A+D+E), QA-optimalizace+integrace (F+G+H)
 - [ ] Koordinátor: verifikace, commit/push každé vlny, závěrečný report, definice další fáze (Studio harness)
 

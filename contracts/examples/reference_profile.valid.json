@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "reference_id": "rp_mx5_nd_20_184",
+  "vehicle": { "make": "Mazda", "model": "MX-5", "year": 2020 },
+  "source_vehicle_id": "mazda-mx5-nd-20-184-softtop-6mt-eu",
+  "specs": {
+    "power_kw": { "value": 135, "source": "Mazda brožury", "confidence": 1.0 },
+    "torque_nm": { "value": 205, "source": "Mazda brožury", "confidence": 1.0 },
+    "mass_kg": { "value": 1075, "source": "odhad z pásma 1041–1116 kg", "confidence": 0.6, "uncertainty": "+-3%" },
+    "accel_0_100_s": { "value": 6.5, "source": "auto-data; ultimatespecs", "confidence": 0.85, "uncertainty": "+-0.5 s" },
+    "vmax_kmh": { "value": 219, "source": "auto-data; ultimatespecs", "confidence": 0.9 },
+    "brake_100_0_m": { "value": null, "source": "neznámé — tovární údaj neexistuje", "confidence": 0 }
+  },
+  "target_metrics": [
+    { "metric": "accel_0_100_s", "target": 6.5, "tolerance": 0.5, "weight": 1.0 },
+    { "metric": "vmax_kmh", "target": 219, "tolerance": 5.0, "weight": 0.8 },
+    { "metric": "brake_100_0_m", "target": 37.0, "tolerance": 2.0, "weight": 0.9 }
+  ]
+}

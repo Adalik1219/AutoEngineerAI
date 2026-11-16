@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0.0",
+  "plan_id": "plan_0012",
+  "diagnosis_ref": "dg_0007",
+  "steps": [
+    { "area": "transmission", "action": "set_final_drive", "from": 2.866, "to": 3.0, "expected_effect": "lepší akcelerace, vmax -4 km/h", "risk": "vyšší otáčky na dálniční rychlosti" },
+    { "area": "tires", "action": "raise_grip_lat", "from": 1.0, "to": 1.05, "expected_effect": "vyšší stabilita ve slalomu", "risk": "mírný nárůst nedotáčivosti" }
+  ],
+  "chassis_decision": "keep",
+  "priorities": ["tires", "transmission"],
+  "stop_conditions": { "max_iterations": 50, "target_score": 0.95 }
+}

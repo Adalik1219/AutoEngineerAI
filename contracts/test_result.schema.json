@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/test_result-v1.json",
+  "title": "TestResult v1",
+  "description": "Výsledek testu (výstup TelemetryEval, ARCHITECTURE §3.5). Pole MUSÍ odpovídat §3.5: result_id/config_id/scenario_id/environment{mode,seed,code_version}/metrics/deviations_vs_target/score/reproduced_runs/raw_telemetry_ref.",
+  "type": "object",
+  "required": ["schema_version", "result_id", "config_id", "scenario_id", "environment", "metrics", "deviations_vs_target", "score", "reproduced_runs", "raw_telemetry_ref"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "result_id": { "type": "string", "pattern": "^tr_[A-Za-z0-9_]+$" },
+    "config_id": { "type": "string", "pattern": "^cfg_[A-Za-z0-9_]+$" },
+    "scenario_id": { "type": "string", "minLength": 1 },
+    "environment": {
+      "type": "object",
+      "required": ["mode", "seed", "code_version"],
+      "additionalProperties": true,
+      "properties": {
+        "mode": { "enum": ["local-sim", "roblox-runtime"] },
+        "seed": { "type": "integer" },
+        "code_version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "metrics": { "type": "object", "minProperties": 1 },
+    "deviations_vs_target": { "type": "object" },
+    "score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "reproduced_runs": { "type": "integer", "minimum": 1 },
+    "raw_telemetry_ref": { "type": "string", "minLength": 1 }
+  }
+}

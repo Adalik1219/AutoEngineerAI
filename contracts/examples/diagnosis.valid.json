@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "diagnosis_id": "dg_0007",
+  "profile_id": "vp_2026_mx5_demo",
+  "reference_id": "rp_mx5_nd_20_184",
+  "chassis_info_ref": "chi_achassis_ac6c",
+  "items": [
+    {
+      "area": "transmission",
+      "symptom": "akcelerace 0–100 za 7.8 s, cíl 6.5 s",
+      "probable_cause": "krátký stálý převod 2.866 + pomalé řazení v simulaci",
+      "evidence_metrics": { "accel_0_100_s": 7.8, "shift_time_s": 0.4 }
+    },
+    {
+      "area": "tires",
+      "symptom": "stability_index 0.93 ve slalomu",
+      "probable_cause": "nízký boční grip zadní nápravy při přenosu hmotnosti",
+      "evidence_metrics": { "stability_index": 0.93 }
+    }
+  ]
+}
