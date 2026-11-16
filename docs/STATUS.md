@@ -26,6 +26,13 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
+## Probíhající milník: matematická simulace + optimalizátor (vlastní brief uživatele, QA systém)
+
+- [x] FÁZE 3 schválena → implementace spuštěna. Stack: Python 3, pouze stdlib. Souřadnice x vpřed / y vlevo / z vzhůru, SI, dt=1/240.
+- [ ] Vlna 1 (8 implementačních agentů, disjunktní vlastnictví): A kontrakty, B fyzika, C sim-engine, D A-Chassis adaptér, E reference, F telemetrie, G optimalizátor+pipeline, H testy+CI
+- [ ] Vlna 2 (nezávislé QA, oddělení agenti): QA-fyzika (B+C), QA-kontrakty/data (A+D+E), QA-optimalizace+integrace (F+G+H)
+- [ ] Koordinátor: verifikace, commit/push každé vlny, závěrečný report, definice další fáze (Studio harness)
+
 ## Další kroky (koordinátor po dodání)
 
 1. Zkontrolovat kompatibilitu 6 výstupů.
