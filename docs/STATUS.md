@@ -35,7 +35,9 @@ Otevřené body před implementací:
 - [x] Koordinátorské rychlé opravy: 23× null-confidence→0 ve 3 profilech, pbrake_bias→unknown, VEHICLE-DATA škála sladěna s ARCH §3.2.
 - [x] Opravná vlna DODÁNA 2026-11-16: Fix-Api (api.py, backend=src.Physics.api), Fix-Sim (re-export run_scenario, AWD→diff, eps, R5 limit), Fix-TO (schema-validní TestResult, externí Sim v kampani, propose export, __main__, fail-fast, čítač), Fix-Con (null→0 strojně, 23 kontrol), Fix-Tests (propose_candidates, skipy).
 - [x] Koordinátorská verifikace: H suite 102 běhů = 99 PASS / 0 FAIL / 3 PENDING (oprávněné); živý TestResult (Sim→evaluate) striktně validní vůči schématu; backend kampaně = external-src.Sim (žádný fallback). Zbytková mezera: test_result.schema.json rozšířena o 5 interních volitelných polí (total_score, group_scores, baseline_total_score, protected, verdicts) — živý výstup by jinak neprošel additionalProperties:false.
-- [ ] QA re-check (nezávislí auditoři): potvrdit opravy + integrační verdikt celého řetězce
+- [x] QA re-check DODÁN 2026-11-16: fyzika PASS (R1–R5), data PASS (23/23 + 23 null@0), integrace FUNGUJE (7/7 rozhraní).
+- [x] MILNÍK SPLNĚN: `reports/MILESTONE-MATH-SIM.md` (naměřené výsledky, limity, pravidla). H suite 99/0/3, živý TestResult validní, kampaň na external-src.Sim.
+- [ ] Další fáze (nezahájena): Studio harness + kalibrace proti A-Chassis (RUN-001, float/CFRAME, A5 brána, baseline VariantStore)
 - [ ] Koordinátor: verifikace, commit/push každé vlny, závěrečný report, definice další fáze (Studio harness)
 
 ## Další kroky (koordinátor po dodání)

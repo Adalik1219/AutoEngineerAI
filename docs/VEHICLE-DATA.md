@@ -102,7 +102,7 @@ Křivka momentu (`torque_curve`): každý bod má `point_type` (factory/measured
 
 ## 6. Řešení chybějících údajů
 
-1. `value: null` + `source_type: estimate` + nízká confidence + `notes: "CHYBÍ: ..."` (viz Cx, tuhosti, setrvačnost v ukázce). Prázdné pole ani vymyšlené číslo není dovoleno.
+1. `value: null` + `source_type: estimate` + `confidence: 0` + `notes: "CHYBÍ: ..."` (viz Cx, tuhosti, setrvačnost v ukázce). Prázdné pole ani vymyšlené číslo není dovoleno.
 2. Dopočet je povolen, pokud je vzorec uveden: průměr pneu z designace, moment z výkonu (P = M·ω), čelní plocha 0,85 × š × v. Takový bod má `point_type: interpolated` / `source_type: estimate`, confidence 0.4–0.95 dle metody.
 3. Pořadí náhrad: OEM příbuzné varianty → nezávislé měření → fyzikální aproximace → kalibrační parametr simulace (označen, ladí optimizer ve fázi 10, nikdy se nezapisuje zpět jako fakt).
 4. Brzdná dráha, časy na okruhu a spotřeba nejsou tovární parametry — vždy `measurement` nebo `estimate`, nikdy `factory`.
