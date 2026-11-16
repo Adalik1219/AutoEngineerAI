@@ -354,9 +354,9 @@ PARAMETERS: list[ParameterDef] = [
        "§12", "Extrémní bias (0/1) rizikový [P]."),
     _m("pbrake_force", "PBrakeForce", "brakes", "brakes.pbrake_force", 5000, "",
        "§12", "PBrake: jen zadek (bias 0)."),
-    _m("pbrake_bias", "Bias(PBrake)", "brakes", "brakes.pbrake_bias", 0, "", "§12",
-       "Klíč pro parkovací bias audit jmenovitě neuvádí ('Bias=0') – název je "
-       "kvalifikovaný odhadem, hodnota 0 ověřena."),
+    _u("pbrake_bias", "Bias(PBrake)?", "brakes", "brakes.pbrake_bias", "§12",
+       "Název klíče audit nepotvrzuje — do ověření ve Studiu read-only.",
+       "Hodnota 0 ověřena ('Bias=0'); název je kvalifikovaný odhad (QA vlna 2)."),
     _m("engine_brake_force", "EBrakeForce", "brakes", "brakes.engine_brake",
        500, "", "§12", "Motorová brzda v redline."),
     _m("abs_threshold_sps", "ABSThreshold", "brakes", "brakes.abs_threshold_sps",

@@ -71,7 +71,7 @@ Plné strojové schéma: `C:/.DATA/AutoEngineerAI/vehicle-data/references/_schem
 | 0.85–0.95 | Shoda více zdrojů / OEM nepřímo | rozměry, V-max 219 km/h |
 | 0.6–0.8 | Jeden věrohodný zdroj nebo měření s metodikou | hmotnost dle trhu, 0–100 |
 | 0.3–0.5 | Kvalifikovaný odhad | těžiště, geometrie, brzda 100–0 |
-| 0.0–0.2 | Neznámé / zástupný symbol (`null`) | Cx, tuhosti pružin, setrvačnost |
+| 0.0 | Neznámé / zástupný symbol (`null`); `null` ⇒ vždy `confidence: 0` (ARCH §3.2, strojně vynuceno schématem) | Cx, tuhosti pružin, setrvačnost |
 
 ### 3.3 Zdrojové registry (pro tento návrh použité)
 

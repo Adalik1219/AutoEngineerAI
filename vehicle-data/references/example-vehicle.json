@@ -36,7 +36,7 @@
     "payload_max": { "value": 219, "unit": "kg", "source": "Arnold Clark max loading 219", "source_type": "aggregator", "confidence": 0.75, "notes": null },
     "weight_distribution_front_pct": { "value": 52, "unit": "%", "source": "odhad dle literatury MX-5 ND (~50:50 až 52:48)", "source_type": "estimate", "confidence": 0.45, "notes": "ODHAD: Mazda přesné % pro tento trim nezveřejňuje; simulace citlivá — ověřit vážením." },
     "cog_height": { "value": 460, "unit": "mm", "source": "odhad pro nízký roadster této hmotnosti", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD: tovární údaj neexistuje; pouze pro fyzikální model, nutno kalibrovat testem." },
-    "yaw_inertia": { "value": null, "unit": "kg·m²", "source": "neznámé — dopočítat z geometrie v Physics Analysis", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: dopočítat obdélníkovou aproximací a kalibrovat." },
+    "yaw_inertia": { "value": null, "unit": "kg·m²", "source": "neznámé — dopočítat z geometrie v Physics Analysis", "source_type": "estimate", "confidence": 0, "notes": "CHYBÍ: dopočítat obdélníkovou aproximací a kalibrovat." },
     "fuel_tank_capacity": { "value": 45, "unit": "l", "source": "Mazda AU/NZ brožury; shodné agregátory", "source_type": "factory", "confidence": 1.0, "notes": null }
   },
   "wheels_tires": {
@@ -130,8 +130,8 @@
     "rear_type": "multilink, coil springs",
     "front_arb": true,
     "rear_arb": true,
-    "spring_rate_front": { "value": null, "unit": "N/mm", "source": "neznámé — továrně nezveřejněno", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: určit měřením nebo převodem z aftermarket dat; nevymýšlet." },
-    "spring_rate_rear": { "value": null, "unit": "N/mm", "source": "neznámé", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: viz výše." },
+    "spring_rate_front": { "value": null, "unit": "N/mm", "source": "neznámé — továrně nezveřejněno", "source_type": "estimate", "confidence": 0, "notes": "CHYBÍ: určit měřením nebo převodem z aftermarket dat; nevymýšlet." },
+    "spring_rate_rear": { "value": null, "unit": "N/mm", "source": "neznámé", "source_type": "estimate", "confidence": 0, "notes": "CHYBÍ: viz výše." },
     "damper_note": "tovární tlumiče (Sport/Bilstein dle výbavy); křivky tlumení nezveřejněny"
   },
   "alignment": {
@@ -142,7 +142,7 @@
     "toe_rear_deg": { "value": 0.1, "unit": "deg", "source": "odhad (mírná sbíhavost)", "source_type": "estimate", "confidence": 0.3, "notes": "ODHAD." }
   },
   "aero": {
-    "drag_coefficient_cd": { "value": null, "unit": "-", "source": "neznámé — Mazda Cx pro ND oficiálně neuvádí", "source_type": "estimate", "confidence": 0.2, "notes": "CHYBÍ: agregátory uvádějí prázdné; nepřebírat cizí odhady bez zdroje. Pro simulaci použít kalibrační parametr." },
+    "drag_coefficient_cd": { "value": null, "unit": "-", "source": "neznámé — Mazda Cx pro ND oficiálně neuvádí", "source_type": "estimate", "confidence": 0, "notes": "CHYBÍ: agregátory uvádějí prázdné; nepřebírat cizí odhady bez zdroje. Pro simulaci použít kalibrační parametr." },
     "frontal_area": { "value": 1.9, "unit": "m²", "source": "odhad 0.85 × šířka × výška (1.735×1.23)", "source_type": "estimate", "confidence": 0.4, "notes": "ODHAD: geometrická aproximace." },
     "downforce_note": "sériový roadster bez přítlačných prvků; přítlak zanedbatelný"
   }
