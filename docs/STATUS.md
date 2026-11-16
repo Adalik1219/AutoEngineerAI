@@ -15,8 +15,8 @@
 - [x] `docs/TESTING-OPTIMIZATION.md` (585 ř.) — 11 scénářů, vícekriteriální akceptace, pseudokód
 - [x] `docs/ROBLOX-RUNTIME.md` (312 ř.) — doporučeno plugin+harness, matice L1–L5, test RUN-001
 - [x] Ověřeno: RobloxSimulator beze změny (status prázdný, HEAD 238a934); `chasis.rbxm` originál netknut (SHA shoda s kopií)
-- [ ] `git init` + první commit (rozhodne uživatel)
-- [ ] GitHub repo `Adalik1219/AutoEngineerAI` (založí uživatel nebo na pokyn)
+- [x] `git init` + první commit `b7fbd5c` (main, 13 souborů)
+- [x] GitHub repo `Adalik1219/AutoEngineerAI` (public, pushnuto 2026-11-16)
 
 ## Integrační verdikt koordinátora
 
