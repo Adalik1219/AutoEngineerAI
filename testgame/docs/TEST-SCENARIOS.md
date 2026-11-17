@@ -64,6 +64,10 @@ Frekvence vzorkovani: 60 Hz. `run_id = hash(scenario_version, driver_version, va
   `SUMMARY-<config_id>-T03` (`mean`/`std` populacni/`min`/`max`/`delta_pct`,
   `repeatability_ok`) do outboxu; validuje `tests/test_f44_regression.py`
   (prazdny `vehicle-data/telemetry/f44` = SKIP, legitimni PENDING).
+- Vyber scenaru z inboxu (F4.4, Agent F3): inbox config muze nest volitelne
+  `scenario_ids` (pole, napr. `["T03"]`) nebo `scenario_id` (jedno ID); chybi-li
+  nebo je-li neplatne, bezi plny brief T01–T07. T03-only kampan posle
+  `{"scenario_ids": ["T03"]}` a obejde ~25 min plneho briefu.
 - Outbox limit 200 kB (F4.4, Agent F2): do outboxu se uklada decimovana kopie
   (cap 200 vzorku, adaptivni `step = ceil(n/200)` — T03 ~300 vzorku: step 2;
   T01 40 s: step 12), vzdy prvni + posledni vzorek. Plna telemetrie zustava

@@ -219,6 +219,7 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		task.wait(step)
 		t += step
 		local throttle, brake, steer = runner:DriverInputs(t)
+		ScenarioRunner.WriteDriveAttributes(vehicle, throttle, brake, steer)
 		collector:SetInputs(throttle, brake, steer)
 		local sample = collector:SampleOnce(t)
 		if sample == nil then
@@ -228,6 +229,8 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	end
 	runner:Finish(status, runner.failReason)
 	collector:Stop()
+	-- F4.4 F3: vynulovani atributoveho mustku (zadna zaseknuta brzda/plyn do dalsiho behu).
+	ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0)
 
 	local completion = if status == "completed" then "completed" else "failed"
 	if runner.failReason ~= nil then
@@ -343,6 +346,35 @@ local function writeT03Summary(
 	RuntimeController.WriteOutboxResult(bridge, summaryObj)
 end
 
+-- F4.4 F3: vyber scenaru z inbox configu (volitelny; default vsechny T01-T07).
+-- Podporuje `scenario_ids` (pole) nebo `scenario_id` (jedno ID). Neplatna ci
+-- neznama ID se preskakuji; je-li vysledek prazdny, plati default (plny brief).
+local function resolveScenarioIds(config: any): { string }?
+	if config == nil then
+		return nil
+	end
+	local wanted: { string } = {}
+	local seen: { [string]: boolean } = {}
+	local function take(sid: any)
+		if typeof(sid) == "string" and not seen[sid] and ScenarioDefinitions.Get(sid) ~= nil then
+			seen[sid] = true
+			table.insert(wanted, sid)
+		end
+	end
+	local ids = (config :: any).scenario_ids
+	if typeof(ids) == "table" then
+		for _, sid in ids do
+			take(sid)
+		end
+	else
+		take((config :: any).scenario_id)
+	end
+	if #wanted == 0 then
+		return nil
+	end
+	return wanted
+end
+
 local function runBrief(config: any, scenarioIds: { string }?): { any }
 	local bridge = RuntimeController.EnsureBridge()
 	local remotes = RuntimeController.EnsureRemotes()
@@ -392,13 +424,13 @@ local function main(): ()
 	local remotes = RuntimeController.EnsureRemotes()
 	RuntimeController.BindSubmitConfig(remotes, function(config: any)
 		task.spawn(function()
-			runBrief(config)
+			runBrief(config, resolveScenarioIds(config))
 		end)
 	end)
 	local pending = RuntimeController.ReadInboxConfig(bridge, nil)
 	if pending ~= nil then
 		task.spawn(function()
-			runBrief(pending)
+			runBrief(pending, resolveScenarioIds(pending))
 		end)
 	end
 end

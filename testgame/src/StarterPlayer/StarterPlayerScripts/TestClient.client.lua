@@ -30,6 +30,9 @@
 --   klient -> server FireServer { type = "Started", scenarioId }
 --   klient -> server FireServer { type = "Result", scenarioId, outcome, reason, runTime_s, distance_studs }
 --   klient -> server FireServer { type = "Error", message }
+-- Harness-brief (ReplicatedStorage/AutoEngineerRemotes/AERunBrief, F4.4 Agent F3):
+--   server -> klient OnClientEvent { run_id, scenario_id, params? } -- stejny Start
+--   (usednuti hrace, je-li postava; zadny teleport). Obe sbernice aktivni soucasne.
 -- outcome: "completed" | "aborted" | "timeout" | "emergency_stop" | "stopped".
 --
 -- Jazyk: komentare cesky, identifikatory anglicky.
@@ -44,6 +47,8 @@ local SHARED_NAME = "Shared"
 local DRIVER_MODULE_NAME = "AutonomousDriver"
 local SCENARIOS_MODULE_NAME = "ScenarioDefinitions"
 local REMOTE_NAME = "AE_DriverCommands"
+local RUN_REMOTES_FOLDER = "AutoEngineerRemotes"
+local RUN_BRIEF_NAME = "AERunBrief"
 local DRIVE_SEAT_NAME = "DriveSeat"
 local TUNE_MODULE_NAME = "A-Chassis Tune"
 
@@ -310,6 +315,40 @@ remote.OnClientEvent:Connect(function(msg: any)
 		-- Server oznamuje vjezd do brzdne zony (T03).
 		RuntimeController.brakeZone = msg.value == true
 	end
+end)
+
+-- Prijem briefu od serveroveho harnessu (F4.4 Agent F3): stejny Start jako pres
+-- AE_DriverCommands -- usednuti hrace (je-li postava), zadny teleport.
+-- Sbernice AE_DriverCommands zustava beze zmen; obe aktivni soucasne.
+task.spawn(function()
+	local folder = ReplicatedStorage:FindFirstChild(RUN_REMOTES_FOLDER)
+	if folder == nil then
+		folder = ReplicatedStorage:WaitForChild(RUN_REMOTES_FOLDER, 60)
+	end
+	if folder == nil then
+		return
+	end
+	local brief = folder:FindFirstChild(RUN_BRIEF_NAME)
+	if brief == nil then
+		brief = folder:WaitForChild(RUN_BRIEF_NAME, 60)
+	end
+	if brief == nil or not brief:IsA("RemoteEvent") then
+		return
+	end
+	brief.OnClientEvent:Connect(function(msg: any)
+		if type(msg) ~= "table" then
+			return
+		end
+		local sid = msg.scenario_id
+		if typeof(sid) ~= "string" or sid == "" then
+			return
+		end
+		local params: { [string]: any }? = nil
+		if typeof(msg.params) == "table" then
+			params = msg.params
+		end
+		StartScenario(sid, params)
+	end)
 end)
 
 -- Pojistka: pri smrti postavy vstupy na nulu (zadny duchovni plyn).

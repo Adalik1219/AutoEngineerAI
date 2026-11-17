@@ -119,6 +119,21 @@ function ScenarioRunner:DriverInputs(t: number): (number, number, number)
 	end
 end
 
+-- F4.4 F3: zapis ridiciho vystupu do atributu vozu (server->klient replikace).
+-- Drive mustek (VehicleManager.ApplyDriveInputBridge) je v Heartbeat smycce ORuje
+-- do _IBrake/_IThrot/_GSteerT. Zadny jiny vstup se tu nemeni; sedadlo se nepouziva
+-- (Drive ho v tomto buildu necte, viz hlavicka).
+function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: number, brake: number, steer: number): ()
+	if vehicle == nil then
+		return
+	end
+	pcall(function()
+		vehicle:SetAttribute("AE_Throttle", throttle)
+		vehicle:SetAttribute("AE_Brake", brake)
+		vehicle:SetAttribute("AE_Steer", steer)
+	end)
+end
+
 -- Vyhodnoceni ukonceni; vraci "running" | "completed" | "failed".
 function ScenarioRunner:Evaluate(sample: any, def: any, t: number): string
 	if sample == nil then
