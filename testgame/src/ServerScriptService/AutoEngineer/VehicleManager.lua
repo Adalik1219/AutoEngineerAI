@@ -19,7 +19,7 @@ VehicleManager.TEMPLATE_NAME = "JeepTemplate"
 VehicleManager.TEMPLATES_FOLDER_NAME = "VehicleTemplates"
 VehicleManager.TUNE_MODULE_NAME = "A-Chassis Tune"
 
--- Mnozina MUTABLE_TUNE klicu (79 polozek, generovano z parameters.json).
+-- Mnozina MUTABLE_TUNE klicu (82 polozek, generovano z parameters.json, F4.3 live-rekonciliace).
 local MUTABLE_TUNE_SET = {
 	ABSThreshold = true,
 	Ackerman = true,
@@ -29,8 +29,8 @@ local MUTABLE_TUNE_SET = {
 	AutoUpThresh = true,
 	AxleDensity = true,
 	AxleSize = true,
-	Bias = true,
 	BrakeAccel = true,
+	BrakeBias = true,
 	BrakeDecel = true,
 	BrakeForce = true,
 	CGHeight = true,
@@ -39,7 +39,6 @@ local MUTABLE_TUNE_SET = {
 	ClutchKick = true,
 	Config = true,
 	CurveMult = true,
-	Damping = true,
 	DifferentialType = true,
 	EBrakeForce = true,
 	Electric = true,
@@ -48,8 +47,11 @@ local MUTABLE_TUNE_SET = {
 	FDMult = true,
 	FDiffCoast = true,
 	FDiffPower = true,
+	FDiffPreload = true,
 	FGyroDamp = true,
 	FGyroDampening = true,
+	FSusDamping = true,
+	FSusStiffness = true,
 	FWSteer = true,
 	FWheelDensity = true,
 	FinalDrive = true,
@@ -64,10 +66,12 @@ local MUTABLE_TUNE_SET = {
 	PBrakeForce = true,
 	PeakRPM = true,
 	PeakSharpness = true,
-	Preload = true,
+	RDiffPreload = true,
 	RGyroDamp = true,
 	RGyroDampening = true,
 	RPMEngage = true,
+	RSusDamping = true,
+	RSusStiffness = true,
 	RWheelDensity = true,
 	Ratios = true,
 	Redline = true,
@@ -83,7 +87,6 @@ local MUTABLE_TUNE_SET = {
 	SteerRatio = true,
 	SteerSpeed = true,
 	SteeringType = true,
-	Stiffness = true,
 	Superchargers = true,
 	SusRadius = true,
 	T2_BoostLag = true,
@@ -102,12 +105,13 @@ local MUTABLE_TUNE_SET = {
 	WeightDist = true,
 }
 
--- Zname odmitane klice mimo MUTABLE_TUNE s duvodem (dle katalogu):
--- READ_ONLY (3), SCRIPT_CONTROLLED (14), STRUCTURE_CONTROLLED (2), UNKNOWN (27).
+-- Zname odmitane klice mimo MUTABLE_TUNE s duvodem (dle katalogu F4.3):
+-- READ_ONLY (3), SCRIPT_CONTROLLED (7), STRUCTURE_CONTROLLED (2), UNKNOWN (3),
+-- PREJMENOVANO (15).
 local DENY_REASONS = {
 	["ElecRedline/ElecTransition2"] = "READ_ONLY: Gauges cte jine nazvy nez Tune (audit §15); nezapisovat",
-	FWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v Tune neexistuje (audit §10, §17.4)",
-	RWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v Tune neexistuje (audit §10, §17.4)",
+	FWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v live Tune neexistuje (audit §10, §17.4, F4.3)",
+	RWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v live Tune neexistuje (audit §10, §17.4, F4.3)",
 	DownforceF = "SCRIPT_CONTROLLED: pritlak F je konstanta ve skriptu Aerodynamics, mimo Tune (audit §13)",
 	DownforceR = "SCRIPT_CONTROLLED: pritlak R je konstanta ve skriptu Aerodynamics, mimo Tune (audit §13)",
 	Drag = "SCRIPT_CONTROLLED: odpor je konstanta v Aerodynamics, mimo Tune (audit §13)",
@@ -117,9 +121,24 @@ local DENY_REASONS = {
 	WheelspinRatio = "SCRIPT_CONTROLLED: pomer prokluzu je v Simulated, mimo Tune (audit §10)",
 	WheelRadius = "STRUCTURE_CONTROLLED: polomer kol je geometrie dilu, ne parametr Tune (audit §10, katalog)",
 	Wheelbase = "STRUCTURE_CONTROLLED: rozvor/rozchod je geometrie, mimo Tune (audit §1, katalog)",
-	StAxisOffset = "UNKNOWN: klic v Tune CHYBI, Initialize:171 ho cte -> runtime error (audit §9, §17.1)",
-	CompressionRatio = "UNKNOWN: klic auditem nepotvrzen, jen ve vzorci HP_T (audit §5, katalog)",
-	StiffnessPending = "UNKNOWN: viz Stiffness/Damping - float-lane dekod nepotvrzen (audit §1, katalog PENDING)",
+	StAxisOffset = "UNKNOWN: klic v live Tune CHYBI, Initialize:171 ho cte -> runtime error (audit §9, §17.1, F4.3)",
+	CompressionRatio = "UNKNOWN: klic auditem potvrzen jen ve vzorci HP_T, hodnota v katalogu null (audit §5, katalog)",
+	Bias = "PREJMENOVANO: genericky klic neexistuje -> zapis BrakeBias (F4.3 live Tune)",
+	Damping = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusDamping / RSusDamping (F4.3 live Tune)",
+	Stiffness = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusStiffness / RSusStiffness (F4.3 live Tune)",
+	Preload = "PREJMENOVANO: genericky klic neexistuje -> zapis FDiffPreload / RDiffPreload (F4.3 live Tune)",
+	SlipThres = "PREJMENOVANO: klic stareho difu -> zapis FDiffSlipThres / RDiffSlipThres / CDiffSlipThres (F4.3 live Tune)",
+	LockThres = "PREJMENOVANO: klic stareho difu -> zapis FDiffLockThres / RDiffLockThres / CDiffLockThres (F4.3 live Tune)",
+	SusLength = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusLength / RSusLength (F4.3 live Tune)",
+	PreCompress = "PREJMENOVANO: genericky klic neexistuje -> zapis FPreCompress / RPreCompress (F4.3 live Tune)",
+	ExtensionLim = "PREJMENOVANO: genericky klic neexistuje -> zapis FExtensionLim / RExtensionLim (F4.3 live Tune)",
+	CompressLim = "PREJMENOVANO: genericky klic neexistuje -> zapis FCompressLim / RCompressLim (F4.3 live Tune)",
+	SusAngle = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusAngle / RSusAngle (F4.3 live Tune)",
+	AnchorOffset = "PREJMENOVANO: genericky klic neexistuje -> zapis FAnchorOffset / RAnchorOffset (F4.3 live Tune)",
+	["Bias(PBrake)?"] = "PREJMENOVANO: odhad nazvu -> zapis PBrakeBias, hodnota 0 overena behem (F4.3 live Tune)",
+	["RDiffPower?"] = "PREJMENOVANO: odhad nazvu -> zapis RDiffPower (F4.3 live Tune)",
+	["RDiffCoast?"] = "PREJMENOVANO: odhad nazvu -> zapis RDiffCoast (F4.3 live Tune)",
+	SusCoilPending = "UNKNOWN: viz FSus*/RSus* zaznamy - dekod float-lane nepotvrzen (audit §1, katalog PENDING)",
 }
 
 -- Originalni hodnoty pro rollback: [vehicle] -> { [key] = deepCopy(hodnoty) }.
@@ -320,7 +339,7 @@ function VehicleManager.Rollback(vehicle)
 	return count
 end
 
--- Vrati serazeny seznam vsech MUTABLE_TUNE klicu (79 polozek dle katalogu).
+-- Vrati serazeny seznam vsech MUTABLE_TUNE klicu (82 polozek dle katalogu F4.3).
 function VehicleManager.GetMutableKeys()
 	local keys = {}
 	for key, _ in pairs(MUTABLE_TUNE_SET) do

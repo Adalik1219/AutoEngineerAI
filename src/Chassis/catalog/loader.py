@@ -30,7 +30,7 @@ VERIFICATION = ("PASS", "PENDING")
 VALUE_TYPES = ("boolean", "integer", "number", "string", "array",
                "object", "null")
 
-EXPECTED_COUNT = 125  # = počet položek achassis_v1 (Agent D); úplnost vs audit
+EXPECTED_COUNT = 138  # = počet položek achassis_v1 po F4.3 live-rekonciliaci (Agent R)
 
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                           "parameters.json")

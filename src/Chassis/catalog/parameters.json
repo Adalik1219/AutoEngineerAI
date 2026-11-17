@@ -219,7 +219,7 @@
  },
  {
   "id": "brake_bias_front",
-  "tune_key": "Bias",
+  "tune_key": "BrakeBias",
   "category": "MUTABLE_TUNE",
   "config_path": "brakes.bias_front",
   "value": 0.6,
@@ -228,16 +228,16 @@
   "min": 0,
   "max": 1,
   "default": 0.6,
-  "function": "Přední bias 0.6.",
-  "physical_effect": "Extrémní 0/1 rizikový [P]. Extrémní bias (0/1) rizikový [P].",
+  "function": "Přední brzdný bias 0.6 (live-klíč BrakeBias).",
+  "physical_effect": "Rozdělení brzdné síly předek/zadek z BrakeForce; extrémy 0/1 rizikové [P]. Živá hodnota šablony 0.6 (ověřeno během F4.3).",
   "used_in": [
    "Drive"
   ],
   "depends_on": [],
   "conflicts": [],
   "change_method": "tune",
-  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
-  "confidence": 0.9,
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 1.0,
   "verification_status": "PASS"
  },
  {
@@ -408,43 +408,68 @@
   "verification_status": "PASS"
  },
  {
-  "id": "damper",
-  "tune_key": "Damping",
+  "id": "damper_f",
+  "tune_key": "FSusDamping",
   "category": "MUTABLE_TUNE",
-  "config_path": "suspension.damper_f_Nspm",
+  "config_path": "suspension.damper_f",
   "value": null,
   "unit": "",
-  "value_type": "integer",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": 500,
-  "function": "Tlumič 500 – KANDIDÁTNÍ dekód (viz stiffness).",
-  "physical_effect": "Damping=0 → houpání. Hodnota PENDING. Damping = 0 → houpání. Kandidátní dekód – viz limity.",
+  "function": "Tlumič F (live FSusDamping) – kandidátní dekód 500.",
+  "physical_effect": "Tlumení F nápravy (Initialize přepisuje SpringConstraint); 0 → houpání. Hodnota PENDING do Studia (kandidátní dekód, symetrie kol nevychází).",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [
-   "spring_stiffness"
+   "sus_stiffness_f"
   ],
   "conflicts": [],
   "change_method": "tune",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.4,
   "verification_status": "PENDING"
  },
  {
-  "id": "diff_preload",
-  "tune_key": "Preload",
+  "id": "damper_r",
+  "tune_key": "RSusDamping",
   "category": "MUTABLE_TUNE",
-  "config_path": "powertrain.diff.preload",
+  "config_path": "suspension.damper_r",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 500,
+  "function": "Tlumič R (live RSusDamping) – kandidátní dekód 500.",
+  "physical_effect": "Tlumení R nápravy (Initialize přepisuje SpringConstraint); 0 → houpání. Hodnota PENDING do Studia (kandidátní dekód, symetrie kol nevychází).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_stiffness_r"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.4,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "diff_preload_f",
+  "tune_key": "FDiffPreload",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.diff.front_preload",
   "value": 20,
   "unit": "0–100",
   "value_type": "integer",
   "min": 0,
   "max": 100,
   "default": 20,
-  "function": "Předpětí difu (20, 0–100).",
-  "physical_effect": "Vysoký Preload + zamčené dify v rejdu = přetáčení simu [P]. Vysoký Preload + uzamčené dify v rejdu = přetáčení simu [P].",
+  "function": "Předpětí předního difu 20 (0–100, live FDiffPreload).",
+  "physical_effect": "Váha uzávěrky předku; vysoký preload + uzamčené dify v rejdu = přetáčení simu [P].",
   "used_in": [
    "Drive"
   ],
@@ -453,9 +478,34 @@
   ],
   "conflicts": [],
   "change_method": "tune",
-  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.9,
   "verification_status": "PASS"
+ },
+ {
+  "id": "diff_preload_r",
+  "tune_key": "RDiffPreload",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.diff.rear_preload",
+  "value": null,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Předpětí zadního difu (live RDiffPreload) – živá hodnota R neuvedena.",
+  "physical_effect": "PENDING Studio: odečíst RDiffPreload ze šablony. RO-DŮVOD: audit uvádí jen obecné Preload=20.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.3,
+  "verification_status": "PENDING"
  },
  {
   "id": "differential_type",
@@ -1402,28 +1452,54 @@
   "verification_status": "PASS"
  },
  {
-  "id": "spring_stiffness",
-  "tune_key": "Stiffness",
+  "id": "sus_stiffness_f",
+  "tune_key": "FSusStiffness",
   "category": "MUTABLE_TUNE",
-  "config_path": "suspension.spring_f_Npm",
+  "config_path": "suspension.stiffness_f",
   "value": null,
   "unit": "",
-  "value_type": "integer",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": 20000,
-  "function": "Tuhost pružin 20000 – KANDIDÁTNÍ dekód, symetrie kol nevychází.",
-  "physical_effect": "Bezpečné cca 0.25–4×; <~5000 = dosedání. Hodnota PENDING do Studia. F i R stejné; bezpečné cca 0.25–4×; < ~5000 = dosedání. POZOR: kandidátní dekód float-lane, symetrie kol nevychází – viz limity.",
+  "function": "Tuhost pružin F (live FSusStiffness) – kandidátní dekód 20000.",
+  "physical_effect": "Tuhost F nápravy; < ~5000 = dosedání; bezpečné cca 0.25–4×. Hodnota PENDING do Studia.",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [
-   "sus_length",
-   "pre_compress"
+   "sus_length_f",
+   "pre_compress_f"
   ],
   "conflicts": [],
   "change_method": "tune",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.4,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "sus_stiffness_r",
+  "tune_key": "RSusStiffness",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.stiffness_r",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 20000,
+  "function": "Tuhost pružin R (live RSusStiffness) – kandidátní dekód 20000.",
+  "physical_effect": "Tuhost R nápravy; < ~5000 = dosedání; bezpečné cca 0.25–4×. Hodnota PENDING do Studia.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length_r",
+   "pre_compress_r"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.4,
   "verification_status": "PENDING"
  },
@@ -2342,7 +2418,7 @@
  },
  {
   "id": "electric_gauge_names",
-  "tune_key": "ElecRedline/ElecTransition2",
+  "tune_key": null,
   "category": "READ_ONLY",
   "config_path": "engine.electric.gauge_names",
   "value": null,
@@ -2351,7 +2427,7 @@
   "min": null,
   "max": null,
   "default": null,
-  "function": "Gauges čte ElecRedline/ElecTransition2, Tune má E_Redline/E_Trans2.",
+  "function": "Gauges čte ElecRedline/ElecTransition2, live Tune má E_Redline/E_Trans2 (názvy jen v kódu, F4.3 potvrzeno).",
   "physical_effect": "CHYBA č.3: projeví se jen při Electric=true (zde mrtvé). Nikdy nezapisovat. Chyba kódu č. 3 – viz limits().",
   "used_in": [
    "Gauges_AC6"
@@ -2370,7 +2446,7 @@
  },
  {
   "id": "legacy_wheel_density_f",
-  "tune_key": "FWLgcyDensity",
+  "tune_key": null,
   "category": "READ_ONLY",
   "config_path": "tires.legacy_density_f",
   "value": null,
@@ -2379,7 +2455,7 @@
   "min": null,
   "max": null,
   "default": null,
-  "function": "FWLgcyDensity – klíč neexistuje; mrtvá non-PGS větev.",
+  "function": "FWLgcyDensity – klíč v live Tune neexistuje (potvrzeno F4.3); mrtvá non-PGS větev.",
   "physical_effect": "CHYBA č.4: bez PGS Initialize skončí chybou dřív. Nikdy nezapisovat. Chyba kódu č. 4 – viz limits().",
   "used_in": [
    "Simulated"
@@ -2387,13 +2463,13 @@
   "depends_on": [],
   "conflicts": [],
   "change_method": "none",
-  "source": "A-CHASSIS-AUDIT.md §14, §17; Simulated:1-196; Initialize:96-125",
+  "source": "A-CHASSIS-AUDIT.md §14, §17; Simulated:1-196; Initialize:96-125 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.9,
   "verification_status": "PASS"
  },
  {
   "id": "legacy_wheel_density_r",
-  "tune_key": "RWLgcyDensity",
+  "tune_key": null,
   "category": "READ_ONLY",
   "config_path": "tires.legacy_density_r",
   "value": null,
@@ -2410,23 +2486,23 @@
   "depends_on": [],
   "conflicts": [],
   "change_method": "none",
-  "source": "A-CHASSIS-AUDIT.md §14, §17; Simulated:1-196; Initialize:96-125",
+  "source": "A-CHASSIS-AUDIT.md §14, §17; Simulated:1-196; Initialize:96-125 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.9,
   "verification_status": "PASS"
  },
  {
-  "id": "anchor_offset",
-  "tune_key": "AnchorOffset",
+  "id": "anchor_offset_f",
+  "tune_key": "FAnchorOffset",
   "category": "UNKNOWN",
-  "config_path": "suspension.anchor_offset",
+  "config_path": "suspension.anchor_offset_f",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "object",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Offset ukotvení – hodnota neuvedena (neaktivní větev).",
-  "physical_effect": "PENDING. RO-DŮVOD: Hodnota v auditu neuvedena (jen neaktivní procedurální větev).",
+  "function": "Offset ukotvení F (live FAnchorOffset, tabulka) – hodnota neuvedena.",
+  "physical_effect": "Neaktivní procedurální větev. PENDING. RO-DŮVOD: hodnota v auditu neuvedena.",
   "used_in": [
    "Initialize"
   ],
@@ -2437,33 +2513,85 @@
    "arm_kinematics"
   ],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.1,
   "verification_status": "PENDING"
  },
  {
-  "id": "compress_lim",
-  "tune_key": "CompressLim",
+  "id": "anchor_offset_r",
+  "tune_key": "RAnchorOffset",
   "category": "UNKNOWN",
-  "config_path": "suspension.compress_lim",
+  "config_path": "suspension.anchor_offset_r",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "object",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Limit stlačení – hodnota neuvedena.",
-  "physical_effect": "Vstup MinLength vzorce; mimo FreeLength = trvalé dosednutí. RO-DŮVOD: Hodnota v auditu neuvedena (jen vzorec MinLength).",
+  "function": "Offset ukotvení R (live RAnchorOffset, tabulka) – hodnota neuvedena.",
+  "physical_effect": "Neaktivní procedurální větev. PENDING. RO-DŮVOD: hodnota v auditu neuvedena.",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [
-   "sus_length"
+   "arm_kinematics"
+  ],
+  "conflicts": [
+   "arm_kinematics"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "compress_lim_f",
+  "tune_key": "FCompressLim",
+  "category": "UNKNOWN",
+  "config_path": "suspension.compress_lim_f",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Limit stlačení F (live FCompressLim) – hodnota neuvedena.",
+  "physical_effect": "Vstup MinLength vzorce F; mimo FreeLength = trvalé dosednutí. RO-DŮVOD: audit zná jen odvozené MinLength 2.35.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length_f"
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "compress_lim_r",
+  "tune_key": "RCompressLim",
+  "category": "UNKNOWN",
+  "config_path": "suspension.compress_lim_r",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Limit stlačení R (live RCompressLim) – hodnota neuvedena.",
+  "physical_effect": "Vstup MinLength vzorce R; mimo FreeLength = trvalé dosednutí. RO-DŮVOD: audit zná jen odvozené MinLength 2.35.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length_r"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
   "verification_status": "PENDING"
  },
  {
@@ -2721,28 +2849,53 @@
   "verification_status": "PENDING"
  },
  {
-  "id": "extension_lim",
-  "tune_key": "ExtensionLim",
+  "id": "extension_lim_f",
+  "tune_key": "FExtensionLim",
   "category": "UNKNOWN",
-  "config_path": "suspension.extension_lim",
+  "config_path": "suspension.extension_lim_f",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Limit prodloužení – hodnota neuvedena.",
-  "physical_effect": "Vstup MaxLength vzorce; mimo FreeLength = trvalé propnutí. RO-DŮVOD: Hodnota v auditu neuvedena (jen vzorec MaxLength).",
+  "function": "Limit prodloužení F (live FExtensionLim) – hodnota neuvedena.",
+  "physical_effect": "Vstup MaxLength vzorce F; mimo FreeLength = trvalé propnutí. RO-DŮVOD: audit zná jen odvozené MaxLength 3.2.",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [
-   "sus_length"
+   "sus_length_f"
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "extension_lim_r",
+  "tune_key": "RExtensionLim",
+  "category": "UNKNOWN",
+  "config_path": "suspension.extension_lim_r",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Limit prodloužení R (live RExtensionLim) – hodnota neuvedena.",
+  "physical_effect": "Vstup MaxLength vzorce R; mimo FreeLength = trvalé propnutí. RO-DŮVOD: audit zná jen odvozené MaxLength 3.2.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length_r"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
   "verification_status": "PENDING"
  },
  {
@@ -2773,18 +2926,18 @@
   "verification_status": "PENDING"
  },
  {
-  "id": "lock_thresh_old",
-  "tune_key": "LockThres",
+  "id": "lock_thresh_f",
+  "tune_key": "FDiffLockThres",
   "category": "UNKNOWN",
-  "config_path": "powertrain.diff.lock_thresh_old",
+  "config_path": "powertrain.diff.front_lock_thresh",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Práh uzávěrky starého difu – ignorován při New.",
-  "physical_effect": "Podmíněný; hodnota neuvedena. PENDING. RO-DŮVOD: Starý dif, při DifferentialType=New ignorován; hodnota neuvedena.",
+  "function": "Práh uzávěrky F (live FDiffLockThres) – hodnota neuvedena.",
+  "physical_effect": "Podmíněný parametr difu F. PENDING. RO-DŮVOD: audit zná jen staré LockThres (ignorováno při DifferentialType=New); F/R/C varianty auditem nepopsány.",
   "used_in": [
    "Drive"
   ],
@@ -2795,23 +2948,77 @@
    "differential_type"
   ],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "lock_thresh_r",
+  "tune_key": "RDiffLockThres",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.rear_lock_thresh",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Práh uzávěrky R (live RDiffLockThres) – hodnota neuvedena.",
+  "physical_effect": "Podmíněný parametr difu R. PENDING. RO-DŮVOD: audit zná jen staré LockThres (ignorováno při DifferentialType=New); F/R/C varianty auditem nepopsány.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [
+   "differential_type"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "lock_thresh_c",
+  "tune_key": "CDiffLockThres",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.center_lock_thresh",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Práh uzávěrky C (live CDiffLockThres) – hodnota neuvedena.",
+  "physical_effect": "Podmíněný parametr difu C. PENDING. RO-DŮVOD: audit zná jen staré LockThres (ignorováno při DifferentialType=New); F/R/C varianty auditem nepopsány.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [
+   "differential_type"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
   "verification_status": "PENDING"
  },
  {
   "id": "pbrake_bias",
-  "tune_key": "Bias(PBrake)?",
+  "tune_key": "PBrakeBias",
   "category": "UNKNOWN",
   "config_path": "brakes.pbrake_bias",
-  "value": null,
+  "value": 0,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
-  "default": null,
-  "function": "Bias ruční brzdy – název klíče audit nepotvrzuje (hodnota 0 ano).",
-  "physical_effect": "Kvalifikovaný odhad z QA vlny 2; read-only do Studia. PENDING. Hodnota 0 ověřena ('Bias=0'); název je kvalifikovaný odhad (QA vlna 2). RO-DŮVOD: Název klíče audit nepotvrzuje — do ověření ve Studiu read-only.",
+  "default": 0,
+  "function": "Bias ruční brzdy 0 – live-klíč PBrakeBias (jen zadek).",
+  "physical_effect": "PBrake brzdí jen zadek (bias 0). Živá hodnota šablony 0 (ověřeno během F4.3).",
   "used_in": [
    "Drive"
   ],
@@ -2820,48 +3027,73 @@
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
-  "confidence": 0.3,
-  "verification_status": "PENDING"
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.9,
+  "verification_status": "PASS"
  },
  {
-  "id": "pre_compress",
-  "tune_key": "PreCompress",
+  "id": "pre_compress_f",
+  "tune_key": "FPreCompress",
   "category": "UNKNOWN",
-  "config_path": "suspension.pre_compress",
+  "config_path": "suspension.pre_compress_f",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Předpětí pružiny – hodnota neuvedena.",
-  "physical_effect": "Vstup FreeLength vzorce. PENDING. RO-DŮVOD: Hodnota v auditu neuvedena (jen vzorec FreeLength).",
+  "function": "Předpětí pružiny F (live FPreCompress) – hodnota neuvedena.",
+  "physical_effect": "Vstup FreeLength vzorce F. PENDING. RO-DŮVOD: audit zná jen odvozené FreeLength 2.7.",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [
-   "sus_length"
+   "sus_length_f"
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "pre_compress_r",
+  "tune_key": "RPreCompress",
+  "category": "UNKNOWN",
+  "config_path": "suspension.pre_compress_r",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Předpětí pružiny R (live RPreCompress) – hodnota neuvedena.",
+  "physical_effect": "Vstup FreeLength vzorce R. PENDING. RO-DŮVOD: audit zná jen odvozené FreeLength 2.7.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length_r"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
   "verification_status": "PENDING"
  },
  {
   "id": "rear_diff_coast",
-  "tune_key": "RDiffCoast?",
+  "tune_key": "RDiffCoast",
   "category": "UNKNOWN",
   "config_path": "powertrain.diff.rear_coast",
-  "value": null,
-  "unit": "",
-  "value_type": "null",
-  "min": null,
-  "max": null,
-  "default": null,
-  "function": "Zadní dif ubrání – audit uvádí jen 'zadek 30' bez názvu.",
-  "physical_effect": "Název RDiffCoast? odvozen, NEPOTVRZEN. PENDING. RO-DŮVOD: Audit uvádí jen 'zadek 40/30' bez názvu klíče – název RDiffCoast odvozen, nepotvrzen; hodnota 30 nepřevzata jako fakt.",
+  "value": 30,
+  "unit": "0–100",
+  "value_type": "integer",
+  "min": 0,
+  "max": 100,
+  "default": 30,
+  "function": "Zadní dif ubrání 30 (live-klíč RDiffCoast potvrzen F4.3).",
+  "physical_effect": "Váha násobiče zadku bez plynu. PENDING: párování 30↔coast odvozeno z paralelní struktury auditu.",
   "used_in": [
    "Drive"
   ],
@@ -2870,23 +3102,23 @@
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.7,
   "verification_status": "PENDING"
  },
  {
   "id": "rear_diff_power",
-  "tune_key": "RDiffPower?",
+  "tune_key": "RDiffPower",
   "category": "UNKNOWN",
   "config_path": "powertrain.diff.rear_power",
-  "value": null,
-  "unit": "",
-  "value_type": "null",
-  "min": null,
-  "max": null,
-  "default": null,
-  "function": "Zadní dif plyn – audit uvádí jen 'zadek 40' bez názvu klíče.",
-  "physical_effect": "Název RDiffPower? odvozen, NEPOTVRZEN; hodnota nepřevzata. PENDING. Bezpečné pásmo 0–100; vysoký Preload = nedotáčivost + odpor v rejdu. RO-DŮVOD: Audit uvádí jen 'zadek 40/30' bez názvu klíče – název RDiffPower odvozen, nepotvrzen; hodnota 40 nepřevzata jako fakt.",
+  "value": 40,
+  "unit": "0–100",
+  "value_type": "integer",
+  "min": 0,
+  "max": 100,
+  "default": 40,
+  "function": "Zadní dif plyn 40 (live-klíč RDiffPower potvrzen F4.3).",
+  "physical_effect": "Váha násobiče zadku pod plynem; vysoký preload = nedotáčivost + odpor v rejdu. PENDING: párování 40↔power odvozeno z paralelní struktury auditu.",
   "used_in": [
    "Drive"
   ],
@@ -2895,8 +3127,8 @@
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.7,
   "verification_status": "PENDING"
  },
  {
@@ -2927,18 +3159,18 @@
   "verification_status": "PENDING"
  },
  {
-  "id": "slip_thresh_old",
-  "tune_key": "SlipThres",
+  "id": "slip_thresh_f",
+  "tune_key": "FDiffSlipThres",
   "category": "UNKNOWN",
-  "config_path": "powertrain.diff.slip_thresh_old",
+  "config_path": "powertrain.diff.front_slip_thresh",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Práh prokluzu starého difu – ignorován při DifferentialType=New.",
-  "physical_effect": "Podmíněný parametr; hodnota neuvedena. PENDING. RO-DŮVOD: Starý dif, při DifferentialType=New ignorován; hodnota neuvedena.",
+  "function": "Práh prokluzu F (live FDiffSlipThres) – hodnota neuvedena.",
+  "physical_effect": "Podmíněný parametr difu F. PENDING. RO-DŮVOD: audit zná jen staré SlipThres (ignorováno při DifferentialType=New); F/R/C varianty auditem nepopsány.",
   "used_in": [
    "Drive"
   ],
@@ -2949,8 +3181,62 @@
    "differential_type"
   ],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "slip_thresh_r",
+  "tune_key": "RDiffSlipThres",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.rear_slip_thresh",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Práh prokluzu R (live RDiffSlipThres) – hodnota neuvedena.",
+  "physical_effect": "Podmíněný parametr difu R. PENDING. RO-DŮVOD: audit zná jen staré SlipThres (ignorováno při DifferentialType=New); F/R/C varianty auditem nepopsány.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [
+   "differential_type"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "slip_thresh_c",
+  "tune_key": "CDiffSlipThres",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.center_slip_thresh",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Práh prokluzu C (live CDiffSlipThres) – hodnota neuvedena.",
+  "physical_effect": "Podmíněný parametr difu C. PENDING. RO-DŮVOD: audit zná jen staré SlipThres (ignorováno při DifferentialType=New); F/R/C varianty auditem nepopsány.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [
+   "differential_type"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
   "verification_status": "PENDING"
  },
  {
@@ -2976,7 +3262,7 @@
  },
  {
   "id": "steer_axis_offset",
-  "tune_key": "StAxisOffset",
+  "tune_key": null,
   "category": "UNKNOWN",
   "config_path": "steering.axis_offset",
   "value": null,
@@ -2985,15 +3271,15 @@
   "min": null,
   "max": null,
   "default": null,
-  "function": "StAxisOffset – klíč v Tune CHYBÍ, Initialize:171 ho čte.",
-  "physical_effect": "CHYBA č.1: CFrame.new(0,nil,0) → podezření na runtime error. PENDING Studio. Chyba kódu č. 1 – viz limits(). RO-DŮVOD: Klíč v Tune CHYBÍ, ale Initialize:171 ho čte (CFrame.new(0, nil, 0) → podezření na runtime error). Nutno ověřit prvním spuštěním ve Studiu.",
+  "function": "StAxisOffset – klíč v live Tune CHYBÍ (potvrzeno F4.3), Initialize:171 ho čte.",
+  "physical_effect": "CHYBA č.1: CFrame.new(0,nil,0) → podezření na runtime error. PENDING Studio. Chyba kódu č. 1 – viz limits(). RO-DŮVOD: Klíč v Tune CHYBÍ, ale Initialize:171 ho čte (CFrame.new(0, nil, 0) → podezření na runtime error). Nutno ověřit prvním spuštěním ve Studiu. F4.3: live-tune-keys.txt klíč neobsahuje – chyba č.1 trvá.",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.5,
   "verification_status": "PENDING"
  },
@@ -3023,18 +3309,18 @@
   "verification_status": "PENDING"
  },
  {
-  "id": "sus_angle",
-  "tune_key": "SusAngle",
+  "id": "sus_angle_f",
+  "tune_key": "FSusAngle",
   "category": "UNKNOWN",
-  "config_path": "suspension.angle",
+  "config_path": "suspension.angle_f",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Úhel ramen 80 – neaktivní procedurální větev.",
-  "physical_effect": "Nepřebíráno jako fakt pro tento kit. PENDING. RO-DŮVOD: Hodnota 80 patří neaktivní procedurální větvi – nepřebírána.",
+  "function": "Úhel ramen F (live FSusAngle) – 80 patří neaktivní procedurální větvi.",
+  "physical_effect": "Custom větev parametr nepoužívá. PENDING. RO-DŮVOD: hodnota 80 patří neaktivní větvi – nepřevzata.",
   "used_in": [
    "Initialize"
   ],
@@ -3045,35 +3331,89 @@
    "arm_kinematics"
   ],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
   "confidence": 0.1,
   "verification_status": "PENDING"
  },
  {
-  "id": "sus_length",
-  "tune_key": "SusLength",
+  "id": "sus_angle_r",
+  "tune_key": "RSusAngle",
   "category": "UNKNOWN",
-  "config_path": "suspension.length",
+  "config_path": "suspension.angle_r",
   "value": null,
   "unit": "",
-  "value_type": "null",
+  "value_type": "number",
   "min": null,
   "max": null,
   "default": null,
-  "function": "Základní délka SusLength – v auditu jen odvozené délky.",
-  "physical_effect": "FreeLength=SusLength+PreCompress; Max=+ExtensionLim; Min=−CompressLim. FreeLength=SusLength+PreCompress; Max=SusLength+ExtensionLim; Min=SusLength-CompressLim. Limity mimo FreeLength = trvalé dosednutí/propnutí. RO-DŮVOD: Audit dává jen odvozené délky (Free 2.7 / Max 3.2 / Min 2.35, kandidátní dekód); samotné SusLength neuvedeno.",
+  "function": "Úhel ramen R (live RSusAngle) – 80 patří neaktivní procedurální větvi.",
+  "physical_effect": "Custom větev parametr nepoužívá. PENDING. RO-DŮVOD: hodnota 80 patří neaktivní větvi – nepřevzata.",
   "used_in": [
    "Initialize"
   ],
   "depends_on": [
-   "pre_compress",
-   "extension_lim",
-   "compress_lim"
+   "arm_kinematics"
+  ],
+  "conflicts": [
+   "arm_kinematics"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "sus_length_f",
+  "tune_key": "FSusLength",
+  "category": "UNKNOWN",
+  "config_path": "suspension.length_f",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Základní délka F (live FSusLength) – hodnota neuvedena.",
+  "physical_effect": "FreeLength=FSusLength+FPreCompress; Max=+FExtensionLim; Min=−FCompressLim. Limity mimo FreeLength = dosednutí/propnutí. RO-DŮVOD: audit zná jen odvozené Free 2.7/Max 3.2/Min 2.35.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "pre_compress_f",
+   "extension_lim_f",
+   "compress_lim_f"
   ],
   "conflicts": [],
   "change_method": "pending-studio",
-  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
-  "confidence": 0.1,
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "sus_length_r",
+  "tune_key": "RSusLength",
+  "category": "UNKNOWN",
+  "config_path": "suspension.length_r",
+  "value": null,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Základní délka R (live RSusLength) – hodnota neuvedena.",
+  "physical_effect": "FreeLength=RSusLength+RPreCompress; Max=+RExtensionLim; Min=−RCompressLim. Limity mimo FreeLength = dosednutí/propnutí. RO-DŮVOD: audit zná jen odvozené Free 2.7/Max 3.2/Min 2.35.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "pre_compress_r",
+   "extension_lim_r",
+   "compress_lim_r"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35 + live: vehicle-data/analyzed/live-tune-keys.txt (F4.3 Play Solo 2026-11-17)",
+  "confidence": 0.2,
   "verification_status": "PENDING"
  },
  {
