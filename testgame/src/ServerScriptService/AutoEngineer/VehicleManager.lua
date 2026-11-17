@@ -197,44 +197,32 @@ function VehicleManager.ResolveTemplate()
 	return template
 end
 
--- F4.3-HR: oprava struktury sablony za behu (Agent HR, 2026-11-17).
--- Pricina: vsechny A-Chassis skripty (Drive LocalScript, Initialize Script,
--- Plugins/*, Simulated) jsou v sablone potomky ModuleScriptu 'A-Chassis Tune'
--- a engine je proto nespousti ('lacking capability', overeno live vypisem
--- vsech LuaSourceContainer s cestami). Sablona zustava nedotcena (bitova
--- kopie originalu); oprava se deje POUZE na pracovni kopii vznikle Clone.
--- RepairStructure presune cele podstromy 'A-Chassis Interface', 'Initialize'
--- a 'Plugins' zpod Tune na koren kopie; jejich vzajemne relativni
--- vazby (sourozenci pod spolecnym rodicem) zustavaji zachovany, Tune tabulka
--- se nemeni, nic se nemaze. 'README' se ZAMERNE nepresouva (F4.4 M2): je to
--- datovy ModuleScript (nemusi bezet) a Drive:1111 i Gauges ho ctou pres
--- require(car["A-Chassis Tune"].README) -- presun by Drive shodil jeste pred
--- Heartbeat smyckou ("README is not a valid member", overeno live). Dve kotvy
--- Initialize, ktere ukazovaly na Tune
--- jako rodice (car=script.Parent.Parent; require(script.Parent)), se prekotvi
--- na koren kopie (car=script.Parent; require Tune jmenem) — bez toho by
--- Initialize po presunu vyzadoval Model misto ModuleScriptu a build by
--- neprobehl. Overene zavislosti (live, Server): Drive cte Tune pres
--- require(car["A-Chassis Tune"]) a sourozence Car/Values/IsOn pod Interface
--- (presunem celeho Interface nedotceno); Gauges pres
--- require(car["A-Chassis Tune"].README) (README presunuto vedle Tune).
-VehicleManager.REPAIR_MOVE_NAMES = {
-	"A-Chassis Interface",
-	"Initialize",
-	"Plugins",
-}
+-- F5-B: overeni struktury BEZ Script.Source (Agent B, 2026-11-17).
+-- Fakt 1 (live dukaz primo v hernim server-vlakne, sondy AE_CapProbe3/4):
+-- cteni i zapis .Source pada chybou "lacking capability PluginOrOpenCloud".
+-- V produkci proto NELZE prekotevovat kotvy Initialize/MiscWeld -- zamerne
+-- se na Source vubec nesaha (cteni ani zapis).
+-- Fakt 2 (live dukaz AE_probe_build, NEOPRAVENY klon do Workspace): puvodni
+-- struktura (Initialize/Interface/Plugins/README pod Tune) se POSTAVI --
+-- Hinge 40, #AV/#BV 4/4, Plugins:Destroy probehlo, Interface 15 deti.
+-- Engine tedy Script pod Tune-ModuleScriptem SPUSTI; presun na koren nebyl
+-- nikdy potreba (zameneno s nebehem skriptu ve ServerStorage) a prave presun
+-- kotvy rozbil a vynutil si Source-patche. Proto se NIC NEPRESOUVA.
+-- Kotvy overeny proti auditu (live zdroje sablony): Initialize L18/L89/L91/
+-- L93/L97/L99/L1104/L1106/L1124/L1128/L1247 vyzaduje script.Parent = Tune
+-- (ModuleScript s detmi Interface/Plugins/README); Drive L43/L2221 a
+-- Controls_AC6 L39 cte car["A-Chassis Tune"].README (README zustava pod
+-- Tune); MiscWeld zustava pod Initialize (puvodni 3-hop plati, beze zmeny).
+-- Tune je cista data (jediny vyskyt 'script' v celem zdroji je slovo
+-- 'description' v komentari L19) -- require(Tune) vraci stejnou tabulku
+-- pro Initialize/Drive/Gauges i ReadTune/WriteTune, zadny TuneLink-klon
+-- ani synchronizace neni potreba. Sablona zustava nedotcena; overeni je
+-- idempotentni (ciste cteni stromu pres FindFirstChild).
 
-local function plainReplaceOnce(s, from, to)
-	local i, j = string.find(s, from, 1, true)
-	if not i then
-		return s, false
-	end
-	return string.sub(s, 1, i - 1) .. to .. string.sub(s, j + 1), true
-end
-
--- Presune cele podstromy zpod Tune-ModuleScriptu na koren pracovni kopie
--- (sablonu ani jeji potomky odmitne). Idempotentni: jiz presunute preskoci.
--- Vrati true, pocet presunu / false, duvod. Prubeh loguje pres print.
+-- Overi kotvy puvodni struktury na pracovni kopii (sablonu ani jeji potomky
+-- odmitne). NIC NEPRESOUVA, NESAHÁ na Source (F5-B: presun byl zbytecny,
+-- kotvy plati v puvodni strukture -- viz komentar vyse). Idempotentni.
+-- Vrati true, 0 / false, duvod. Prubeh loguje pres print.
 function VehicleManager.RepairStructure(vehicle)
 	if typeof(vehicle) ~= "Instance" then
 		return false, "ocekavan Instance vozidla"
@@ -251,106 +239,64 @@ function VehicleManager.RepairStructure(vehicle)
 	if not tune or not tune:IsA("ModuleScript") then
 		return false, "Tune ModuleScript (A-Chassis Tune) v kopii nenalezen"
 	end
-	local moved = 0
-	for _, name in ipairs(VehicleManager.REPAIR_MOVE_NAMES) do
+	-- Ocekavane deti Tune (kotvy Initialize/Drive/Gauges): vse musi zustat
+	-- pod Tune, jinak kotvy script.Parent neplati a build se nepostavi.
+	local missing = {}
+	for _, name in ipairs({ "A-Chassis Interface", "Initialize", "Plugins", "README" }) do
 		local child = tune:FindFirstChild(name)
 		if child then
-			child.Parent = vehicle
-			moved += 1
 			print(
 				string.format(
-					"[RepairStructure] %s: '%s' (%s) presunuto na koren kopie",
+					"[RepairStructure] %s: '%s' (%s) pod Tune OK",
 					vehicle:GetFullName(),
 					name,
 					child.ClassName
 				)
 			)
 		else
-			local already = vehicle:FindFirstChild(name)
-			if already then
-				print(
-					string.format(
-						"[RepairStructure] %s: '%s' jiz na koreni (%s), preskoceno",
-						vehicle:GetFullName(),
-						name,
-						already.ClassName
-					)
-				)
-			else
-				print(
-					string.format(
-						"[RepairStructure] %s: VAROVANI: '%s' nenalezeno ani pod Tune ani na koreni",
-						vehicle:GetFullName(),
-						name
-					)
-				)
-			end
-		end
-	end
-	-- Prekotveni dvou kotev Initialize na koren kopie (pouze klon, sablona
-	-- sahnuta neni). Zbytek Initialize (WaitForChild Interface/Plugins/README,
-	-- script.Parent["A-Chassis Interface"], script.Parent.Plugins) po presunu
-	-- cele ctverice na koren plati beze zmeny.
-	local init = vehicle:FindFirstChild("Initialize")
-	if init and init:IsA("Script") then
-		local src = init.Source
-		local patched = 0
-		local out, hit = plainReplaceOnce(src, "local car=script.Parent.Parent", "local car=script.Parent")
-		if hit then
-			src = out
-			patched += 1
-		end
-		out, hit = plainReplaceOnce(
-			src,
-			"local _Tune=require(script.Parent)",
-			'local _Tune=require(script.Parent["A-Chassis Tune"])'
-		)
-		if hit then
-			src = out
-			patched += 1
-		end
-		if patched > 0 then
-			init.Source = src
-		end
-		print(string.format("[RepairStructure] %s: Initialize kotvy prekotevny: %d/2", vehicle:GetFullName(), patched))
-		-- MiscWeld (ModuleScript, potomek Initialize) kotvi vuz tremi hoppy
-		-- (MiscWeld -> Initialize -> Tune -> vuz); po presunu staci dva
-		-- (MiscWeld -> Initialize -> vuz). Bez toho by MiscWeld cetl
-		-- car = Workspace a navzdy visel na Workspace:WaitForChild("Misc").
-		local misc = init:FindFirstChild("MiscWeld")
-		if misc then
-			local msrc = misc.Source
-			local mout, mhit = plainReplaceOnce(msrc, "car = script.Parent.Parent.Parent", "car = script.Parent.Parent")
-			if mhit then
-				misc.Source = mout
-			end
+			table.insert(missing, name)
 			print(
 				string.format(
-					"[RepairStructure] %s: MiscWeld kotva: %s",
+					"[RepairStructure] %s: VAROVANI: '%s' pod Tune chybi (kotva neplati, bez Source nelze opravit)",
 					vehicle:GetFullName(),
-					mhit and "prekotevena" or "nenalezena (beze zmeny)"
+					name
+				)
+			)
+		end
+	end
+	-- MiscWeld zustava pod Initialize: puvodni 3-hop
+	-- (MiscWeld -> Initialize -> Tune -> vuz) plati beze zmeny.
+	local init = tune:FindFirstChild("Initialize")
+	if init and init:IsA("Script") then
+		local misc = init:FindFirstChild("MiscWeld")
+		if misc then
+			print(
+				string.format(
+					"[RepairStructure] %s: MiscWeld pod Initialize OK (%s, 3-hop beze zmeny)",
+					vehicle:GetFullName(),
+					misc.ClassName
 				)
 			)
 		else
-			print(
-				string.format(
-					"[RepairStructure] %s: VAROVANI: MiscWeld pod Initialize nenalezen",
-					vehicle:GetFullName()
-				)
-			)
+			table.insert(missing, "MiscWeld")
+			print(string.format("[RepairStructure] %s: VAROVANI: MiscWeld pod Initialize chybi", vehicle:GetFullName()))
 		end
 	else
+		table.insert(missing, "Initialize")
 		print(
 			string.format(
-				"[RepairStructure] %s: VAROVANI: Initialize (Script) na koreni nenalezen",
+				"[RepairStructure] %s: VAROVANI: Initialize (Script) pod Tune nenalezen",
 				vehicle:GetFullName()
 			)
 		)
 	end
-	return true, moved
+	if #missing > 0 then
+		return false, "neuplna struktura pod Tune, chybi: " .. table.concat(missing, ", ")
+	end
+	return true, 0
 end
 
--- Klonuje sablonu jako pracovni kopii s opravenou strukturou (RepairStructure).
+-- Klonuje sablonu jako pracovni kopii s overenou strukturou (RepairStructure).
 -- ZAMERNE NEPARENTUJE do Workspace: Initialize stavi podvozek pri vstupu do
 -- Workspace a cte Tune pres require, takze spravne poradi je
 -- CloneVehicle -> WriteTune -> DeployVehicle. Nasazeni: DeployVehicle.
@@ -540,31 +486,34 @@ function VehicleManager.GetMutableKeys()
 	return keys
 end
 
--- F4.4 M2: atributovy mustek AE_Brake / AE_Throttle / AE_Steer do vstupu Drive.
+-- F4.4 M2 / F5-A arbitrace: atributovy mustek AE_Brake / AE_Throttle / AE_Steer do vstupu Drive.
 -- Duvod: Drive cte JEN UserInputService (klavesy/gamepad); sedadlo (seat.Throttle)
 -- v tomto buildu nefunguje (0 cteni seatu, overeno H1). Serverovy harness/operator
 -- nastavi car:SetAttribute("AE_Brake"|"AE_Throttle"|"AE_Steer") a klientsky Drive
--- je v Heartbeat smycce ORuje do _IBrake/_IThrot/_GSteerT (brzda/plyn: max,
--- volant: prepis). Vyjimka z pravidla 1 (sablona nedotcena): koordinator M2
--- autorizoval aplikaci TOTOZNEHO bloku na ZIVOU sablonu v session (nikdy .rbxm
--- na disku); CloneVehicle ho aplikuje na kazdou pracovni kopii (idempotentni).
+-- je v Heartbeat smycce PREBIRA do vstupu, je-li atribut pritomen (cislo): server
+-- je pak JEDINY urcujici zapisovac _IBrake/_IThrot/_GSteerT (brzda/plyn/volant).
+-- Chybi-li atribut (nil = manualni rezim), klavesy/gamepad zustavaji nedotceny.
+-- Rampy _IBrake->_InBrake (BrakeAccel/BrakeDecel) ani ABS logika Drive timto nedotceny
+-- (mustek saha jen na surove vstupy _IBrake/_IThrot/_GSteerT pred Inputs(dt)).
+-- Vyjimka z pravidla 1 (sablona nedotcena): koordinator M2 autorizoval aplikaci
+-- TOTOZNEHO bloku na ZIVOU sablonu v session (nikdy .rbxm na disku); CloneVehicle
+-- ho aplikuje na kazdou pracovni kopii (idempotentni).
 VehicleManager.DRIVE_INPUT_BRIDGE_MARKER = "AE_DRIVE_INPUT_BRIDGE"
 VehicleManager.DRIVE_INPUT_BRIDGE_ANCHOR = "\t\t--Inputs\n\t\tInputs(dt)"
-VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2): atributovy mustek pro bezridicske mereni.\n"
-	.. "\t\t-- Drive cte JEN UserInputService (klavesy/gamepad); sedadlo nefunguje.\n"
-	.. '\t\t-- Server/operator nastavi car:SetAttribute("AE_Brake"|"AE_Throttle"|"AE_Steer"),\n'
-	.. "\t\t-- klientsky Drive je v Heartbeat smycce ORuje do vstupu (brzda/plyn: max, volant: prepis).\n"
+VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2, arbitrace F5-A): atributovy mustek pro bezridicske mereni.\n"
+	.. "\t\t-- Server je JEDINY urcujici zapisovac vstupu, je-li atribut pritomen (cislo); nil = manual.\n"
+	.. "\t\t-- Rampy _IBrake->_InBrake (BrakeAccel/BrakeDecel) ani ABS logika Drive nedotceny.\n"
 	.. "\t\tdo\n"
 	.. '\t\t\tlocal _aeBrake = car:GetAttribute("AE_Brake")\n'
-	.. '\t\t\tif typeof(_aeBrake) == "number" and _aeBrake > 0 then\n'
-	.. "\t\t\t\t_IBrake = math.max(_IBrake, math.min(1, _aeBrake))\n"
+	.. '\t\t\tif typeof(_aeBrake) == "number" then\n'
+	.. "\t\t\t\t_IBrake = math.max(0, math.min(1, _aeBrake))\n"
 	.. "\t\t\tend\n"
 	.. '\t\t\tlocal _aeThrot = car:GetAttribute("AE_Throttle")\n'
-	.. '\t\t\tif typeof(_aeThrot) == "number" and _aeThrot > 0 then\n'
-	.. "\t\t\t\t_IThrot = math.max(_IThrot, math.min(1, _aeThrot))\n"
+	.. '\t\t\tif typeof(_aeThrot) == "number" then\n'
+	.. "\t\t\t\t_IThrot = math.max(0, math.min(1, _aeThrot))\n"
 	.. "\t\t\tend\n"
 	.. '\t\t\tlocal _aeSteer = car:GetAttribute("AE_Steer")\n'
-	.. '\t\t\tif typeof(_aeSteer) == "number" and _aeSteer ~= 0 then\n'
+	.. '\t\t\tif typeof(_aeSteer) == "number" then\n'
 	.. "\t\t\t\t_GSteerT = math.max(-1, math.min(1, _aeSteer))\n"
 	.. "\t\t\tend\n"
 	.. "\t\tend"

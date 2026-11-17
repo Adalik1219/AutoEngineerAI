@@ -229,8 +229,8 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	end
 	runner:Finish(status, runner.failReason)
 	collector:Stop()
-	-- F4.4 F3: vynulovani atributoveho mustku (zadna zaseknuta brzda/plyn do dalsiho behu).
-	ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0)
+	-- F4.4 F3 / F5-A: zruseni atributoveho mustku (nil = manualni rezim; zadna zaseknuta brzda/plyn).
+	ScenarioRunner.WriteDriveAttributes(vehicle, nil, nil, nil)
 
 	local completion = if status == "completed" then "completed" else "failed"
 	if runner.failReason ~= nil then

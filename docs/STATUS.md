@@ -26,7 +26,13 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## F4.4 UZAVŘENA (bez PASS): smyčka průchozí, přesnost pod laťkou — report F4-4-CLOSURE.md
+## Probíhající: F5 Runtime Stabilization (4 větve: a-brake-arb, b-structure, c-telemetry, d-startcond)
+
+- [x] Výchozí stav: main eafecdc čistý, serve běží, Studio v Play (pouze čtení).
+- [x] Vlna 1 DODÁNA + ověřena koordinátorem: A (arbitrace, server autoritativní) + B (no-Source RepairStructure; DŮKAZ pokusem: neměněný klon staví 32→40 hingů, cap-errors byly zastaralé) + C (SUMMARY z kept, roll_deg, dynamické f*/) + D (start 100±1 verify, ABS read-only). H 155/0/4, lint+build OK.
+- [ ] Vlna 2: restart Play → Agent E (QA + kampaň 3+3 f55 + F5-QA.md)
+- [ ] Koordinátor: code review + merge větví → restart Play → Agent E (QA + kampaň 3+3 f55)
+- [ ] Uzávěr: F5-CLOSURE.md; žádná optimalizace dalších parametrů
 
 - [x] 6 platných jízd T03, telemetrie f44/ (8 JSON), Δ=11.49 < 3σ → FAIL poctivě (lockup bez ABS, brake-flapping, tolerance rychlosti).
 - [x] H 151/156, 1 systematický FAIL (SUMMARY full vs decimované) — test plní strážní funkci, neměnit.

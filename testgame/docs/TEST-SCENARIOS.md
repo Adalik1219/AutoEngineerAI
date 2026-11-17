@@ -77,6 +77,24 @@ Frekvence vzorkovani: 60 Hz. `run_id = hash(scenario_version, driver_version, va
   `measurements.outbox_decimation` (`step`/`kept_samples`/`full_samples`).
   Mensi zasah nez podpora `scenario_ids` z inboxu (bez zmeny
   `RuntimeController`); zvolena decimace.
+- Startovni podminky T03 — deterministicke (F5, Agent D):
+  `ScenarioRunner:Spawn` pro `kind = "straight_brake_100_0"` po ustaleni
+  nastavi presnou vstupni rychlost a OVERI ji pred startem mereni:
+  (1) rychlost `initial_conditions.speed_studs_s` (default 100) ±
+  `entry_tol` (default 1.0) — zpetne cteni `DriveSeat.AssemblyLinearVelocity`
+  (XZ); mimo toleranci = opakuj nastaveni max 3×, pak `FAILED`
+  s `failReason = "startovni_podminky:..."`; (2) pozice/orientace —
+  `spawnCFrame` od volajiciho (StartLine x = 2 + 3 y clearance, H1), overeni
+  facing +X (`RightVector.X >= 0.9`) a roll ~= 0 (`|roll| <= 5°`
+  z PrimaryPart/DriveSeat CFrame) pred startem; (3) ABS — stav
+  `ABSThreshold`/`ABSEnabled` se cte z Tune POUZE read-only (zadny zapis,
+  ABS se NEZAPINA — aktivita zustava dle fyziky pres existujici kanal
+  `Values.ABS`/`Values.ABSActive` → `abs_enabled`/`abs_active` →
+  `summary.t03.abs`); nelze-li ABS overit, zaznamena se
+  `abs_pending:<duvod>` (volajici prida do `errors` behu, mereni dal bezi).
+  Rizeni (`WriteDriveAttributes`) tato zmena netkne (Agent A).
+  F44 kampaň: v0 kolísala 94.5–100 (entry-tolerance porušena 2×) —
+  tato brána takový běh nově odmítne před měřením.
 
 ## T04 – Konstantni polomer / skidpad
 

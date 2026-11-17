@@ -6,7 +6,11 @@ local TelemetrySchema = {}
 TelemetrySchema.SCHEMA_VERSION = "1.0.0"
 TelemetrySchema.MODE = "roblox-runtime"
 
-local REQUIRED_SAMPLE = { "t", "pos", "vel", "accel", "yaw_rate", "inputs" }
+local REQUIRED_SAMPLE = { "t", "pos", "vel", "accel", "yaw_rate", "roll_deg", "inputs" }
+-- roll_deg (kloneni z CFrame, stupne; konvence viz ScenarioRunner.ReadStartRollDeg
+-- a TelemetryCollector.SampleOnce): povinny od F5-C; legacy exporty f44 ho
+-- nemaji (defekt F5-4, F44-T03-FINAL §2) — kohortovou politiku viz
+-- tests/test_f44_regression.py.
 local REQUIRED_RUN = {
 	"run_id",
 	"scenario_id",

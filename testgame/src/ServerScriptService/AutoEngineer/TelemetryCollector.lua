@@ -132,7 +132,9 @@ function TelemetryCollector:SampleOnce(t: number): any?
 		filtAccel = sum / #self.accelWindow
 	end
 
-	local _, yaw, _ = part.CFrame:ToOrientation()
+	local _, yaw, roll = part.CFrame:ToOrientation()
+	-- Roll: kloneni kolem podelne osy X pri facing +X = Z-slozka ToOrientation
+	-- (stejna konvence jako ScenarioRunner.ReadStartRollDeg; zivi Evaluate roll_gt_45).
 	local values = readValues(self.vehicle)
 	local rpm = readNumber(values, "RPM")
 	local gear = readNumber(values, "Gear") or readNumber(values, "GearNum")
@@ -157,6 +159,7 @@ function TelemetryCollector:SampleOnce(t: number): any?
 		accel = if filtAccel ~= nil then { x = filtAccel.X, y = filtAccel.Y, z = filtAccel.Z } else nil,
 		yaw_rate = yawRate,
 		yaw = yaw,
+		roll_deg = math.deg(roll), -- vzdy cislo (CFrame); chybi jen v legacy exportech f44
 		rpm = rpm, -- nil => null, neni-li ve Values
 		gear = gear, -- nil => null
 		abs_enabled = absEnabled, -- nil => null, neni-li Values.ABS
@@ -241,6 +244,16 @@ end
 -- Summary + metriky se NEskrtaji; T03 metriky volajici prepocita z ulozenych
 -- (decimovanych) vzorku, aby nezavisly prepocet v test_f44_regression.py sedel.
 -- Vraci (decimovane_vzorky, step).
+--
+-- F5-C (Agent C): konzistence SUMMARY vs run-docs (defekt 5, F44-T03-FINAL §4.5).
+-- Zvolena varianta "agregace vzdy z kept" (mensi zasah nez podminena decimace:
+-- plne T03-behy maji ~1000-2000 vzorku >> 200 kB, takze podminena decimace by
+-- je stejne decimovala a full-vs-kept nesoulad by zustal). Pravidlo: run-doc
+-- metriky i SUMMARY agregat se pocitaji ZE STEJNYCH kept-vzorku, kanonickou
+-- implementaci ScenarioRunner.ComputeT03Metrics. Handoff (vlastnik TestHarness):
+-- runBrief agreguje distances z kept/outbox t03 (navrat buildOutboxDoc), ne
+-- z plneho navratu runOneScenario. Kohortova politika testu:
+-- test_f44_regression.py (f44 = legacy tolerance, f55+ = exaktne).
 function TelemetryCollector.DecimateForOutbox(samples: any, maxKept: number): ({ any }, number)
 	if typeof(samples) ~= "table" or #samples == 0 then
 		return {}, 1
