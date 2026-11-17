@@ -26,7 +26,12 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající: F4.3 UZAVŘENA (merge 2e1b2b0) — report F4-3-CLOSURE.md
+## Probíhající: F4.4 Full T03 Autonomous Braking Validation
+
+- [x] Výchozí stav: main d325e96 čistý, serve běží, Studio v Play (stará session — restart až po H1).
+- [ ] Vlna 1 běží: Agent H1 (brzdový mechanismus z Drive, slot auto-fill, startovní podmínky, brake_distance, repetitions, ABS kanál, regresní test)
+- [ ] Vlna 2: restart Play Solo (koordinátor přes MCP) → Agent M2 (3×0.6 + 3×0.9, statistika, telemetrie)
+- [ ] Vlna 3: Agent Q (QA) → F4-4-CLOSURE.md (žádná optimalizace dalších parametrů)
 
 - [x] QA podmíněné ANO; merge do mainu; H 144/0/4; originál+Simulator nedotčeny.
 - [x] Runtime důkaz: BrakeBias 0.6→56.53 / 0.9→40.44 studs (Δ16.09). Plná T03 smyčka PENDING pro F4.4.

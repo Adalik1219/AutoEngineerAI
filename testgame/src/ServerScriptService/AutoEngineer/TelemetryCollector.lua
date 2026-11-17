@@ -34,6 +34,20 @@ local function readNumber(parent: Instance?, name: string): number?
 	return nil
 end
 
+local function readBool(parent: Instance?, name: string): boolean?
+	if parent == nil then
+		return nil
+	end
+	local child = parent:FindFirstChild(name)
+	if child == nil then
+		return nil
+	end
+	if child:IsA("BoolValue") then
+		return child.Value
+	end
+	return nil
+end
+
 local function readString(parent: Instance?, name: string): string?
 	if parent == nil then
 		return nil
@@ -126,6 +140,14 @@ function TelemetryCollector:SampleOnce(t: number): any?
 		local gs = readString(values, "Gear")
 		gear = if gs ~= nil then tonumber(gs) else nil
 	end
+	-- ABS signaly (A-Chassis Drive, overeno live Agent H1): Drive kazdy frame
+	-- zapisuje Values.ABS (BoolValue, stav _ABS: default z _Tune.ABSEnabled,
+	-- prepinatelny klavesou ToggleABS) a Values.ABSActive (BoolValue, true prave
+	-- kdyz _ABS a brzda a prokluz kol nad _Tune.ABSThreshold). Chybi-li Values
+	-- ve vozidle (Drive nebezi / sablona bez Values), je vysledkem nil => null,
+	-- nikdy se nevymysli; duvod hlasi ScenarioRunner.ComputeT03Metrics.
+	local absEnabled = readBool(values, "ABS")
+	local absActive = readBool(values, "ABSActive")
 
 	local sample = {
 		t = t,
@@ -137,6 +159,8 @@ function TelemetryCollector:SampleOnce(t: number): any?
 		yaw = yaw,
 		rpm = rpm, -- nil => null, neni-li ve Values
 		gear = gear, -- nil => null
+		abs_enabled = absEnabled, -- nil => null, neni-li Values.ABS
+		abs_active = absActive, -- nil => null, neni-li Values.ABSActive
 		inputs = { throttle = self.inputs.throttle, brake = self.inputs.brake, steer = self.inputs.steer },
 	}
 	return sample

@@ -29,11 +29,38 @@ Frekvence vzorkovani: 60 Hz. `run_id = hash(scenario_version, driver_version, va
 ## T03 – Brzdeni 100–0
 
 - Pocatecni podminky: ustalenych 100 studs/s (±1 tolerance vstupu), plyn 0.
-- Postup: plna brzda rampou 0 → 1 za 0.15 s, volant 0.
-- Completion: v < 0.1 studs/s + 1 s ustaleni, nebo timeout 20 s.
+  Harness (F4.4, Agent H1): CFrame dilu `StartLine` v TestTracku (x = 2, overeno
+  z `TestTrack.rbxmx`) + rychlost 100 studs/s pres `AssemblyLinearVelocity`
+  vsech BasePartu (DriveSeat explicitne — Drive cte `DriveSeat.Velocity`).
+  `entrySpeed` se cte z `ScenarioDefinitions` (`initial_conditions.speed_studs_s`).
+- Postup: plna brzda rampou 0 → 1 za 0.15 s, volant 0. Replay brzi od t = 0
+  (deterministicky, `ScenarioRunner:DriverInputs`); `BrakeLine` x = 3000
+  (TestTrack) jako trigger je PENDING (nevlastnim `ScenarioDefinitions`).
+- Mechanism brzdy/ABS (overeno live ctenim Drive zdroje v Play session, H1):
+  brzda je SAMOSTATNY vstup `_IBrake` (0/1) vyhlazeny na `_InBrake` rampami
+  `BrakeAccel`/`BrakeDecel` → `_GBrake` → `brake`; moment na kolo
+  `(FBrakeForce|RBrakeForce * (60/fps) * brake * tqABS) + EBrake + PBrake`
+  (`BrakeForce = 2500`, `BrakeBias = 0.6` live). ABS: `_Tune.ABSEnabled`
+  (live default true, neni MUTABLE → harness nezapisuje) + toggle klavesou;
+  aktivace pri prokluzu nad `ABSThreshold` (live 20) a `brake > 0` → `tqABS = 0`;
+  signaly `Values.ABS` / `Values.ABSActive` (BoolValue) cte `TelemetryCollector`
+  (`abs_enabled` / `abs_active`; chybi-li, null + duvod). NENI zaporny Throttle;
+  predpoklad [P] v `TestClient` (`seat.Throttle = -brake`) Drive v tomto buildu
+  neplati (0 vyskytu cteni seatu). Plny report: `ScenarioRunner.lua` hlavicka.
+- Completion: v < 0.1 studs/s + 1 s ustaleni (hlida `ScenarioRunner:Evaluate`
+  na XZ rychlosti), nebo timeout 20 s.
 - Fail: protoceni (yaw > 90°), opusteni pruhu > 2 m, prevraceni, NaN.
-- Merene: `brake_distance_studs`, `stopping_time_s`, `mean_decel`, `peak_decel`, `lat_deviation_braking`, `yaw_rate_max_braking`.
-- Opakovatelnost: 3×, rozptyl drahy do ±5 %.
+- Merene: `brake_distance_studs`, `stopping_time_s`, `mean_decel`,
+  `peak_decel`, `lat_deviation_braking`, `yaw_rate_max_braking`.
+  `brake_distance_studs` = kumulativni XZ draha od t = 0 do prvniho vzorku
+  s XZ-rychlosti < 0.1 (`ScenarioRunner.ComputeT03Metrics`); ABS aktivita
+  (`abs.active` / `abs.active_samples`, jinak `active = null` + `reason`)
+  je soucasti `summary.t03` kazdeho behu v outboxu.
+- Opakovatelnost: 3×, rozptyl drahy do ±5 %. Harness bezi
+  `repetitions = def.repetitions` na config a zapisuje agregat
+  `SUMMARY-<config_id>-T03` (`mean`/`std` populacni/`min`/`max`/`delta_pct`,
+  `repeatability_ok`) do outboxu; validuje `tests/test_f44_regression.py`
+  (prazdny `vehicle-data/telemetry/f44` = SKIP, legitimni PENDING).
 
 ## T04 – Konstantni polomer / skidpad
 
