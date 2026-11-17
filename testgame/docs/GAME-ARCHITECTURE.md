@@ -18,7 +18,7 @@ Zdroje: `docs/AGENT-RULES.md`, `docs/A-CHASSIS-AUDIT.md` (§3 hierarchie),
 
 | Soubor (abs. cesta) | Obsah | Konzument |
 |---|---|---|
-| `C:/.DATA/AutoEngineerAI/testgame/src/Workspace/TestTrack.rbxmx` | Model `TestTrack`: rovinka 1500 + brzdná zóna 200 (7 dílů) | B (project.json), C (harness spawn/waypointy) |
+| `C:/.DATA/AutoEngineerAI/testgame/src/Workspace/TestTrack.rbxmx` | Model `TestTrack`: rovinka 3000 + brzdná zóna 800 (10 dílů) | B (project.json), C (harness spawn/waypointy) |
 | `C:/.DATA/AutoEngineerAI/testgame/src/Workspace/TestSpawn.rbxmx` | Model `TestSpawn`: garáž 40×30 + `SpawnPad` (6 dílů) | C (spawn vozidla) |
 | `C:/.DATA/AutoEngineerAI/testgame/src/Workspace/TestEnvironment.rbxmx` | Model `TestEnvironment`: skidpad-kruh, slalom, nerovnosti, 2 povrchy + split-mu (46 dílů) | C, D (waypointy), E (zóny měření) |
 | `C:/.DATA/AutoEngineerAI/testgame/src/ServerStorage/VehicleTemplates/JeepTemplate.rbxm` | Šablona vozidla, prostá kopie work-copy (230 421 B) | C (`VehicleManager` klonuje do testu) |
@@ -51,31 +51,31 @@ Concrete=816, Plastic=256, SmoothPlastic=272, Neon=288.
 
 ---
 
-## 3. TestTrack — rovinka + brzdná zóna (T01, T03; částečně T02)
+## 3. TestTrack — rovinka + brzdná zóna (T01–T03)
 
 Model `TestTrack`, jízdní pruh šířky 12 (z −6…6). **[F]** souřadnice z XML:
 
 | Díl | Size (x,y,z) | Střed (x,y,z) | Materiál | Význam |
 |---|---|---|---|---|
 | `StraightLane` | 1500, 1, 12 | 750, −0.5, 0 | Asphalt | rovinka x 0…1500 |
-| `BrakeZone` | 200, 1, 12 | 1600, −0.5, 0 | Concrete | brzdná zóna x 1500…1700 |
+| `StraightLane2` | 1500, 1, 12 | 2250, −0.5, 0 | Asphalt | rovinka x 1500…3000 |
+| `BrakeZone` | 800, 1, 12 | 3400, −0.5, 0 | Concrete | brzdná zóna x 3000…3800 |
 | `StartLine` | 2, 1.1, 12 | 2, −0.45, 0 | SmoothPlastic bílá | start (T01/T03) |
-| `BrakeLine` | 2, 1.1, 12 | 1500, −0.45, 0 | Neon červená | začátek brzdění (T03) |
-| `EndWall` | 4, 10, 16 | 1704, 5, 0 | Plastic tmavá | záchytná bariéra |
-| `RailLeft` / `RailRight` | 1704, 2, 1 | 852, 1, ∓7 | Concrete | boční mantinely |
+| `BrakeLine` | 2, 1.1, 12 | 3000, −0.45, 0 | Neon červená | začátek brzdění (T03) |
+| `EndWall` | 4, 10, 16 | 3804, 5, 0 | Plastic tmavá | záchytná bariéra |
+| `RailLeft`/`RailLeft2` / `RailRight`/`RailRight2` | 1902, 2, 1 | 951 / 2853, 1, ∓7 | Concrete | boční mantinely |
 
-Celková délka: 1700 studs vozovky + bariéra. Start vozidla: x ≈ 10
+Celková délka: 3800 studs vozovky + bariéra. Start vozidla: x ≈ 10
 (za `StartLine`, prostor pro `settle_s = 1.0 s`).
 
 Vazba na scénáře: **T01** (800 studs) a **T03** (800 studs) se vejdou
-s rezervou; brzdění z 100 studs/s má k dispozici 200 studs `BrakeZone`
+s rezervou; brzdění z 100 studs/s má k dispozici 800 studs `BrakeZone`
 + nouzově mantinely a `EndWall`.
 
-**[N] → otevřený bod pro koordinátora / agenta B:** T02 (`straight`,
-3000 studs) se do 1500-studové rovinky **nevejde**. Tento soubor drží
-zadaných 1500 m; možnosti: (a) v revizi prodloužit `StraightLane` na
-3000, (b) T02 jako více kol / ovál, (c) snížit délku T02. Bez rozhodnutí
-je T02 na této mapě neproveditelný — ostatních 6 scénářů je pokryto.
+**[F]** T02 (`straight`, 3000 studs) se do prodloužené rovinky 0…3000
+**vejde** (mikro-fix T02: `StraightLane` + `StraightLane2`, `BrakeZone`
+800, `BrakeLine` na x = 3000, `EndWall` na x = 3804). Ostatní scénáře
+beze změny.
 
 ---
 
@@ -164,7 +164,7 @@ Konstrukční detaily:
 - **C (harness):** startovní pozice T01/T03 x≈10 na `TestTrack`;
   střed kruhu T04 (0,0,0) R=100; slalom T06 od x=180; hrboly T07 od x=160,
   z=60; friken `WetPad`/split zón před během.
-- **D (driver):** waypoints: rovinka (0→1500, z=0), kruh R=100,
+- **D (driver):** waypoints: rovinka (0→3000, z=0), kruh R=100,
   slalom x 180…720.
 - **E (telemetrie):** měřicí zóny = `BrakeLine` (vstup T03),
   cíl T06 x=720, konec hrbolů x=512.
@@ -178,7 +178,7 @@ Konstrukční detaily:
   `$path` (vlastnictví B) — build validuje projekt, ne obsah mapy.
 - `stylua`: **N/A** — agent A nevlastní žádný `.lua` soubor.
 - XML validace: `xml.etree parse` všech 3 `.rbxmx` → OK
-  (TestTrack 7, TestSpawn 6, TestEnvironment 46 dílů).
+  (TestTrack 10, TestSpawn 6, TestEnvironment 46 dílů).
 - SHA: `sha256sum` work-copy i JeepTemplate =
   `dc8747…fefdf`, shoda s `A-CHASSIS-AUDIT.md` §1.
 - `git -C C:/.DATA/RobloxSimulator status --short` → prázdné (nedotčeno).
@@ -194,7 +194,7 @@ Konstrukční detaily:
 - **[P]** 1 stud ≈ 0.28 m se v mapě nikde nepřepočítává; rychlosti scénářů
   jsou ve studs/s dle `ScenarioDefinitions`. Převodní koeficient patří do
   manifestu běhu (ROBLOX-RUNTIME §6), ne do geometrie.
-- **[N]** T02 délka (viz §3) — rozhodnutí koordinátora.
+- **[F]** T02 délka vyřešena mikro-fixem (viz §3) — rovinka 3000.
 - **[N]** Frikční koeficienty povrchů — změří/zkalibruje FÁZE 9 (agent C+E).
 - **[N]** Nájezd na skidpad-kruh a návrat (D); přesná spawn-orientace (C).
 - Riziko: ručně psané XML nemá Studio-validaci do prvního otevření ve

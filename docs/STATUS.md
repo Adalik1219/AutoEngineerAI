@@ -31,8 +31,10 @@ Otevřené body před implementací:
 - [x] Prostředí ověřeno: Rojo 7.7.1, lune/selene/stylua, port 34872 volný, repo čisté (c21c03d). Studio připojeno (1 instance, nesahám na ni).
 - [x] Klíčový fakt pro řidiče: fyziku A-Chassis 6C počítá KLIENT (Drive LocalScript ~60 Hz), server staví (Initialize); vstupy = sedící hráč přes VehicleSeat.
 - [x] Zamčený strom testgame/ + brány (rojo build + stylua --check, žádný zápis do Studia); .gitignore výjimka pro JeepTemplate.rbxm.
-- [ ] Vlna 1 běží: A (mapa+šablona) + B (Rojo projekt) + C (VehicleManager+RUNTIME-API) + D (řidič) + E (harness+telemetrie)
-- [ ] Uzavření: koordinátorská verifikace (build+lint), commit/push, příprava Studio ověření s uživatelem (Play testy běží uživatel)
+- [x] Vlna 1 DODÁNA: A (mapa+šablona, SHA shoda) + B (Rojo projekt, build 0) + C (VehicleManager+RUNTIME-API) + D (řidič, lune 23/23) + E (harness+telemetrie T01–T07)
+- [x] Micro-fix T02 DODÁN: rovinka 3000 (BrakeZone 3000–3800, EndWall 3804), build+lint zelené.
+- [x] FÁZE UZAVŘENA (souborově): report ROBLOX-TEST-ENVIRONMENT-CLOSURE.md; build 0, lint 0, SHA shoda. Runtime A–E PENDING — čeká Studio Play s uživatelem.
+- [ ] Další krok s uživatelem: `rojo serve` → Accept v pluginu → MCP kontrola syncu → Play testy (mapa, spawn, řidič, telemetrie)
 
 - [x] Výchozí stav: HEAD 66cb834 čistý, rbxm SHA shoda, Simulator read-only.
 - [x] Vlna 1 DODÁNA + ověřena koordinátorem: A (patched_config→Sim, 8 testů), B (backlog 79: P0=7/P1=41/P2=25/P3=6), C (mrtvá statika pryč, effect test, H 141=137/0/4, optimizer selftest zelený). MAPPING.md věta sladěna.

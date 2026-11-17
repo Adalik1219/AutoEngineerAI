@@ -43,6 +43,41 @@
         <token name="BottomSurface">0</token>
       </Properties>
     </Item>
+    <Item class="Part" referent="RBX_StraightLane2">
+      <Properties>
+        <string name="Name">StraightLane2</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">1376</token>
+        <Color3 name="Color3">
+          <R>0.5</R>
+          <G>0.5</G>
+          <B>0.5</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>1500</X>
+          <Y>1</Y>
+          <Z>12</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2250</X>
+          <Y>-0.5</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
     <Item class="Part" referent="RBX_BrakeZone">
       <Properties>
         <string name="Name">BrakeZone</string>
@@ -55,12 +90,12 @@
           <B>0.6</B>
         </Color3>
         <Vector3 name="size">
-          <X>200</X>
+          <X>800</X>
           <Y>1</Y>
           <Z>12</Z>
         </Vector3>
         <CoordinateFrame name="CFrame">
-          <X>1600</X>
+          <X>3400</X>
           <Y>-0.5</Y>
           <Z>0</Z>
           <R00>1</R00>
@@ -130,7 +165,7 @@
           <Z>12</Z>
         </Vector3>
         <CoordinateFrame name="CFrame">
-          <X>1500</X>
+          <X>3000</X>
           <Y>-0.45</Y>
           <Z>0</Z>
           <R00>1</R00>
@@ -165,7 +200,7 @@
           <Z>16</Z>
         </Vector3>
         <CoordinateFrame name="CFrame">
-          <X>1704</X>
+          <X>3804</X>
           <Y>5</Y>
           <Z>0</Z>
           <R00>1</R00>
@@ -195,12 +230,47 @@
           <B>0.5</B>
         </Color3>
         <Vector3 name="size">
-          <X>1704</X>
+          <X>1902</X>
           <Y>2</Y>
           <Z>1</Z>
         </Vector3>
         <CoordinateFrame name="CFrame">
-          <X>852</X>
+          <X>951</X>
+          <Y>1</Y>
+          <Z>-7</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_RailLeft2">
+      <Properties>
+        <string name="Name">RailLeft2</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">816</token>
+        <Color3 name="Color3">
+          <R>0.5</R>
+          <G>0.5</G>
+          <B>0.5</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>1902</X>
+          <Y>2</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2853</X>
           <Y>1</Y>
           <Z>-7</Z>
           <R00>1</R00>
@@ -230,12 +300,47 @@
           <B>0.5</B>
         </Color3>
         <Vector3 name="size">
-          <X>1704</X>
+          <X>1902</X>
           <Y>2</Y>
           <Z>1</Z>
         </Vector3>
         <CoordinateFrame name="CFrame">
-          <X>852</X>
+          <X>951</X>
+          <Y>1</Y>
+          <Z>7</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_RailRight2">
+      <Properties>
+        <string name="Name">RailRight2</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">816</token>
+        <Color3 name="Color3">
+          <R>0.5</R>
+          <G>0.5</G>
+          <B>0.5</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>1902</X>
+          <Y>2</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2853</X>
           <Y>1</Y>
           <Z>7</Z>
           <R00>1</R00>
