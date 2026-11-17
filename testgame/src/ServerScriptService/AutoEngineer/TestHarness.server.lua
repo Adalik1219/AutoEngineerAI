@@ -184,7 +184,7 @@ local function buildOutboxDoc(output: any, fullSamples: any, recomputeT03: boole
 	}
 end
 
-local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Folder, rep: number): any
+local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Folder, rep: number): (any, any)
 	local runId = string.format("RUN-%s-%s-r%d", tostring(config.config_id or "nocfg"), def.scenario_id, rep)
 	local runner = ScenarioRunner.new({})
 	local collector = TelemetryCollector.new({ rateHz = ScenarioDefinitions.SAMPLE_RATE_HZ })
@@ -203,8 +203,31 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		end
 	end
 	runner:Spawn(def, runId, vehicle, spawnCFrame)
+	-- F5 FX D-1: po applyStartSpeed znovu OVERIT rychlost z DriveSeat
+	-- (read-back helper ScenarioRunner.ReadDriveSeatXzSpeed); pri neshode
+	-- mimo toleranci fail behu s duvodem, ne slepe pokracovani.
+	local startFailed: string? = nil
 	if isT03(def) and vehicle ~= nil and spawnCFrame ~= nil then
-		applyStartSpeed(vehicle, spawnCFrame, entrySpeed(def))
+		local want = entrySpeed(def)
+		applyStartSpeed(vehicle, spawnCFrame, want)
+		local tol = ScenarioRunner.T03_DEFAULT_ENTRY_TOL
+		if def.initial_conditions ~= nil and typeof((def.initial_conditions :: any).entry_tol) == "number" then
+			tol = (def.initial_conditions :: any).entry_tol
+		end
+		local measured = ScenarioRunner.ReadDriveSeatXzSpeed(vehicle)
+		if measured == nil then
+			startFailed = "entry_speed_neoverena_po_apply:chybi_DriveSeat"
+		elseif math.abs(measured - want) > (tol :: number) then
+			startFailed = string.format(
+				"entry_speed_mimo_toleranci_po_apply:cil=%.1f_tol=%.1f_mereno=%.2f",
+				want,
+				tol :: number,
+				measured
+			)
+		end
+		if startFailed ~= nil then
+			table.insert(errors, startFailed)
+		end
 	end
 	(remotes:FindFirstChild("AERunBrief") :: RemoteEvent):FireAllClients({
 		run_id = runId,
@@ -232,7 +255,7 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	-- F4.4 F3 / F5-A: zruseni atributoveho mustku (nil = manualni rezim; zadna zaseknuta brzda/plyn).
 	ScenarioRunner.WriteDriveAttributes(vehicle, nil, nil, nil)
 
-	local completion = if status == "completed" then "completed" else "failed"
+	local completion = if status == "completed" and startFailed == nil then "completed" else "failed"
 	if runner.failReason ~= nil then
 		table.insert(errors, tostring(runner.failReason))
 	end
@@ -270,9 +293,12 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	-- T03 metriky se pro outbox PREPOCITAJI z ulozenych (decimovanych) vzorku,
 	-- aby nezavisly prepocet v test_f44_regression.py sedel na 3 des. mista.
 	-- Summary (duration_s, state, t03) se NESKRTA, jen vzorky.
-	RuntimeController.WriteOutboxResult(bridge, buildOutboxDoc(output, collector.samples, isT03(def)));
+	-- F5 FX C-1: outbox-doc (kept) se vraci jako druha hodnota; runBrief z nej
+	-- agreguje SUMMARY, aby sedel exaktne s test_summary_aggregate (f55+).
+	local outboxDoc = buildOutboxDoc(output, collector.samples, isT03(def))
+	RuntimeController.WriteOutboxResult(bridge, outboxDoc);
 	(remotes:FindFirstChild("AEStatus") :: RemoteEvent):FireAllClients({ run_id = runId, status = completion })
-	return output
+	return output, outboxDoc
 end
 
 -- Agregace T03 serie (repetitions na config): mean/std/min/max brake_distance,
@@ -393,13 +419,17 @@ local function runBrief(config: any, scenarioIds: { string }?): { any }
 		local runIds: { string } = {}
 		local allStopped = true
 		for r = 1, reps do
-			local out = runOneScenario(def, config, bridge, remotes, r)
+			local out, outboxDoc = runOneScenario(def, config, bridge, remotes, r)
 			table.insert(results, out)
 			if isT03(def) then
 				table.insert(runIds, tostring(out.run_id))
-				local t03 = if typeof(out.measurements) == "table"
-						and typeof(out.measurements.summary) == "table"
-					then (out.measurements.summary :: any).t03
+				-- F5 FX C-1: SUMMARY se agreguje z kept-vzorku outboxu (stejnych,
+				-- ktere validuje test_summary_aggregate), ne z plneho navratu
+				-- runOneScenario -- viz DecimateForOutbox ("agregace vzdy z kept").
+				local t03 = if typeof(outboxDoc) == "table"
+						and typeof(outboxDoc.measurements) == "table"
+						and typeof(outboxDoc.measurements.summary) == "table"
+					then (outboxDoc.measurements.summary :: any).t03
 					else nil
 				if typeof(t03) == "table" and typeof(t03.brake_distance_studs) == "number" then
 					table.insert(distances, t03.brake_distance_studs)
