@@ -26,7 +26,11 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající F4.3: Live Tune Catalog Reconciliation (větev f43-live-tune-reconciliation)
+## Probíhající: F4.3 UZAVŘENA (merge 2e1b2b0) — report F4-3-CLOSURE.md
+
+- [x] QA podmíněné ANO; merge do mainu; H 144/0/4; originál+Simulator nedotčeny.
+- [x] Runtime důkaz: BrakeBias 0.6→56.53 / 0.9→40.44 studs (Δ16.09). Plná T03 smyčka PENDING pro F4.4.
+- [ ] Další krok POUZE po schválení: F4.4 produkční harness wiring (slot auto-fill, brake_distance, 3 opakování)
 
 - [x] Větev založena z 6cfb815; serve běží (PID 13536); Studio připojeno.
 - [x] Vlna 1 DODÁNA (Agent R): 19 fantomů opraveno, katalog 138 záznamů (82/14/2/3/37), 0 fantomů, adaptér + VehicleManager sladěny. Vedlejší efekt: 13 zastaralých asercí ve F4 testech (očekáváno).
