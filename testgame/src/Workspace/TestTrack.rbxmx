@@ -1,0 +1,257 @@
+<?xml version='1.0' encoding='utf-8'?>
+<roblox version="4">
+  <Meta name="ExplicitAutoJoints" content="true" />
+  <External>null</External>
+  <External>nil</External>
+  <Item class="Model" referent="RBX_MODEL_TestTrack">
+    <Properties>
+      <string name="Name">TestTrack</string>
+      <bool name="Anchored">false</bool>
+    </Properties>
+    <Item class="Part" referent="RBX_StraightLane">
+      <Properties>
+        <string name="Name">StraightLane</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">1376</token>
+        <Color3 name="Color3">
+          <R>0.5</R>
+          <G>0.5</G>
+          <B>0.5</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>1500</X>
+          <Y>1</Y>
+          <Z>12</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>750</X>
+          <Y>-0.5</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_BrakeZone">
+      <Properties>
+        <string name="Name">BrakeZone</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">816</token>
+        <Color3 name="Color3">
+          <R>0.6</R>
+          <G>0.6</G>
+          <B>0.6</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>200</X>
+          <Y>1</Y>
+          <Z>12</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1600</X>
+          <Y>-0.5</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_StartLine">
+      <Properties>
+        <string name="Name">StartLine</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">272</token>
+        <Color3 name="Color3">
+          <R>1</R>
+          <G>1</G>
+          <B>1</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>2</X>
+          <Y>1.1</Y>
+          <Z>12</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>2</X>
+          <Y>-0.45</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_BrakeLine">
+      <Properties>
+        <string name="Name">BrakeLine</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">288</token>
+        <Color3 name="Color3">
+          <R>1</R>
+          <G>0</G>
+          <B>0</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>2</X>
+          <Y>1.1</Y>
+          <Z>12</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1500</X>
+          <Y>-0.45</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_EndWall">
+      <Properties>
+        <string name="Name">EndWall</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">256</token>
+        <Color3 name="Color3">
+          <R>0.1</R>
+          <G>0.1</G>
+          <B>0.1</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>4</X>
+          <Y>10</Y>
+          <Z>16</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>1704</X>
+          <Y>5</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_RailLeft">
+      <Properties>
+        <string name="Name">RailLeft</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">816</token>
+        <Color3 name="Color3">
+          <R>0.5</R>
+          <G>0.5</G>
+          <B>0.5</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>1704</X>
+          <Y>2</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>852</X>
+          <Y>1</Y>
+          <Z>-7</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+    <Item class="Part" referent="RBX_RailRight">
+      <Properties>
+        <string name="Name">RailRight</string>
+        <bool name="Anchored">true</bool>
+        <bool name="CanCollide">true</bool>
+        <token name="Material">816</token>
+        <Color3 name="Color3">
+          <R>0.5</R>
+          <G>0.5</G>
+          <B>0.5</B>
+        </Color3>
+        <Vector3 name="size">
+          <X>1704</X>
+          <Y>2</Y>
+          <Z>1</Z>
+        </Vector3>
+        <CoordinateFrame name="CFrame">
+          <X>852</X>
+          <Y>1</Y>
+          <Z>7</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <token name="Shape">1</token>
+        <token name="TopSurface">0</token>
+        <token name="BottomSurface">0</token>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

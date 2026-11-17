@@ -9,3 +9,4 @@ vehicle-data/telemetry/selftest_*
 vehicle-data/runs/opt_selftest_*
 vehicle-data/runs/fixverify_*
 vehicle-data/runs/
+testgame/bridge/

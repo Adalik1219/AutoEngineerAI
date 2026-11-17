@@ -1,0 +1,50 @@
+{
+  "name": "AutoEngineerTestGame",
+  "servePort": 34872,
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "AutoEngineer": {
+        "$className": "Folder",
+        "$path": "src/ReplicatedStorage/AutoEngineer"
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "AutoEngineer": {
+        "$className": "Folder",
+        "$path": "src/ServerScriptService/AutoEngineer"
+      }
+    },
+    "ServerStorage": {
+      "$className": "ServerStorage",
+      "VehicleTemplates": {
+        "$className": "Folder",
+        "$path": "src/ServerStorage/VehicleTemplates"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "TestClient": {
+          "$className": "LocalScript",
+          "$path": "src/StarterPlayer/StarterPlayerScripts/TestClient.client.lua"
+        }
+      }
+    },
+    "Workspace": {
+      "$className": "Workspace",
+      "TestTrack": {
+        "$path": "src/Workspace/TestTrack.rbxmx"
+      },
+      "TestSpawn": {
+        "$path": "src/Workspace/TestSpawn.rbxmx"
+      },
+      "TestEnvironment": {
+        "$path": "src/Workspace/TestEnvironment.rbxmx"
+      }
+    }
+  }
+}
