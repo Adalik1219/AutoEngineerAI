@@ -1,6 +1,7 @@
 *.rbxm
 *.rbxlx
 !docs/*.md
+!testgame/**/VehicleTemplates/*.rbxm
 __pycache__/
 *.pyc
 vehicle-data/runs/selftest_*
