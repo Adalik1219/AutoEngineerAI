@@ -124,10 +124,10 @@ class TestF4OptimizerEffect(unittest.TestCase):
         """Dynamicky prostor: bias se ladi, peak_torque_neni v prostoru."""
         caps = backend_caps(CATALOG)
         self.assertTrue(caps)
-        self.assertIn("Bias", caps)
+        self.assertIn("BrakeBias", caps)
         self.assertNotIn("Horsepower", caps)  # Sim meri moment/vykon
         tune_space = build_search_space(CATALOG, caps)
-        self.assertIn("Bias", tune_space)
+        self.assertIn("BrakeBias", tune_space)
         space = search_space(_cfg(BAD_BIAS))
         self.assertTrue(space)
         names = [e["name"] for e in space]

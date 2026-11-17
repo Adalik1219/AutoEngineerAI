@@ -160,7 +160,7 @@ class TestF4Integration(unittest.TestCase):
         # (2) map_config: Tune-mapovatelne projde, peak_torque_nm odmítnut.
         mapped, report, patched = _map_and_apply(config)
         tune_keys = {c["tune_key"] for c in mapped["tune_changes"]}
-        self.assertIn("Bias", tune_keys)
+        self.assertIn("BrakeBias", tune_keys)
         self.assertIn("FinalDrive", tune_keys)
         rej = {r["param"]: r["reason"] for r in mapped["rejected"]}
         self.assertIn("engine.peak_torque_nm", rej)
@@ -169,13 +169,13 @@ class TestF4Integration(unittest.TestCase):
 
         # (3) Adapter: Tune patch se aplikuje (wiring Agent D).
         applied = {a["tune_key"] for a in report.applied}
-        self.assertIn("Bias", applied)
-        self.assertEqual(patched["parameters"]["tune"]["Bias"], 0.70)
+        self.assertIn("BrakeBias", applied)
+        self.assertEqual(patched["parameters"]["tune"]["BrakeBias"], 0.70)
 
         # (4) Sim běží na patched_config (projekce tune -> Sim cesty),
         #     NIKOLI na původním vstupu.
         sim_cfg = sim_input_from_patched(patched)
-        self.assertEqual(sim_cfg["parameters"]["tune"]["Bias"], 0.70)
+        self.assertEqual(sim_cfg["parameters"]["tune"]["BrakeBias"], 0.70)
         self.assertEqual(sim_cfg["parameters"]["brakes"]["bias_front"], 0.70)
         self.assertNotEqual(sim_cfg, orig_snapshot,
                             "Sim-vstup musi nest aplikovany patch")
@@ -190,7 +190,7 @@ class TestF4Integration(unittest.TestCase):
                          "Sim cte prave patched-odvozeny vstup")
         self.assertEqual(
             sim_file["parameters"]["brakes"]["bias_front"],
-            patched["parameters"]["tune"]["Bias"])
+            patched["parameters"]["tune"]["BrakeBias"])
         out_dir = os.path.join(tmp, "sim")
         csv_path, _, manifest = run_scenario(
             cfg_path, SCENARIO, DEFAULT_DT, SEED, out_dir)
@@ -250,8 +250,8 @@ class TestF4Integration(unittest.TestCase):
 
         _, _, patched_before = _map_and_apply(base)
         _, _, patched_after = _map_and_apply(changed)
-        self.assertEqual(patched_before["parameters"]["tune"]["Bias"], 0.62)
-        self.assertEqual(patched_after["parameters"]["tune"]["Bias"], 0.70)
+        self.assertEqual(patched_before["parameters"]["tune"]["BrakeBias"], 0.62)
+        self.assertEqual(patched_after["parameters"]["tune"]["BrakeBias"], 0.70)
 
         sim_before = sim_input_from_patched(patched_before)
         sim_after = sim_input_from_patched(patched_after)
