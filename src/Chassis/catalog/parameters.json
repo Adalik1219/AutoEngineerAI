@@ -1,0 +1,3104 @@
+[
+ {
+  "id": "abs_threshold_sps",
+  "tune_key": "ABSThreshold",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.abs_threshold_sps",
+  "value": 20,
+  "unit": "SPS",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 20,
+  "function": "Práh ABS 20 SPS.",
+  "physical_effect": "ABS = plné přerušení tqABS=0, ne pulzování; →0 = brzdy téměř nebrzdí. ABSThreshold→0 = brzdy téměř nebrzdí. ABS = plné přerušení (tqABS=0), ne pulzování.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "ackermann",
+  "tune_key": "Ackerman",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.ackermann_ratio",
+  "value": 0.9,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.9,
+  "function": "Ackermann 0.9.",
+  "physical_effect": "SteerInner = min(Outer−(1−Ackerman)×Outer, 1.2×Outer). SteerInner = min(Outer−(1−Ackerman)×Outer, 1.2×Outer).",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "auto_down_thresh",
+  "tune_key": "AutoDownThresh",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.auto_down_thresh",
+  "value": 1400,
+  "unit": "rpm",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 1400,
+  "function": "Práh podřazení 1400 rpm.",
+  "physical_effect": "Vztahuje se k otáčkám.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "auto_shift_mode"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "auto_shift_mode",
+  "tune_key": "AutoShiftMode",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.auto_shift_mode",
+  "value": "Speed",
+  "unit": "",
+  "value_type": "string",
+  "min": null,
+  "max": null,
+  "default": "Speed",
+  "function": "Režim auto-řazení (Speed).",
+  "physical_effect": "Logika Auto() v Drive.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "trans_modes"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "auto_shift_type",
+  "tune_key": "AutoShiftType",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.auto_shift_type",
+  "value": "DCT",
+  "unit": "",
+  "value_type": "string",
+  "min": null,
+  "max": null,
+  "default": "DCT",
+  "function": "Typ automatu (DCT).",
+  "physical_effect": "Časy ShiftUpTime/ShiftDnTime.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "shift_up_time",
+   "shift_down_time"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "auto_up_thresh",
+  "tune_key": "AutoUpThresh",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.auto_up_thresh",
+  "value": -200,
+  "unit": "rel. peak",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": -200,
+  "function": "Práh řazení nahoru −200 (rel. peak).",
+  "physical_effect": "Vztahuje se k PeakRPM.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "peak_rpm",
+   "auto_shift_mode"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "axle_density",
+  "tune_key": "AxleDensity",
+  "category": "MUTABLE_TUNE",
+  "config_path": "mass.axle_density",
+  "value": 0.1,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.1,
+  "function": "Hustota náprav 0.1 (custom-zavěšení .01).",
+  "physical_effect": "Hmotnost podvozku. Custom-zavěšení díly .01.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §11; Initialize:473-541; Tune:32-48",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "axle_size",
+  "tune_key": "AxleSize",
+  "category": "MUTABLE_TUNE",
+  "config_path": "mass.axle_size",
+  "value": 1.5,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 1.5,
+  "function": "Velikost nápravových dílů 1.5 (Arm/Base/Axle/AxleP 1.5³).",
+  "physical_effect": "Runtime geometrie. Runtime díly Arm/Base/Axle/AxleP (1.5³).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §11; Initialize:473-541; Tune:32-48",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "brake_accel",
+  "tune_key": "BrakeAccel",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.brake_accel",
+  "value": 0.2,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.2,
+  "function": "Rychlost náběhu brzdného signálu (0.2).",
+  "physical_effect": "Vstup #BV logiky v Drive.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "brake_bias_front",
+  "tune_key": "Bias",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.bias_front",
+  "value": 0.6,
+  "unit": "0–1",
+  "value_type": "number",
+  "min": 0,
+  "max": 1,
+  "default": 0.6,
+  "function": "Přední bias 0.6.",
+  "physical_effect": "Extrémní 0/1 rizikový [P]. Extrémní bias (0/1) rizikový [P].",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "brake_decel",
+  "tune_key": "BrakeDecel",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.brake_decel",
+  "value": 0.5,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.5,
+  "function": "Rychlost poklesu brzdného signálu (0.5).",
+  "physical_effect": "Uvolnění brzd.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "brake_force",
+  "tune_key": "BrakeForce",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.torque_Nm",
+  "value": 2500,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 2500,
+  "function": "Brzdná síla 2500.",
+  "physical_effect": "#BV = (FBrake/RBrakeForce×60/FPS×brzda×tqABS) + EBrake×… + PBrake. #BV = (FBrake/RBrakeForce × 60/FPS × brzda × tqABS) + EBrake×… + PBrake.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "abs_threshold_sps"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "cg_height",
+  "tune_key": "CGHeight",
+  "category": "MUTABLE_TUNE",
+  "config_path": "mass.cg_height",
+  "value": 0.8,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.8,
+  "function": "Výška těžiště 0.8.",
+  "physical_effect": "CGHeight>~2 = převracení; bezpečně ≤~1.2. CGHeight > ~2 = převracení; bezpečně ≤ ~1.2.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §11; Initialize:473-541; Tune:32-48",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "clutch_enabled",
+  "tune_key": "Clutch",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.clutch.enabled",
+  "value": true,
+  "unit": "bool",
+  "value_type": "boolean",
+  "min": null,
+  "max": null,
+  "default": true,
+  "function": "Typ spojky (Clutch; alternativy TorqueConverter/CVT).",
+  "physical_effect": "Volí větev spojkové logiky. Typ Clutch; alternativy TorqueConverter/CVT se volí stejným parametrem.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "clutch_engage",
+  "tune_key": "ClutchEngage",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.clutch.engage",
+  "value": 10,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 10,
+  "function": "Záběr spojky (10).",
+  "physical_effect": "ClutchEngage→0 = rázy [P]. ClutchEngage→0 = rázy [P].",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "flywheel"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "clutch_kick",
+  "tune_key": "ClutchKick",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.clutch.kick",
+  "value": false,
+  "unit": "bool",
+  "value_type": "boolean",
+  "min": null,
+  "max": null,
+  "default": false,
+  "function": "Launch control (false, standardně off).",
+  "physical_effect": "Startovací procedura. Launch control, standardně off.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "clutch_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "curve_mult",
+  "tune_key": "CurveMult",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.curve_mult",
+  "value": 0.5,
+  "unit": "~0–1",
+  "value_type": "number",
+  "min": 0,
+  "max": 1,
+  "default": 0.5,
+  "function": "Tvarový násobitel křivky 0.5 (pásmo ~0–1).",
+  "physical_effect": "CurveMult>~1 → nerealistická křivka. CurveMult > ~1 → nerealistická křivka.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "damper",
+  "tune_key": "Damping",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.damper_f_Nspm",
+  "value": null,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 500,
+  "function": "Tlumič 500 – KANDIDÁTNÍ dekód (viz stiffness).",
+  "physical_effect": "Damping=0 → houpání. Hodnota PENDING. Damping = 0 → houpání. Kandidátní dekód – viz limity.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "spring_stiffness"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.4,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "diff_preload",
+  "tune_key": "Preload",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.diff.preload",
+  "value": 20,
+  "unit": "0–100",
+  "value_type": "integer",
+  "min": 0,
+  "max": 100,
+  "default": 20,
+  "function": "Předpětí difu (20, 0–100).",
+  "physical_effect": "Vysoký Preload + zamčené dify v rejdu = přetáčení simu [P]. Vysoký Preload + uzamčené dify v rejdu = přetáčení simu [P].",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "differential_type",
+  "tune_key": "DifferentialType",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.differential_type",
+  "value": "New",
+  "unit": "New|Old",
+  "value_type": "string",
+  "min": null,
+  "max": null,
+  "default": "New",
+  "function": "Typ diferenciálu (New).",
+  "physical_effect": "New = párové násobiče kolem 1 (součet páru = 2); starý dif ignorován. Nový dif: párové násobiče FR↔FL, RR↔RL kolem 1 (součet páru = 2).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [
+   "slip_thresh_old",
+   "lock_thresh_old"
+  ],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "drive_config",
+  "tune_key": "Config",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.drive_type",
+  "value": "AWD",
+  "unit": "FWD|RWD|AWD",
+  "value_type": "string",
+  "min": null,
+  "max": null,
+  "default": "AWD",
+  "function": "Konfigurace pohonu (AWD).",
+  "physical_effect": "Jména kol FL/FR/RL/RR určují hnaná kola; F/R u AWD bez středového difu. Rozdělení F/R u AWD není středový dif – obě nápravy dostanou plné tq škálované jen TorqueVector biasem (zjednodušení).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "electric_enabled",
+  "tune_key": "Electric",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.electric.enabled",
+  "value": false,
+  "unit": "bool",
+  "value_type": "boolean",
+  "min": null,
+  "max": null,
+  "default": false,
+  "function": "Hlavní přepínač elektropohonu (false).",
+  "physical_effect": "False → celá elektro-větev mrtvá; Gauges mismatch se neprojeví. Elektro-větev mrtvá; Gauges názvy nesedí (viz limity).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [
+   "electric_gauge_names"
+  ],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "engine_brake_force",
+  "tune_key": "EBrakeForce",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.engine_brake",
+  "value": 500,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 500,
+  "function": "Motorová brzda 500 (v redline).",
+  "physical_effect": "EBrake×(1−plyn)×(RPM/Redline). Motorová brzda v redline.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "redline_rpm"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "engine_enabled",
+  "tune_key": "Engine",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.enabled",
+  "value": true,
+  "unit": "bool",
+  "value_type": "boolean",
+  "min": null,
+  "max": null,
+  "default": true,
+  "function": "Zapíná spalovací větev motoru.",
+  "physical_effect": "Electric=false → celá elektro-větev je mrtvá (neaktivní kód). Elektro-větev je mrtvá (Electric=false).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "eq_point",
+  "tune_key": "EqPoint",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.eq_point",
+  "value": 5252,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 5252,
+  "function": "Převodní bod HP↔lb-ft (5252).",
+  "physical_effect": "Škálování momentu/výkonu v celém pásmu. Škálování HP↔lb-ft.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "final_drive",
+  "tune_key": "FinalDrive",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.final_drive",
+  "value": 3.545,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 3.545,
+  "function": "Stálý převod 3.545.",
+  "physical_effect": "Násobí všechny stupně (fFDr vzorec).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "gear_ratios"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "final_drive_mult",
+  "tune_key": "FDMult",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.final_drive_mult",
+  "value": 1.1,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 1.1,
+  "function": "Násobič stálého převodu 1.1.",
+  "physical_effect": "FDMult≠1 rozhodí Gauges max-rychlosti jen vizuálně, fyziku ne. FDMult≠1 rozhodí Gauges max-rychlosti jen vizuálně, fyziku ne.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "final_drive"
+  ],
+  "conflicts": [
+   "gauge_max_speed_display"
+  ],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "flywheel",
+  "tune_key": "Flywheel",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.flywheel",
+  "value": 500,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 500,
+  "function": "Setrvačnost (500; vyšší = rychlejší reakce).",
+  "physical_effect": "Flywheel→0 = kmitání RPM [P]; mísí _GoalRPM a _WheelRPM přes _Clutch. Vyšší = rychlejší reakce; Flywheel→0 = kmitání RPM [P].",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "rev_accel",
+   "clutch_engage"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "front_diff_coast",
+  "tune_key": "FDiffCoast",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.diff.front_coast",
+  "value": 20,
+  "unit": "0–100",
+  "value_type": "integer",
+  "min": 0,
+  "max": 100,
+  "default": 20,
+  "function": "Přední dif ubrání (20, 0–100).",
+  "physical_effect": "Váha násobiče bez plynu.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "front_diff_power",
+  "tune_key": "FDiffPower",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.diff.front_power",
+  "value": 20,
+  "unit": "0–100",
+  "value_type": "integer",
+  "min": 0,
+  "max": 100,
+  "default": 20,
+  "function": "Přední dif plyn (20, pásmo 0–100).",
+  "physical_effect": "Váha násobiče pod plynem.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "front_gyro_damp",
+  "tune_key": "FGyroDamp",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.wheel_gyro_damp_f",
+  "value": 100,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 100,
+  "function": "Tlumič klopení kol F (D=100, MaxTorque 1,0,1).",
+  "physical_effect": "Stabilizace kol; řízení drží BodyGyro Steer (P=100000, D=1000). Tlumení klopení kol (BodyGyro, MaxTorque 1,0,1).",
+  "used_in": [
+   "Initialize",
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "front_gyro_dampening",
+  "tune_key": "FGyroDampening",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.gyro_dampening_f",
+  "value": 50,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 50,
+  "function": "Tlumič stabilizátoru tlumiče F (D=50, MaxTorque 0,0,1).",
+  "physical_effect": "Tlumi klopení jednotky tlumiče. D tlumiče BodyGyro Stabilizer (MaxTorque 0,0,1).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "front_wheel_density",
+  "tune_key": "FWheelDensity",
+  "category": "MUTABLE_TUNE",
+  "config_path": "tires.wheel_density_f",
+  "value": 0.1,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.1,
+  "function": "Hustota předních kol 0.1.",
+  "physical_effect": "Jediný 'parametr pneumatiky' v Tune; hmotnost kola. Hmotnost kola = jediný 'parametr pneumatiky' v Tune.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "front_wheel_steer",
+  "tune_key": "FWSteer",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.rear_steer",
+  "value": "None",
+  "unit": "",
+  "value_type": "string",
+  "min": null,
+  "max": null,
+  "default": "None",
+  "function": "Zadní řízení FWSteer=None (4WS off).",
+  "physical_effect": "Zadní osa zamčena weldem MakeWeld(base,axle). 4WS off; zadní osa zamčena weldem.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "gear_ratios",
+  "tune_key": "Ratios",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.gears",
+  "value": {
+   "R": 3.28,
+   "N": 0,
+   "1": 3.827,
+   "2": 2.36,
+   "3": 1.685,
+   "4": 1.313,
+   "5": 1.0,
+   "6": 0.793
+  },
+  "unit": "",
+  "value_type": "object",
+  "min": null,
+  "max": null,
+  "default": {
+   "R": 3.28,
+   "N": 0,
+   "1": 3.827,
+   "2": 2.36,
+   "3": 1.685,
+   "4": 1.313,
+   "5": 1.0,
+   "6": 0.793
+  },
+  "function": "Převodové poměry R/N/1–6.",
+  "physical_effect": "Určují _WheelRPM a V-max na stupeň; Gauges z nich počítá max-rychlosti.",
+  "used_in": [
+   "Drive",
+   "Gauges_AC6"
+  ],
+  "depends_on": [
+   "final_drive",
+   "final_drive_mult"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "horsepower",
+  "tune_key": "Horsepower",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.horsepower",
+  "value": 200,
+  "unit": "hp",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 200,
+  "function": "Cílový výkon motoru 200 hp.",
+  "physical_effect": "Škáluje momentovou křivku CurveN; základ akcelerace a V-max.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "idle_rpm",
+  "tune_key": "IdleRPM",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.idle_rpm",
+  "value": 950,
+  "unit": "rpm",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 950,
+  "function": "Volnoběžné otáčky 950 rpm.",
+  "physical_effect": "Výchozí bod křivky; rozjezd a Stall-chování.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "idle_throttle",
+  "tune_key": "IdleThrottle",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.idle_throttle",
+  "value": 3,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 3,
+  "function": "Plyn na volnoběh (3).",
+  "physical_effect": "Drží IdleRPM.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "idle_rpm"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "incline_comp",
+  "tune_key": "InclineComp",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.incline_comp",
+  "value": 1,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 1,
+  "function": "Kompenzace stoupání (1).",
+  "physical_effect": "Násobič momentu 1+lookVector.y×g; zpátečka invertována. Násobič momentu do kopce; zpátečka invertována.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "lock_to_lock",
+  "tune_key": "LockToLock",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.lock_to_lock",
+  "value": 2.6,
+  "unit": "otáčky",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 2.6,
+  "function": "Otáčky volantu 2.6.",
+  "physical_effect": "SteerOuter = 2.6×180/15 = 31.2°. SteerOuter = LockToLock×180/SteerRatio = 31.2°.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [
+   "steer_ratio"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "min_steer",
+  "tune_key": "MinSteer",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.min_steer_pct",
+  "value": 10,
+  "unit": "%",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 10,
+  "function": "Minimální rejd 10 %.",
+  "physical_effect": "Zachovává ovladatelnost ve vysoké rychlosti.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [
+   "steer_decay"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "mouse_steer_exp",
+  "tune_key": "MSteerExp",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.mouse_exp",
+  "value": 1,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 1,
+  "function": "Exponent mouse-steer 1.",
+  "physical_effect": "Křivka myši; kamera AC6_MSteer_Camera.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "pbrake_force",
+  "tune_key": "PBrakeForce",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.pbrake_force",
+  "value": 5000,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 5000,
+  "function": "Ruční brzda 5000 (jen zadek, bias 0).",
+  "physical_effect": "PBrake okruh. PBrake: jen zadek (bias 0).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "pbrake_bias"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "peak_rpm",
+  "tune_key": "PeakRPM",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.peak_rpm",
+  "value": 6800,
+  "unit": "rpm",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 6800,
+  "function": "Otáčky vrcholu křivky 6800 rpm.",
+  "physical_effect": "Parabola CurveN má maximum zde; řazení se vztahuje k peak.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "auto_up_thresh"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "peak_sharpness",
+  "tune_key": "PeakSharpness",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.peak_sharpness",
+  "value": 20,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 20,
+  "function": "Strmost špičky křivky (20).",
+  "physical_effect": "Extrémy → nerealistická špička/díra, jízdní nestabilita. Extrémy → nerealistická špička/díra (jízdní nestabilita, ne simulační).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rear_gyro_damp",
+  "tune_key": "RGyroDamp",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.wheel_gyro_damp_r",
+  "value": 100,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 100,
+  "function": "Tlumič klopení kol R (100).",
+  "physical_effect": "Symetricky k F.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rear_gyro_dampening",
+  "tune_key": "RGyroDampening",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.gyro_dampening_r",
+  "value": 50,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 50,
+  "function": "Tlumič stabilizátoru tlumiče R (50).",
+  "physical_effect": "Symetricky k F.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rear_wheel_density",
+  "tune_key": "RWheelDensity",
+  "category": "MUTABLE_TUNE",
+  "config_path": "tires.wheel_density_r",
+  "value": 0.1,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.1,
+  "function": "Hustota zadních kol 0.1.",
+  "physical_effect": "Symetricky k F.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "redline_rpm",
+  "tune_key": "Redline",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.redline_rpm",
+  "value": 8000,
+  "unit": "rpm",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 8000,
+  "function": "Omezovač 8000 rpm.",
+  "physical_effect": "Nad redline sráží RevBounce; _spLimit motorů kol.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "rev_bounce"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "return_speed",
+  "tune_key": "ReturnSpeed",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.return_per_tick",
+  "value": 0.1,
+  "unit": "°/tick",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.1,
+  "function": "Rychlost vracení 0.1 °/tick.",
+  "physical_effect": "Centrování řízení.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rev_accel",
+  "tune_key": "RevAccel",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.rev_accel",
+  "value": 250,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 250,
+  "function": "Zrychlení otáček (250).",
+  "physical_effect": "Točivost motoru; interaguje s Flywheel.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "flywheel"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rev_bounce",
+  "tune_key": "RevBounce",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.rev_bounce",
+  "value": 250,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 250,
+  "function": "Sražení omezovačem (250, ½ na posledním stupni).",
+  "physical_effect": "Chování na redline. Omezovač sráží RevBounce (plný/½ na posledním stupni).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "redline_rpm"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rev_decay",
+  "tune_key": "RevDecay",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.rev_decay",
+  "value": 75,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 75,
+  "function": "Pokles otáček (75).",
+  "physical_effect": "Doběh otáček bez plynu.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "rpm_engage",
+  "tune_key": "RPMEngage",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.clutch.rpm_engage",
+  "value": 3500,
+  "unit": "rpm",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 3500,
+  "function": "Otáčky záběru 3500 rpm.",
+  "physical_effect": "Parametr měniče/CVT větve.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "clutch_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "shift_down_time",
+  "tune_key": "ShiftDnTime",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.shift_down_time_s",
+  "value": 0.125,
+  "unit": "s",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.125,
+  "function": "Čas řazení dolů 0.125 s.",
+  "physical_effect": "Prodleva při podřazení.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "auto_shift_type"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "shift_up_time",
+  "tune_key": "ShiftUpTime",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.shift_up_time_s",
+  "value": 0.25,
+  "unit": "s",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.25,
+  "function": "Čas řazení nahoru 0.25 s.",
+  "physical_effect": "Prodleva výkonu při řazení.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "auto_shift_type"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "speed_engage",
+  "tune_key": "SpeedEngage",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.clutch.speed_engage_sps",
+  "value": 20,
+  "unit": "SPS",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 20,
+  "function": "Rychlost záběru 20 SPS.",
+  "physical_effect": "Spojení _GoalRPM/_WheelRPM za jízdy.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "clutch_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "spring_stiffness",
+  "tune_key": "Stiffness",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.spring_f_Npm",
+  "value": null,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 20000,
+  "function": "Tuhost pružin 20000 – KANDIDÁTNÍ dekód, symetrie kol nevychází.",
+  "physical_effect": "Bezpečné cca 0.25–4×; <~5000 = dosedání. Hodnota PENDING do Studia. F i R stejné; bezpečné cca 0.25–4×; < ~5000 = dosedání. POZOR: kandidátní dekód float-lane, symetrie kol nevychází – viz limity.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length",
+   "pre_compress"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.4,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "stall_enabled",
+  "tune_key": "Stall",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.clutch.stall",
+  "value": true,
+  "unit": "bool",
+  "value_type": "boolean",
+  "min": null,
+  "max": null,
+  "default": true,
+  "function": "Chcípání motoru (true).",
+  "physical_effect": "Vyžaduje ignition plugin. Chcípnutí; vyžaduje ignition plugin.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "steer_decay",
+  "tune_key": "SteerDecay",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.decay_sps",
+  "value": 330,
+  "unit": "SPS",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 330,
+  "function": "Útlum řízení 330 SPS.",
+  "physical_effect": "Nízký SteerDecay = přetáčivé ve vysoké rychlosti. Nízký SteerDecay = přetáčivé ve vysoké rychlosti.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "steer_ratio",
+  "tune_key": "SteerRatio",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.ratio",
+  "value": 15,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 15,
+  "function": "Převod řízení 15.",
+  "physical_effect": "Vstup SteerOuter vzorce.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [
+   "lock_to_lock"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "steer_speed",
+  "tune_key": "SteerSpeed",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.speed_per_tick",
+  "value": 0.05,
+  "unit": "°/tick",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.05,
+  "function": "Rychlost rejdu 0.05 °/tick.",
+  "physical_effect": "Aplikace na Arm.Steer.CFrame kinematicky, ne silou.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "steering_type",
+  "tune_key": "SteeringType",
+  "category": "MUTABLE_TUNE",
+  "config_path": "steering.type",
+  "value": "New",
+  "unit": "",
+  "value_type": "string",
+  "min": null,
+  "max": null,
+  "default": "New",
+  "function": "Typ řízení (New).",
+  "physical_effect": "Nová větev výpočtu SteerOuter/Inner.",
+  "used_in": [
+   "Drive",
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "supercharger_count",
+  "tune_key": "Superchargers",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.supercharger.count",
+  "value": 0,
+  "unit": "ks",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 0,
+  "function": "Počet kompresorů (0).",
+  "physical_effect": "Nula → kompresorová větev neaktivní.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "sus_radius",
+  "tune_key": "SusRadius",
+  "category": "MUTABLE_TUNE",
+  "config_path": "suspension.radius",
+  "value": 0.2,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.2,
+  "function": "Poloměr pružiny 0.2 (vzhled).",
+  "physical_effect": "Vizuální; Template vzhled. Vzhled pružiny.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "tcs_gradient",
+  "tune_key": "TCSGradient",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.tcs_gradient",
+  "value": 20,
+  "unit": "SPS",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 20,
+  "function": "Gradient TCS 20 SPS.",
+  "physical_effect": "Strmost škrcení.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "tcs_threshold_sps"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "tcs_limit_pct",
+  "tune_key": "TCSLimit",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.tcs_limit_pct",
+  "value": 10,
+  "unit": "%",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 10,
+  "function": "Limit TCS 10 %.",
+  "physical_effect": "Zbytkový moment při prokluzu; flagy TCSActive/TCSAmt ve Values.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "tcs_threshold_sps"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "tcs_threshold_sps",
+  "tune_key": "TCSThreshold",
+  "category": "MUTABLE_TUNE",
+  "config_path": "brakes.tcs_threshold_sps",
+  "value": 20,
+  "unit": "SPS",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 20,
+  "function": "Práh TCS 20 SPS.",
+  "physical_effect": "Gradientní škrcení 1−min(max(0,skluz−práh)/gradient,1)×(1−limit). TCS: 1 − min(max(0, skluz−TCSThreshold)/TCSGradient,1) × (1−TCSLimit).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "tcs_gradient",
+   "tcs_limit_pct"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "throttle_accel",
+  "tune_key": "ThrotAccel",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.throttle_accel",
+  "value": 0.05,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.05,
+  "function": "Rychlost náběhu plynu (0.05).",
+  "physical_effect": "Odezva motoru na plyn; vyšší = agresivnější.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "throttle_decel",
+  "tune_key": "ThrotDecel",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.throttle_decel",
+  "value": 0.2,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": 0.2,
+  "function": "Rychlost poklesu plynu (0.2).",
+  "physical_effect": "Doběh motoru po ubrání.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "torque_vector",
+  "tune_key": "TorqueVector",
+  "category": "MUTABLE_TUNE",
+  "config_path": "powertrain.torque_vector",
+  "value": 0,
+  "unit": "-1..1",
+  "value_type": "integer",
+  "min": -1,
+  "max": 1,
+  "default": 0,
+  "function": "Předozadní bias 0 (−1 = 100 % předek, 50:50 při 0).",
+  "physical_effect": "Není středový dif – obě nápravy dostanou plné tq škálované biasem. 0 = 50:50; -1 = 100 % předek.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "drive_config"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "trans_modes",
+  "tune_key": "TransModes",
+  "category": "MUTABLE_TUNE",
+  "config_path": "transmission.modes",
+  "value": [
+   "Semi",
+   "Manual",
+   "Auto"
+  ],
+  "unit": "",
+  "value_type": "array",
+  "min": null,
+  "max": null,
+  "default": [
+   "Semi",
+   "Manual",
+   "Auto"
+  ],
+  "function": "Režimy řazení [Semi,Manual,Auto], první = výchozí.",
+  "physical_effect": "Výchozí chování převodovky. První = výchozí.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "turbo2_boost_lag",
+  "tune_key": "T2_BoostLag",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.turbo.boost_lag_2",
+  "value": 250,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 250,
+  "function": "Náběh 2. stupně turba (250).",
+  "physical_effect": "Platí jen při Turbochargers=2. Druhý stupeň dvojitého turba.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "turbo_count"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "turbo_boost",
+  "tune_key": "T_Boost",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.turbo.boost",
+  "value": 7,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 7,
+  "function": "Plnicí tlak turba (7).",
+  "physical_effect": "Přímý vstup HP_T; vyšší boost = vyšší špičkový výkon. HP_T z T_Boost × počet × CompressionRatio/10 / 7.5.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "turbo_count",
+   "compression_ratio"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "turbo_boost_lag",
+  "tune_key": "T_BoostLag",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.turbo.boost_lag",
+  "value": 125,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 125,
+  "function": "Náběh 1. stupně turba (125).",
+  "physical_effect": "Dynamika _TBoost 0.05–2; vyšší lag = pomalejší odezva.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "turbo_count"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "turbo_count",
+  "tune_key": "Turbochargers",
+  "category": "MUTABLE_TUNE",
+  "config_path": "engine.turbo.count",
+  "value": 2,
+  "unit": "ks",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 2,
+  "function": "Počet turbodmychadel (2).",
+  "physical_effect": "Násobí HP_T ve vzorci T_Boost×počet×CompressionRatio/10/7.5.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "weight_box_size",
+  "tune_key": "WeightBSize",
+  "category": "MUTABLE_TUNE",
+  "config_path": "mass.box_size",
+  "value": [
+   7.03,
+   5.35,
+   18.11
+  ],
+  "unit": "",
+  "value_type": "array",
+  "min": null,
+  "max": null,
+  "default": [
+   7.03,
+   5.35,
+   18.11
+  ],
+  "function": "Rozměr váhového kvádru [7.03, 5.35, 18.11].",
+  "physical_effect": "≈ rozměry auta; vše massless kromě kol/náprav; hráč massless. ≈ rozměry auta (kvádr #Weight v Body).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "weight_lb"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §11; Initialize:473-541; Tune:32-48",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "weight_dist_pct",
+  "tune_key": "WeightDist",
+  "category": "MUTABLE_TUNE",
+  "config_path": "mass.dist_front_pct",
+  "value": 55,
+  "unit": "%",
+  "value_type": "integer",
+  "min": 0,
+  "max": 100,
+  "default": 55,
+  "function": "Rozložení 55 %.",
+  "physical_effect": "Poloha = Lerp(zadek, předek, 55 %) + CGHeight; mimo 0–100 extrémy. Poloha kvádru = Lerp(střed zadku, střed předku, WeightDist) + CGHeight. Mimo 0–100 = extrémy schválně povoleny.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "weight_box_size"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §11; Initialize:473-541; Tune:32-48",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "weight_lb",
+  "tune_key": "Weight",
+  "category": "MUTABLE_TUNE",
+  "config_path": "mass.total_kg",
+  "value": 3439,
+  "unit": "lb",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": 3439,
+  "function": "Cílová hmotnost 3439 lb.",
+  "physical_effect": "Hustota kvádru #Weight dopočtena (cap-varování ≥2); převod na kg až runtime. Cílová hmotnost; hustota váhového kvádru dopočtena (cap-varování ≥2). Převod na kg řeší až runtime vrstva, nikdy úložiště (§3).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "weight_box_size"
+  ],
+  "conflicts": [],
+  "change_method": "tune",
+  "source": "A-CHASSIS-AUDIT.md §11; Initialize:473-541; Tune:32-48",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "abs_pulse_logic",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Pulzní ABS / chytré TCS – vyžaduje zásah skriptem.",
+  "physical_effect": "Současné ABS jen on/off; přepínače T/Y za jízdy. Přepínače T/Y za jízdy; flagy ABSActive/TCSActive/TCSAmt ve Values.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "abs_threshold_sps",
+   "tcs_threshold_sps"
+  ],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "arm_kinematics",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": "geometry_overrides",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Kinematika ramen custom geometrie – jen přestavbou dílů/kloubů.",
+  "physical_effect": "Parametrem nelze; 24× HingeConstraint pasivní čepy, 4× Spring template. Test: průjezd nerovností – rozkmit, kontakt kol, náklon.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [
+   "front_wishbone_len",
+   "rear_wishbone_len",
+   "sus_angle"
+  ],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §8, §16; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "camber_caster_toe",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Odklon/záklon/sbíhavost (vše 0°) – jen natočení kola.",
+  "physical_effect": "CFrame.Angles, ne fyzika závěsu; v Tune přiznáno. Skutečná geometrie jen konstrukcí. V Tune přiznáno ('Don't physically apply'); camber je vizuální.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "center_diff_logic",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Skutečný středový dif / aktivní vektorování – vyžaduje zásah skriptem.",
+  "physical_effect": "Současné AWD je zjednodušené (bez mezinápravového prokluzu).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "drive_config",
+   "torque_vector"
+  ],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "curve_shape_func",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Tvar křivky CurveN (parabola kolem PeakRPM) – kód, mimo Tune.",
+  "physical_effect": "Mění se skriptem (Drive), ne Tune; mapy E85 apod. skriptem. Skriptem: tvar křivky (CurveN…), přidání map (E85 apod.).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "peak_rpm",
+   "peak_sharpness",
+   "curve_mult"
+  ],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "downforce_f",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": 125,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Přítlak F 125 – konstanta ve skriptu.",
+  "physical_effect": "(0,−speed/300×125,0); přítlak funguje (správné Magnitude). DownforceF.Force = (0, −speed/300×125, 0).",
+  "used_in": [
+   "Aerodynamics"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §13; Aerodynamics:1-22; Body:DownforceF/R,Drag",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "downforce_r",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": 150,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Přítlak R 150 – konstanta ve skriptu.",
+  "physical_effect": "(0,−speed/300×150,0). DownforceR.Force = (0, −speed/300×150, 0).",
+  "used_in": [
+   "Aerodynamics"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §13; Aerodynamics:1-22; Body:DownforceF/R,Drag",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "drag_coeff",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": 0.34,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Odpor Drag .34 – konstanta v Aerodynamics, MIMO Tune.",
+  "physical_effect": "Drag=(0,0,speed²×Drag/30). CHYBA č.2: magnitude → odpor se nikdy neaplikuje; V-max měřit až po opravě. Drag = (0,0,speed²×Drag/30).",
+  "used_in": [
+   "Aerodynamics"
+  ],
+  "depends_on": [],
+  "conflicts": [
+   "aerodynamics_bug"
+  ],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §13; Aerodynamics:1-22; Body:DownforceF/R,Drag",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "shift_logic",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Řadicí logika Auto() + Launch Control – kód.",
+  "physical_effect": "Mění se skriptem (Drive).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "trans_modes"
+  ],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "target_friction",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": "tires.grip_long",
+  "value": 0.7,
+  "unit": "",
+  "value_type": "number",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Cílová adheze F/RTargetFriction .7 + Heat (min .1) – v Simulated.",
+  "physical_effect": "Grip = CustomPhysicalProperties, přepsání každých wait() podle skluzu wheel/(0.774×speed); kola koule. Grip = CustomPhysicalProperties kol, přepis každých wait() podle skluzu wheel/(0.774×speed). Kola = koule (Part.shape=0/Ball).",
+  "used_in": [
+   "Simulated"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "wear_speed",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Opotřebení WearSpeed .4 / Regen 3.6 / elasticita .5 / váhy 1 – Simulated.",
+  "physical_effect": "Mimo Tune; rozměr pneu = rozměr dílu (wDia z Size.x). Rozměr pneu = rozměr dílu kola (wDia z Size.x největšího hnacího kola).",
+  "used_in": [
+   "Simulated"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "wheel_lock_ratio",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Poměr lock-režimu (<8 % → ×WheelLockRatio 1/2) – Simulated.",
+  "physical_effect": "Mění se skriptem.",
+  "used_in": [
+   "Simulated"
+  ],
+  "depends_on": [
+   "target_friction"
+  ],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "wheelspin_ratio",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Poměr prokluzu (>130 % → ×WheelspinRatio 1/1.1) – Simulated.",
+  "physical_effect": "Mění se skriptem; TCS-off větev >80 % → ×1.",
+  "used_in": [
+   "Simulated"
+  ],
+  "depends_on": [
+   "target_friction"
+  ],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.85,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "wind_volume",
+  "tune_key": null,
+  "category": "SCRIPT_CONTROLLED",
+  "config_path": null,
+  "value": 1,
+  "unit": "",
+  "value_type": "integer",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Zvuk větru Vol=1 – konstanta.",
+  "physical_effect": "Audio, bez fyzikálního účinku.",
+  "used_in": [
+   "Aerodynamics"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "script",
+  "source": "A-CHASSIS-AUDIT.md §13; Aerodynamics:1-22; Body:DownforceF/R,Drag",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "wheel_radius",
+  "tune_key": null,
+  "category": "STRUCTURE_CONTROLLED",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Poloměr kol (Size.x/wDia) – bitově neověřen.",
+  "physical_effect": "Struktura: odečíst Size kol ve Studiu.",
+  "used_in": [],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "geometry",
+  "source": "A-CHASSIS-AUDIT.md §1, §10; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.3,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "wheelbase_etc",
+  "tune_key": null,
+  "category": "STRUCTURE_CONTROLLED",
+  "config_path": "dimensions.wheelbase_m",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Rozvor/rozchod/ride-height – nevyčteny (float/CFrame gap §1).",
+  "physical_effect": "Struktura: měřit ve Studiu (FL–RL, FL–FR), zapsat do vehicle-data/analyzed/.",
+  "used_in": [],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "geometry",
+  "source": "A-CHASSIS-AUDIT.md §1, §3; Initialize:473-541; Tune:32-48",
+  "confidence": 0.3,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_gauge_names",
+  "tune_key": "ElecRedline/ElecTransition2",
+  "category": "READ_ONLY",
+  "config_path": "engine.electric.gauge_names",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Gauges čte ElecRedline/ElecTransition2, Tune má E_Redline/E_Trans2.",
+  "physical_effect": "CHYBA č.3: projeví se jen při Electric=true (zde mrtvé). Nikdy nezapisovat. Chyba kódu č. 3 – viz limits().",
+  "used_in": [
+   "Gauges_AC6"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [
+   "electric_redline",
+   "electric_trans2"
+  ],
+  "change_method": "none",
+  "source": "A-CHASSIS-AUDIT.md §15; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "legacy_wheel_density_f",
+  "tune_key": "FWLgcyDensity",
+  "category": "READ_ONLY",
+  "config_path": "tires.legacy_density_f",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "FWLgcyDensity – klíč neexistuje; mrtvá non-PGS větev.",
+  "physical_effect": "CHYBA č.4: bez PGS Initialize skončí chybou dřív. Nikdy nezapisovat. Chyba kódu č. 4 – viz limits().",
+  "used_in": [
+   "Simulated"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "none",
+  "source": "A-CHASSIS-AUDIT.md §14, §17; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "legacy_wheel_density_r",
+  "tune_key": "RWLgcyDensity",
+  "category": "READ_ONLY",
+  "config_path": "tires.legacy_density_r",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "RWLgcyDensity – viz F; mrtvý kód.",
+  "physical_effect": "Nikdy nezapisovat.",
+  "used_in": [
+   "Simulated"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "none",
+  "source": "A-CHASSIS-AUDIT.md §14, §17; Simulated:1-196; Initialize:96-125",
+  "confidence": 0.9,
+  "verification_status": "PASS"
+ },
+ {
+  "id": "anchor_offset",
+  "tune_key": "AnchorOffset",
+  "category": "UNKNOWN",
+  "config_path": "suspension.anchor_offset",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Offset ukotvení – hodnota neuvedena (neaktivní větev).",
+  "physical_effect": "PENDING. RO-DŮVOD: Hodnota v auditu neuvedena (jen neaktivní procedurální větev).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "arm_kinematics"
+  ],
+  "conflicts": [
+   "arm_kinematics"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "compress_lim",
+  "tune_key": "CompressLim",
+  "category": "UNKNOWN",
+  "config_path": "suspension.compress_lim",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Limit stlačení – hodnota neuvedena.",
+  "physical_effect": "Vstup MinLength vzorce; mimo FreeLength = trvalé dosednutí. RO-DŮVOD: Hodnota v auditu neuvedena (jen vzorec MinLength).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "compression_ratio",
+  "tune_key": "CompressionRatio",
+  "category": "UNKNOWN",
+  "config_path": "engine.compression_ratio",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Kompresní poměr – klíč auditem nepotvrzen, jen ve vzorci HP_T.",
+  "physical_effect": "Vstup vzorce turba; hodnota PENDING. Vstup vzorce turba: HP_T z T_Boost × počet × CompressionRatio/10 / 7.5. RO-DŮVOD: Klíč v Tune auditem nepotvrzen (jen ve vzorci HP_T); hodnota neuvedena.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "turbo_boost"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_end_mult",
+  "tune_key": "EH_EndMult",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.end_mult",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. koncový exponent – neuvedeno.",
+  "physical_effect": "Neověřeno; mrtvá větev. RO-DŮVOD: Hodnota v auditu neuvedena (mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_end_percent",
+  "tune_key": "EH_EndPercent",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.end_percent",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. koncové procento – neuvedeno.",
+  "physical_effect": "Neověřeno; mrtvá větev. RO-DŮVOD: Hodnota v auditu neuvedena (mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_front_mult",
+  "tune_key": "EH_FrontMult",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.front_mult",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. přední exponent – neuvedeno.",
+  "physical_effect": "Neověřeno; mrtvá větev. RO-DŮVOD: Hodnota v auditu neuvedena (mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_redline",
+  "tune_key": "E_Redline",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.redline",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. omezovač – hodnota neuvedena (mrtvá větev).",
+  "physical_effect": "Gauges čte ElecRedline místo E_Redline (chyba č.3). RO-DŮVOD: Hodnota v auditu neuvedena; Gauges čte ElecRedline (mismatch, viz limity).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [
+   "electric_gauge_names"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_torque",
+  "tune_key": "E_Torque",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.torque",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. moment – neuvedeno.",
+  "physical_effect": "Neověřeno; mrtvá větev. RO-DŮVOD: Hodnota v auditu neuvedena (mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_torque_end_mult",
+  "tune_key": "ET_EndMult",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.torque_end_mult",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. koncový násobitel momentu – neuvedeno.",
+  "physical_effect": "Neověřeno; mrtvá větev. RO-DŮVOD: Hodnota v auditu neuvedena (mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_torque_end_percent",
+  "tune_key": "ET_EndPercent",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.torque_end_percent",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. koncové procento momentu – neuvedeno.",
+  "physical_effect": "Neověřeno; mrtvá větev. RO-DŮVOD: Hodnota v auditu neuvedena (mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_trans1",
+  "tune_key": "E_Trans1",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.trans1",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. lichoběžník bod 1 – hodnota neuvedena (mrtvá větev).",
+  "physical_effect": "Neověřeno; aktivní jen při Electric=true. Lichoběžník elektro-křivky. RO-DŮVOD: Hodnota v auditu neuvedena (Electric=false, mrtvá větev).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "electric_trans2",
+  "tune_key": "E_Trans2",
+  "category": "UNKNOWN",
+  "config_path": "engine.electric.trans2",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "El. lichoběžník bod 2 – hodnota neuvedena (mrtvá větev).",
+  "physical_effect": "Gauges čte ElecTransition2 místo E_Trans2 (chyba č.3). RO-DŮVOD: Hodnota v auditu neuvedena; Gauges čte ElecTransition2 (mismatch, viz limity).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "electric_enabled"
+  ],
+  "conflicts": [
+   "electric_gauge_names"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "extension_lim",
+  "tune_key": "ExtensionLim",
+  "category": "UNKNOWN",
+  "config_path": "suspension.extension_lim",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Limit prodloužení – hodnota neuvedena.",
+  "physical_effect": "Vstup MaxLength vzorce; mimo FreeLength = trvalé propnutí. RO-DŮVOD: Hodnota v auditu neuvedena (jen vzorec MaxLength).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "front_wishbone_len",
+  "tune_key": "FWsBoneLen",
+  "category": "UNKNOWN",
+  "config_path": "suspension.wishbone_len_f",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Délka ramene F (4) – patří NEAKTIVNÍ procedurální větvi.",
+  "physical_effect": "Custom větev v tomto kitu ji nepoužívá; hodnota nepřevzata. PENDING. Bez SuspensionGeometry by skript stavěl procedurální wishbone – v tomto kitu neaktivní. RO-DŮVOD: Hodnota 4 patří procedurální (neaktivní) větvi; custom větev ji nepoužívá – hodnotu nepřebírám jako fakt pro tento kit.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "arm_kinematics"
+  ],
+  "conflicts": [
+   "arm_kinematics"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "lock_thresh_old",
+  "tune_key": "LockThres",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.lock_thresh_old",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Práh uzávěrky starého difu – ignorován při New.",
+  "physical_effect": "Podmíněný; hodnota neuvedena. PENDING. RO-DŮVOD: Starý dif, při DifferentialType=New ignorován; hodnota neuvedena.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [
+   "differential_type"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "pbrake_bias",
+  "tune_key": "Bias(PBrake)?",
+  "category": "UNKNOWN",
+  "config_path": "brakes.pbrake_bias",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Bias ruční brzdy – název klíče audit nepotvrzuje (hodnota 0 ano).",
+  "physical_effect": "Kvalifikovaný odhad z QA vlny 2; read-only do Studia. PENDING. Hodnota 0 ověřena ('Bias=0'); název je kvalifikovaný odhad (QA vlna 2). RO-DŮVOD: Název klíče audit nepotvrzuje — do ověření ve Studiu read-only.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "pbrake_force"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §12; Drive:999-1077; Initialize:440-462; Tune:329-338",
+  "confidence": 0.3,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "pre_compress",
+  "tune_key": "PreCompress",
+  "category": "UNKNOWN",
+  "config_path": "suspension.pre_compress",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Předpětí pružiny – hodnota neuvedena.",
+  "physical_effect": "Vstup FreeLength vzorce. PENDING. RO-DŮVOD: Hodnota v auditu neuvedena (jen vzorec FreeLength).",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "sus_length"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "rear_diff_coast",
+  "tune_key": "RDiffCoast?",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.rear_coast",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Zadní dif ubrání – audit uvádí jen 'zadek 30' bez názvu.",
+  "physical_effect": "Název RDiffCoast? odvozen, NEPOTVRZEN. PENDING. RO-DŮVOD: Audit uvádí jen 'zadek 40/30' bez názvu klíče – název RDiffCoast odvozen, nepotvrzen; hodnota 30 nepřevzata jako fakt.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "rear_diff_power",
+  "tune_key": "RDiffPower?",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.rear_power",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Zadní dif plyn – audit uvádí jen 'zadek 40' bez názvu klíče.",
+  "physical_effect": "Název RDiffPower? odvozen, NEPOTVRZEN; hodnota nepřevzata. PENDING. Bezpečné pásmo 0–100; vysoký Preload = nedotáčivost + odpor v rejdu. RO-DŮVOD: Audit uvádí jen 'zadek 40/30' bez názvu klíče – název RDiffPower odvozen, nepotvrzen; hodnota 40 nepřevzata jako fakt.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "rear_wishbone_len",
+  "tune_key": "RWsBoneLen",
+  "category": "UNKNOWN",
+  "config_path": "suspension.wishbone_len_r",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Délka ramene R – neaktivní větev.",
+  "physical_effect": "Viz front_wishbone_len. PENDING. RO-DŮVOD: Viz front_wishbone_len – neaktivní větev.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "arm_kinematics"
+  ],
+  "conflicts": [
+   "arm_kinematics"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "slip_thresh_old",
+  "tune_key": "SlipThres",
+  "category": "UNKNOWN",
+  "config_path": "powertrain.diff.slip_thresh_old",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Práh prokluzu starého difu – ignorován při DifferentialType=New.",
+  "physical_effect": "Podmíněný parametr; hodnota neuvedena. PENDING. RO-DŮVOD: Starý dif, při DifferentialType=New ignorován; hodnota neuvedena.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "differential_type"
+  ],
+  "conflicts": [
+   "differential_type"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §7; Drive:290-304,937-993; Tune:210-239",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "spring_color",
+  "tune_key": null,
+  "category": "UNKNOWN",
+  "config_path": null,
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Barva pružin – Tune-měnitelná dle §16, ale klíč ani hodnota neuvedeny.",
+  "physical_effect": "Nevymýšlím; PENDING Studio. Matice 'co lze měnit čím': Karoserie | barva pružin | MiscWeld | díly… RO-DŮVOD: Audit uvádí 'barva pružin' jako Tune-měnitelnou, ale název klíče ani hodnotu neuvádí – nevymýšlím.",
+  "used_in": [],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §16; §16 matice 'co lze měnit čím'",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "steer_axis_offset",
+  "tune_key": "StAxisOffset",
+  "category": "UNKNOWN",
+  "config_path": "steering.axis_offset",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "StAxisOffset – klíč v Tune CHYBÍ, Initialize:171 ho čte.",
+  "physical_effect": "CHYBA č.1: CFrame.new(0,nil,0) → podezření na runtime error. PENDING Studio. Chyba kódu č. 1 – viz limits(). RO-DŮVOD: Klíč v Tune CHYBÍ, ale Initialize:171 ho čte (CFrame.new(0, nil, 0) → podezření na runtime error). Nutno ověřit prvním spuštěním ve Studiu.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §9; Drive:322-431; Initialize:145-159,400-428; Tune:108-143",
+  "confidence": 0.5,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "supercharger_sensitivity",
+  "tune_key": "S_Sensitivity",
+  "category": "UNKNOWN",
+  "config_path": "engine.supercharger.sensitivity",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Citlivost kompresoru _SBoost – hodnota v auditu neuvedena.",
+  "physical_effect": "Neověřeno; nutno odečíst z Tune ve Studiu (F4 PENDING). _SBoost z otáček × S_Sensitivity. RO-DŮVOD: Hodnota v auditu neuvedena – nevymýšlím, nutno odečíst z Tune ve Studiu.",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "supercharger_count"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §5; Drive:435-650,784-930; Tune:144-208",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "sus_angle",
+  "tune_key": "SusAngle",
+  "category": "UNKNOWN",
+  "config_path": "suspension.angle",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Úhel ramen 80 – neaktivní procedurální větev.",
+  "physical_effect": "Nepřebíráno jako fakt pro tento kit. PENDING. RO-DŮVOD: Hodnota 80 patří neaktivní procedurální větvi – nepřebírána.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "arm_kinematics"
+  ],
+  "conflicts": [
+   "arm_kinematics"
+  ],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "sus_length",
+  "tune_key": "SusLength",
+  "category": "UNKNOWN",
+  "config_path": "suspension.length",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "Základní délka SusLength – v auditu jen odvozené délky.",
+  "physical_effect": "FreeLength=SusLength+PreCompress; Max=+ExtensionLim; Min=−CompressLim. FreeLength=SusLength+PreCompress; Max=SusLength+ExtensionLim; Min=SusLength-CompressLim. Limity mimo FreeLength = trvalé dosednutí/propnutí. RO-DŮVOD: Audit dává jen odvozené délky (Free 2.7 / Max 3.2 / Min 2.35, kandidátní dekód); samotné SusLength neuvedeno.",
+  "used_in": [
+   "Initialize"
+  ],
+  "depends_on": [
+   "pre_compress",
+   "extension_lim",
+   "compress_lim"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §8; Initialize:207-365; Tune:F/R 20000/500/2.7/3.2/2.35",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ },
+ {
+  "id": "tq_lock",
+  "tune_key": "TQLock",
+  "category": "UNKNOWN",
+  "config_path": "transmission.clutch.tq_lock",
+  "value": null,
+  "unit": "",
+  "value_type": "null",
+  "min": null,
+  "max": null,
+  "default": null,
+  "function": "TQLock měniče – hodnota v auditu neuvedena.",
+  "physical_effect": "PENDING; jen pro TorqueConverter větev. RO-DŮVOD: Hodnota v auditu neuvedena (parametr měniče).",
+  "used_in": [
+   "Drive"
+  ],
+  "depends_on": [
+   "clutch_enabled"
+  ],
+  "conflicts": [],
+  "change_method": "pending-studio",
+  "source": "A-CHASSIS-AUDIT.md §6; Drive:653-732,809-842; Tune:240-328",
+  "confidence": 0.1,
+  "verification_status": "PENDING"
+ }
+]

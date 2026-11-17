@@ -30,8 +30,9 @@ Otevřené body před implementací:
 
 - [x] Výchozí stav ověřen: HEAD 827352b čistý, RobloxSimulator read-only, chasis.rbxm SHA shoda.
 - [x] Zmrazená rozhraní koordinátorem: katalogový záznam (19 polí) + klasifikace 5 kategorií + mapping API (map_config/build_search_space).
-- [ ] Vlna 1: Agent A (katalog parameters.json + loader + CATALOG.md) + Agent B (mapping_engine + mapping/ + MAPPING.md)
-- [ ] Vlna 2: Agent C (QA: testy mapování + qa/qa-f4-parameter-intelligence.md, F4-01–F4-12) + Agent D (integrace: wiring search_space, test_f4_integration.py, draft PHASE-4 reportu)
+- [x] Vlna 1 DODÁNA: A (125 záznamů, 79/14/2/3/27, loader exit 0) + B (map_config/build_search_space, selftest exit 0).
+- [x] Verifikace koordinátora: katalog 19 polí ✓; map_config na reálném katalogu mapuje Bias+FinalDrive, odmítá peak_torque_nm (očekáváno) — NÁLEZ: build_search_space vrací [] (PASS vs verified; backend_caps semantika). Předáno Agentu D.
+- [ ] Vlna 2 běží: Agent C (QA, F4-01–F4-12) + Agent D (integrace, wiring, draft reportu)
 - [ ] Uzavření: re-verifikace, report reports/PHASE-4-PARAMETER-INTELLIGENCE.md, commit/push
 
 - [x] FÁZE 3 schválena → implementace spuštěna. Stack: Python 3, pouze stdlib. Souřadnice x vpřed / y vlevo / z vzhůru, SI, dt=1/240.
