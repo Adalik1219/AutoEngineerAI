@@ -203,10 +203,14 @@ end
 -- a engine je proto nespousti ('lacking capability', overeno live vypisem
 -- vsech LuaSourceContainer s cestami). Sablona zustava nedotcena (bitova
 -- kopie originalu); oprava se deje POUZE na pracovni kopii vznikle Clone.
--- RepairStructure presune cele podstromy 'A-Chassis Interface', 'Initialize',
--- 'Plugins' a 'README' zpod Tune na koren kopie; jejich vzajemne relativni
+-- RepairStructure presune cele podstromy 'A-Chassis Interface', 'Initialize'
+-- a 'Plugins' zpod Tune na koren kopie; jejich vzajemne relativni
 -- vazby (sourozenci pod spolecnym rodicem) zustavaji zachovany, Tune tabulka
--- se nemeni, nic se nemaze. Dve kotvy Initialize, ktere ukazovaly na Tune
+-- se nemeni, nic se nemaze. 'README' se ZAMERNE nepresouva (F4.4 M2): je to
+-- datovy ModuleScript (nemusi bezet) a Drive:1111 i Gauges ho ctou pres
+-- require(car["A-Chassis Tune"].README) -- presun by Drive shodil jeste pred
+-- Heartbeat smyckou ("README is not a valid member", overeno live). Dve kotvy
+-- Initialize, ktere ukazovaly na Tune
 -- jako rodice (car=script.Parent.Parent; require(script.Parent)), se prekotvi
 -- na koren kopie (car=script.Parent; require Tune jmenem) — bez toho by
 -- Initialize po presunu vyzadoval Model misto ModuleScriptu a build by
@@ -218,7 +222,6 @@ VehicleManager.REPAIR_MOVE_NAMES = {
 	"A-Chassis Interface",
 	"Initialize",
 	"Plugins",
-	"README",
 }
 
 local function plainReplaceOnce(s, from, to)
@@ -337,6 +340,27 @@ function VehicleManager.CloneVehicle(configId)
 	if not ok then
 		clone:Destroy()
 		return nil, rerr
+	end
+	-- F4.4 M2: atributovy mustek AE_Brake/AE_Throttle/AE_Steer do vstupu Drive
+	-- (idempotentni; sablona jiz patchnuta v session => no-op).
+	local okB, berr = VehicleManager.ApplyDriveInputBridge(clone)
+	if not okB then
+		clone:Destroy()
+		return nil, berr
+	end
+	-- F4.4 M2: PrimaryPart = DriveSeat (pouze pracovni kopie). Bez nej je
+	-- PivotTo na kloubove sestave (167 dilu, hinge/constraint spoje) osklive
+	-- nedefinovane: dily se rozhazuji, vuz konci na boku nebo pada svetem
+	-- (overeno live: roll -85.6, pad y=-419). S PrimaryPart je PivotTo
+	-- deterministicky (rotace kolem sedadla) a klon dedenim drzi pohromade.
+	-- M to delal stejne ("PrimaryPart = DriveSeat, pouze na klonech", F4.3).
+	-- Sablona (.rbxm na disku) sahnuta neni; ziva sablona v session ho ma tez
+	-- (operator, aby ho dedily i klony stavene starou zivou tabulkou).
+	local seat = clone:FindFirstChildWhichIsA("VehicleSeat", true)
+	if seat ~= nil then
+		pcall(function()
+			clone.PrimaryPart = seat
+		end)
 	end
 	return clone
 end
@@ -487,6 +511,62 @@ function VehicleManager.GetMutableKeys()
 	end
 	table.sort(keys)
 	return keys
+end
+
+-- F4.4 M2: atributovy mustek AE_Brake / AE_Throttle / AE_Steer do vstupu Drive.
+-- Duvod: Drive cte JEN UserInputService (klavesy/gamepad); sedadlo (seat.Throttle)
+-- v tomto buildu nefunguje (0 cteni seatu, overeno H1). Serverovy harness/operator
+-- nastavi car:SetAttribute("AE_Brake"|"AE_Throttle"|"AE_Steer") a klientsky Drive
+-- je v Heartbeat smycce ORuje do _IBrake/_IThrot/_GSteerT (brzda/plyn: max,
+-- volant: prepis). Vyjimka z pravidla 1 (sablona nedotcena): koordinator M2
+-- autorizoval aplikaci TOTOZNEHO bloku na ZIVOU sablonu v session (nikdy .rbxm
+-- na disku); CloneVehicle ho aplikuje na kazdou pracovni kopii (idempotentni).
+VehicleManager.DRIVE_INPUT_BRIDGE_MARKER = "AE_DRIVE_INPUT_BRIDGE"
+VehicleManager.DRIVE_INPUT_BRIDGE_ANCHOR = "\t\t--Inputs\n\t\tInputs(dt)"
+VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK =
+	"\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2): atributovy mustek pro bezridicske mereni.\n"
+	.. "\t\t-- Drive cte JEN UserInputService (klavesy/gamepad); sedadlo nefunguje.\n"
+	.. "\t\t-- Server/operator nastavi car:SetAttribute(\"AE_Brake\"|\"AE_Throttle\"|\"AE_Steer\"),\n"
+	.. "\t\t-- klientsky Drive je v Heartbeat smycce ORuje do vstupu (brzda/plyn: max, volant: prepis).\n"
+	.. "\t\tdo\n"
+	.. "\t\t\tlocal _aeBrake = car:GetAttribute(\"AE_Brake\")\n"
+	.. "\t\t\tif typeof(_aeBrake) == \"number\" and _aeBrake > 0 then\n"
+	.. "\t\t\t\t_IBrake = math.max(_IBrake, math.min(1, _aeBrake))\n"
+	.. "\t\t\tend\n"
+	.. "\t\t\tlocal _aeThrot = car:GetAttribute(\"AE_Throttle\")\n"
+	.. "\t\t\tif typeof(_aeThrot) == \"number\" and _aeThrot > 0 then\n"
+	.. "\t\t\t\t_IThrot = math.max(_IThrot, math.min(1, _aeThrot))\n"
+	.. "\t\t\tend\n"
+	.. "\t\t\tlocal _aeSteer = car:GetAttribute(\"AE_Steer\")\n"
+	.. "\t\t\tif typeof(_aeSteer) == \"number\" and _aeSteer ~= 0 then\n"
+	.. "\t\t\t\t_GSteerT = math.max(-1, math.min(1, _aeSteer))\n"
+	.. "\t\t\tend\n"
+	.. "\t\tend"
+
+-- Aplikuje mustek do Drive LocalScriptu vozidla (sablona i pracovni kopie).
+-- Idempotentni: obsahuje-li Drive marker, vrati true + "jiz aplikovano".
+function VehicleManager.ApplyDriveInputBridge(vehicle)
+	if typeof(vehicle) ~= "Instance" then
+		return false, "ocekavan Instance vozidla"
+	end
+	local drive = vehicle:FindFirstChild("Drive", true)
+	if drive == nil or not drive:IsA("LocalScript") then
+		return false, "Drive LocalScript ve vozidle nenalezen"
+	end
+	local src = drive.Source
+	if string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_MARKER, 1, true) then
+		return true, "jiz aplikovano"
+	end
+	local anchor = VehicleManager.DRIVE_INPUT_BRIDGE_ANCHOR
+	local i = string.find(src, anchor, 1, true)
+	if i == nil then
+		return false, "kotva Heartbeat/Inputs v Drive nenalezena"
+	end
+	drive.Source = string.sub(src, 1, i - 1)
+		.. VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK
+		.. "\n"
+		.. string.sub(src, i)
+	return true, "aplikovano"
 end
 
 return VehicleManager
