@@ -31,7 +31,8 @@ Otevřené body před implementací:
 - [x] Větev založena z 6cfb815; serve běží (PID 13536); Studio připojeno.
 - [x] Vlna 1 DODÁNA (Agent R): 19 fantomů opraveno, katalog 138 záznamů (82/14/2/3/37), 0 fantomů, adaptér + VehicleManager sladěny. Vedlejší efekt: 13 zastaralých asercí ve F4 testech (očekáváno).
 - [ ] Vlna 2 běží: Agent F (13 oprav + nový test_f43_reconciliation.py proti tichému no-op)
-- [ ] Vlna 2 běží: Agent F (13 oprav + nový test_f43_reconciliation.py proti tichému no-op) → pak runtime test (vyžaduje restart Play Solo)
+- [x] Vlna 2 DODÁNA (Agent F): 13 asercí opraveno + test_f43_reconciliation.py; H 148=144/0/4. Commit+push na větvi.
+- [ ] Vlna 3 běží: Agent S (runtime test BrakeBias T03 vs baseline; freshness gate → případně BLOCKED=restart Play Solo)
 - [ ] Vlna 3: Agent Q (nezávislé QA) → merge do main → F4-3-CLOSURE.md (F4.3 NENÍ hotová bez ověřené runtime změny)
 
 - [x] Prostředí ověřeno: Rojo 7.7.1, lune/selene/stylua, port 34872 volný, repo čisté (c21c03d). Studio připojeno (1 instance, nesahám na ni).
