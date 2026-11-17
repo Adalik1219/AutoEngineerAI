@@ -52,7 +52,8 @@ CATEGORIES = (
     "UNKNOWN",
 )
 
-VERIFIED_STATUS = "verified"
+VERIFIED_STATUS = "PASS"  # sjednocení s katalogem Agenta A (loader.py: VERIFICATION = ("PASS", "PENDING"); PASS = ověřeno auditem/kódem [F]). "verified" = starší název ze zadání FÁZE 4.2, akceptován zpětně ve VERIFIED_STATUSES (selftest Agenta B).
+VERIFIED_STATUSES = ("PASS", "verified")  # oba tvary = "ověřeno"; kanonický je PASS
 
 __all__ = ["map_config", "build_search_space", "run_selftest"]
 
@@ -302,7 +303,7 @@ def map_config(vehicle_config: dict, catalog_path: str, adapter_id: str) -> dict
                            % (clash, clash)),
             })
             continue
-        if entry.get("verification_status") != VERIFIED_STATUS:
+        if entry.get("verification_status") not in VERIFIED_STATUSES:
             warnings.append(
                 "parametr %r mapován s výhradou (verification_status=%r, "
                 "zdroj=%s)" % (path, entry.get("verification_status"),
@@ -333,7 +334,7 @@ def build_search_space(catalog_path: str, backend_caps: list[str]) -> list[str]:
         e = _norm_entry(raw)
         if e.get("category") != "MUTABLE_TUNE":
             continue
-        if e.get("verification_status") != VERIFIED_STATUS:
+        if e.get("verification_status") not in VERIFIED_STATUSES:
             continue
         if not (isinstance(e.get("tune_key"), str) and e["tune_key"]):
             continue
