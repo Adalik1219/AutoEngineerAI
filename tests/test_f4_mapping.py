@@ -40,7 +40,7 @@ RBXM_SHA256 = "dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf"
 AUDIT_TUNE = {
     "Horsepower": 200, "IdleRPM": 950, "PeakRPM": 6800, "Redline": 8000,
     "PeakSharpness": 20, "CurveMult": 0.5, "Turbochargers": 2, "T_Boost": 7,
-    "FinalDrive": 3.545, "FDMult": 1.1, "Bias": 0.6, "Flywheel": 500,
+    "FinalDrive": 3.545, "FDMult": 1.1, "BrakeBias": 0.6, "Flywheel": 500,
 }
 
 
@@ -116,23 +116,23 @@ class TestF4Catalog(unittest.TestCase):
         cls.by_id = {r["id"]: r for r in cls.records}
 
     def test_f4_01_uplnost_125_a_19_poli(self):
-        """F4-01: katalog má 125 záznamů, každý přesně 19 polí, unikátní id."""
-        self.assertEqual(len(self.records), 125)
+        """F4-01: katalog má 138 záznamů, každý přesně 19 polí, unikátní id."""
+        self.assertEqual(len(self.records), 138)
         for r in self.records:
             self.assertEqual(len(r.keys()), 19, r["id"])
-        self.assertEqual(len(self.by_id), 125)
+        self.assertEqual(len(self.by_id), 138)
         paths = [r["config_path"] for r in self.records if r["config_path"]]
         self.assertEqual(len(set(paths)), len(paths))
 
     def test_f4_01_kategorie_pocty(self):
-        """F4-01: rozdělení 79/14/2/3/27 dle adaptéru (measured/script/unknown)."""
+        """F4-01: rozdělení 82/14/2/3/37 dle adaptéru (measured/script/unknown)."""
         from collections import Counter
         counts = Counter(r["category"] for r in self.records)
-        self.assertEqual(counts["MUTABLE_TUNE"], 79)
+        self.assertEqual(counts["MUTABLE_TUNE"], 82)
         self.assertEqual(counts["SCRIPT_CONTROLLED"], 14)
         self.assertEqual(counts["STRUCTURE_CONTROLLED"], 2)
         self.assertEqual(counts["READ_ONLY"], 3)
-        self.assertEqual(counts["UNKNOWN"], 27)
+        self.assertEqual(counts["UNKNOWN"], 37)
 
     def test_f4_02_provenance_klasifikace_parita_s_adapterem(self):
         """F4-02: každý katalogový tune_key existuje v adaptéru;
@@ -164,11 +164,29 @@ class TestF4Catalog(unittest.TestCase):
         self.assertIn("§12", self.by_id["brake_bias_front"]["source"])
 
     def test_f4_03_unknown_zustava_unknown(self):
-        """F4-03: 27 UNKNOWN, žádné vymyšlené hodnoty (value/default None),
-        nikdy k zápisu (change_method pending-studio)."""
+        """F4-03: 37 UNKNOWN, nikdy k zápisu (change_method pending-studio);
+        34 bez vymyšlených hodnot (value/default/min/max None, PENDING)
+        + 3 doložené výjimky F4.3: PBrakeBias=0 (živá hodnota šablony
+        ověřena během, PASS) a RDiffCoast=30 / RDiffPower=40 (párování
+        odvozeno z paralelní struktury auditu §7, PENDING)."""
         unknowns = [r for r in self.records if r["category"] == "UNKNOWN"]
-        self.assertEqual(len(unknowns), 27)
+        self.assertEqual(len(unknowns), 37)
+        by_id = {r["id"]: r for r in unknowns}
+        documented = {
+            "pbrake_bias": (0, 0, None, None, "PASS"),
+            "rear_diff_coast": (30, 30, 0, 100, "PENDING"),
+            "rear_diff_power": (40, 40, 0, 100, "PENDING"),
+        }
+        for rid, (v, d, mn, mx, st) in documented.items():
+            r = by_id[rid]
+            self.assertEqual(
+                (r["value"], r["default"], r["min"], r["max"],
+                 r["verification_status"]),
+                (v, d, mn, mx, st), rid)
         for r in unknowns:
+            self.assertEqual(r["change_method"], "pending-studio", r["id"])
+            if r["id"] in documented:
+                continue
             self.assertIsNone(r["value"], r["id"])
             self.assertIsNone(r["default"], r["id"])
             self.assertIsNone(r["min"], r["id"])
@@ -191,7 +209,7 @@ class TestF4Catalog(unittest.TestCase):
                    "T_Boost": "engine.turbo.boost",
                    "FinalDrive": "transmission.final_drive",
                    "FDMult": "transmission.final_drive_mult",
-                   "Bias": "brakes.bias_front",
+                   "BrakeBias": "brakes.bias_front",
                    "Flywheel": "engine.flywheel"}
         self.assertEqual(set(path_of), set(AUDIT_TUNE))
         for tune_key, expected in AUDIT_TUNE.items():
@@ -210,15 +228,21 @@ class TestF4Catalog(unittest.TestCase):
         nejsou k zápisu; adaptér je vede jako neměnné s důvodem."""
         adapter = _load_adapter()
         by_tune = {p.tune_key: p for p in adapter if p.tune_key}
+        by_path = {p.config_path: p for p in adapter}
         for r in self.records:
             if r["category"] == "READ_ONLY":
                 self.assertEqual(r["change_method"], "none", r["id"])
                 self.assertIsNone(r["value"], r["id"])
             if r["category"] == "SCRIPT_CONTROLLED":
                 self.assertEqual(r["change_method"], "script", r["id"])
-        for key in ("FWLgcyDensity", "RWLgcyDensity"):
-            self.assertFalse(by_tune[key].mutable)
-            self.assertTrue(by_tune[key].read_only_reason)
+        # F4.3: READ_ONLY záznamy mají tune_key null (klíč v live Tune
+        # neexistuje) – nejsou adresovatelné přes tune_key, adaptér je
+        # vede pod config_path jako neměnné s důvodem.
+        for path in ("tires.legacy_density_f", "tires.legacy_density_r"):
+            entry = by_path[path]
+            self.assertFalse(entry.mutable, path)
+            self.assertTrue(entry.read_only_reason, path)
+            self.assertIsNone(entry.tune_key, path)
 
     def test_f4_04_zavislosti_uvedeny(self):
         """F4-04: závislost turba i konflikty jsou v katalogu; každá
@@ -368,7 +392,7 @@ class TestF4Integration(unittest.TestCase):
                 for c in mapped["tune_changes"]}
         adapter = AChassisV1Adapter()
         params = adapter.list_parameters()
-        self.assertEqual(len(params), 125)
+        self.assertEqual(len(params), 138)
         report = adapter.apply_config(
             os.path.join(ROOT, "assets", "chassis-original"),
             _cfg({"tune": dict(tune, WarpDrive=5)}))
@@ -398,8 +422,8 @@ class TestF4Integration(unittest.TestCase):
         adapter = _load_adapter()
         caps = [p.tune_key for p in adapter if p.tune_key]
         space = build_search_space(CATALOG_PATH, caps)
-        self.assertEqual(space, ["Bias", "CurveMult", "FDiffCoast",
-                                 "FDiffPower", "Preload", "TorqueVector",
+        self.assertEqual(space, ["BrakeBias", "CurveMult", "FDiffCoast",
+                                 "FDiffPower", "FDiffPreload", "TorqueVector",
                                  "WeightDist"])
         records = {r["id"]: r for r in catalog_loader.load(CATALOG_PATH)}
         for tune_key in space:
@@ -431,12 +455,12 @@ class TestF4Integration(unittest.TestCase):
         for key in caps:
             self.assertIsInstance(key, str)
             self.assertTrue(key)
-        self.assertIn("Bias", caps)
-        # Sim čte moment/výkon, ne Tune 'Horsepower' (draft D §1.4):
+        self.assertIn("BrakeBias", caps)
+        # Sim čte moment/výkon, ne Tune 'Horsepower' (draft D §1.4).
         self.assertNotIn("Horsepower", caps)
         tune_space = build_search_space(CATALOG_PATH, caps)
-        self.assertTrue(tune_space)  # neprázdný (dnes ['Bias'])
-        self.assertIn("Bias", tune_space)
+        self.assertTrue(tune_space)  # neprázdný (dnes ['BrakeBias', ...])
+        self.assertIn("BrakeBias", tune_space)
         cfg = {"schema_version": "1.0.0", "config_id": "cfg_qa_f409",
                "vehicle_profile_id": "vp_qa", "chassis_adapter": "achassis-v1",
                "parameters": {"transmission": {"final_drive": 3.0},
@@ -473,11 +497,11 @@ class TestF4Safety(unittest.TestCase):
 
     def test_f4_11_neoverene_hodnoty_se_neaplikuji(self):
         """F4-11: UNKNOWN kategorie se mapuje do rejected; PENDING záznamy
-        (31) nejsou v bezpečném ladicím prostoru kap. 5 katalogu."""
+        (43) nejsou v bezpečném ladicím prostoru kap. 5 katalogu."""
         records = catalog_loader.load(CATALOG_PATH)
         pending = [r for r in records
                    if r["verification_status"] == "PENDING"]
-        self.assertEqual(len(pending), 31)
+        self.assertEqual(len(pending), 43)
         real = _write_catalog(records)
         res = map_config(_cfg({"engine": {"compression_ratio": 10.0}}),
                          real, "achassis-v1")
@@ -499,7 +523,7 @@ class TestF4Safety(unittest.TestCase):
         """F4-10/F4-12: selftest katalogu i enginu hlásí OK (vlastní běh)."""
         out = catalog_loader.run_selftest(CATALOG_PATH)
         self.assertEqual(out["selftest"], "OK")
-        self.assertEqual(out["n_records"], 125)
+        self.assertEqual(out["n_records"], 138)
         eng = engine_selftest()
         self.assertEqual(eng["selftest"], "OK")
 

@@ -118,10 +118,10 @@ Volba Tune klíčů (ne config cest): backend aplikuje Tune změny; převod
 | 2 | `engine.peak_power_kw` (config 135; Physics cap `P·1000/ω`) | **žádný** (`Horsepower` = 200 hp, jiná veličina i jednotka) | **NESOULAD – nemapovat** | Zásada: `engine.peak_power_kw ≠ engine.horsepower` bez definovaného převodu (hp↔kW faktor × jiný referenční bod křivky). Odmítnout s důvodem, ne tiše převést. |
 | 3 | `engine.horsepower` (cesta adaptéru, Tune 200) | `Horsepower` | OK v adaptéru, **chybí ve VehicleConfig** (schéma-příklad, `normalize_config` ani `Sim/config` cestu neznají) | `hp`; rozsah dle katalogu. Jediná legitimní motorová cesta pro Tune dnes. |
 | 4 | `transmission.final_drive` (search_space 2.5–4.2; config 2.866; profilový `powertrain.final_drive`) | `FinalDrive` (3.545) × `FDMult` (1.1) | **shoda** (s výhradou konfliktu FD×FDMult, viz §4) | bezrozměrné; `FDMult` měnit jen samostatně |
-| 5 | `brakes.bias_front` (search_space 0.55–0.70; config 0.62/0.65) | `Bias` (0.6) | **shoda** | podíl 0–1; extrémy 0/1 rizikové [P] |
+| 5 | `brakes.bias_front` (config 0.62/0.65; search_space 0.55–0.70) | `BrakeBias` (0.6, live-klíč F4.3) | **shoda** | podíl 0–1; extrémy 0/1 rizikové [P] |
 | 6 | `tires.grip_long/lat` (config 1.0; Optimizer předpoklad) | **žádný** – grip je `_WHEELTUNE` v `Simulated` (mimo Tune) | **NESOULAD – read-only** | Jediný Tune parametr kol je hustota (`FWheelDensity/RWheelDensity`); adheze se ladí skriptem (§10, §16) |
 | 7 | `brakes.torque_Nm` (config 4000) | `BrakeForce` (2500, vzorec `#BV`) | **NESOULAD jednotek** | `BrakeForce` není moment v Nm (škáluje se FPS a režimy); rovnítko zakázáno |
-| 8 | `suspension.spring_f_Npm` (config 28000/24000) | `Stiffness` (20000, kandidátní dekód) | **podmíněně** | `N/m` až po Studio-verifikaci float-lane (audit §1, §8); symetrie kol nevychází |
+| 8 | `suspension.spring_f_Npm` (config 28000/24000) | `FSusStiffness`/`RSusStiffness` (20000/20000, kandidátní dekód; F/R rozděleno F4.3) | **podmíněně** | `N/m` až po Studio-verifikaci float-lane (audit §1, §8); symetrie kol nevychází |
 | 9 | `steering.max_angle_deg` (config 35) | `LockToLock` (2.6) + `SteerRatio` (15) → `SteerOuter` 31.2° | **odvozeno, ne 1:1** | `°`; nelze mapovat přímo, jen přepočtem |
 | 10 | `transmission.gears` (config list) | `Ratios` (dict R/N/1–6) | **strukturální nesoulad** | list ≠ dict s R/N; mapování až po definici konverze |
 | 11 | `parameters.tune` (čte `apply_config`) vs `parameters.engine/…` (schéma §3.3) | – | **dva jmenné prostory** | `tune` = klíče adaptéru; `engine/…` = VehicleConfig. Most = tento engine + katalog |
@@ -142,12 +142,12 @@ nebo definovaný převod přes katalog.
 | výkon motoru | `Horsepower` | hp | rozsah z katalogu; `peak_power_kw` se sem **nepřevádí** | audit §5: jediný výkonový skalár Tune |
 | stálý převod | `FinalDrive` | – | 2.5–4.2 (kalibrace SIM); konflikt s `FDMult` | audit §6; hrany prostoru ověřeny kampaní |
 | škálování převodu | `FDMult` | – | jen samostatně (konflikt výše); =1 pro Gauges | audit §6 |
-| brzdný bias | `Bias` | 0–1 | 0–1; extrémy rizikové | audit §12 |
+| brzdný bias | `BrakeBias` (live-klíč F4.3) | 0–1 | 0–1; extrémy rizikové | audit §12 |
 | počet turbodorů | `Turbochargers` | ks | 0–4 | audit §5 |
 | plnicí tlak | `T_Boost` | – | vyžaduje `turbo.count ≥ 1` | audit §5 (vzorec HP_T) |
 | odpor vzduchu | — (`Drag` je konstanta ve skriptu) | – | SCRIPT_CONTROLLED → rejected | audit §13 + chyba `magnitude` (§17.2) |
 | kompresní poměr | `CompressionRatio`? | – | UNKNOWN → rejected (název nepotvrzen) | audit §5 (jen ve vzorci) |
-| tuhost pružin | `Stiffness` | N/m | bez ověřeného rozsahu → mimo prostor (mapovat ano, ladit ne) | audit §8, float-gap §1 |
+| tuhost pružin | `FSusStiffness`/`RSusStiffness` (F/R rozděleno F4.3) | N/m | bez ověřeného rozsahu → mimo prostor (mapovat ano, ladit ne) | audit §8, float-gap §1 |
 
 ---
 

@@ -77,21 +77,22 @@ Vyžaduje se přes `require` ze serverového Scriptu. Nikdy nemutuje šablonu.
 
 | Funkce | Vstup | Výstup |
 |---|---|---|
-| `CloneVehicle(configId)` | `configId: string` | `Model, nil` / `nil, reason` — klon `JeepTemplate` z `VehicleTemplates` do `Workspace`, název `Jeep_<configId>` |
+| `CloneVehicle(configId)` | `configId: string` | `Model, nil` / `nil, reason` — klon `JeepTemplate` BEZ umístění do stromu (Parent = nil, mimo `Workspace`); `RepairStructure` již aplikován (skripty přesunuty zpod Tune-ModuleScriptu na kořen kopie); název `Jeep_<configId>` — POZOR: změna kontraktu ve F4.3 (dříve parentoval do `Workspace`) |
+| `DeployVehicle(clone)` | `Instance` (klon bez umístění) | parentuje do `Workspace` — tím startuje build `Initialize`; Tune zapisovat PŘED Deployem (`WriteTune` mezi `CloneVehicle` a `DeployVehicle`) |
 | `DestroyVehicle(vehicle)` | `Instance` | `true` / `false, reason` — smaže pouze pracovní kopii ve `Workspace`; šablonu a obsah `VehicleTemplates` odmítne |
 | `ResolveTune(vehicle)` | `Instance` | `ModuleScript, nil` / `nil, reason` — najde `A-Chassis Tune` v kopii |
 | `ReadTune(vehicle, key)` | `Instance, string` | `true, value` / `false, reason` — pouze `MUTABLE_TUNE` |
 | `WriteTune(vehicle, key, value)` | `Instance, string, any` | `true` / `false, reason` — pouze `MUTABLE_TUNE`; první zápis klíče si pamatuje pro rollback |
 | `Rollback(vehicle)` | `Instance` | `count` — obnoví všechny změněné klíče do původních hodnot |
-| `GetMutableKeys()` | — | seřazený seznam 79 `MUTABLE_TUNE` klíčů |
+| `GetMutableKeys()` | — | seřazený seznam 82 `MUTABLE_TUNE` klíčů (F4.3: sladěno se živým Tune) |
 | `IsMutable(key)` / `DenyReason(key)` | `string` | `bool` / `string` — klasifikace klíče |
 
 Pravidla Tune:
 
-- Allowlist = 79 klíčů kategorie `MUTABLE_TUNE`
-  (`src/Chassis/catalog/parameters.json`).
+- Allowlist = 82 klíčů kategorie `MUTABLE_TUNE`
+  (`src/Chassis/catalog/parameters.json`, F4.3: sladěno se živým Tune).
 - `READ_ONLY` (3), `SCRIPT_CONTROLLED` (14), `STRUCTURE_CONTROLLED` (2),
-  `UNKNOWN` (27) → odmítnuto s důvodem (`DenyReason`).
+  `UNKNOWN` (37) → odmítnuto s důvodem (`DenyReason`).
 - Hodnoty tabulek (`Ratios`, `WeightBSize`, `TransModes`) se kopírují hlubokou
   kopií — rollback vrací skutečný originál, ne referenci.
 - Zápis mění živou Tune tabulku (`require`); projeví se při stavbě podvozku

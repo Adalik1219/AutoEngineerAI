@@ -95,8 +95,13 @@ při `Electric=true`, zde mrtvé (§15, §17.3).
 
 ---
 
-## 3. Seznam UNKNOWN (27) – zůstává UNKNOWN
+## 3. Seznam UNKNOWN (37) – zůstává UNKNOWN
 
+F4.3 (Agent R): 19 fantomů opraveno na live-klíče (`Bias→BrakeBias`,
+`Stiffness/Damping/SusLength/PreCompress/ExtensionLim/CompressLim/SusAngle/AnchorOffset→F*/R*`,
+`Preload→FDiffPreload/RDiffPreload`, `SlipThres/LockThres→F/R/C Diff*Thres`,
+`RDiffPower?/RDiffCoast?→RDiffPower/RDiffCoast`, `Bias(PBrake)?→PBrakeBias`;
+`StAxisOffset/FWLgcyDensity/RWLgcyDensity/ElecRedline-ElecTransition2→tune_key null`).
 Důvod je vždy v `physical_effect` / `source` záznamu; společný jmenovatel:
 klíč nebo hodnota v auditu chybí, větev je mrtvá/neaktivní, nebo jde o
 kvalifikovaný odhad. **Není dovoleno je hádat ani zapisovat do Tune.**
@@ -105,11 +110,11 @@ Elektro (mrtvá větev, 9): `electric_trans1`, `electric_trans2`,
 `electric_redline`, `electric_front_mult`, `electric_end_mult`,
 `electric_end_percent`, `electric_torque`, `electric_torque_end_mult`,
 `electric_torque_end_percent`. Motor (2): `supercharger_sensitivity`,
-`compression_ratio`. Převodovka (1): `tq_lock`. Dif (4): `rear_diff_power`,
-`rear_diff_coast`, `slip_thresh_old`, `lock_thresh_old`. Podvozek (8):
-`sus_length`, `pre_compress`, `extension_lim`, `compress_lim`,
-`front_wishbone_len`, `rear_wishbone_len`, `sus_angle`, `anchor_offset`
-(8). Řízení (1):
+`compression_ratio`. Převodovka (1): `tq_lock`. Dif (8): `rear_diff_power`,
+`rear_diff_coast`, `slip_thresh_f/r/c`, `lock_thresh_f/r/c`. Podvozek (14):
+`sus_length_f/r`, `pre_compress_f/r`, `extension_lim_f/r`, `compress_lim_f/r`,
+`front_wishbone_len`, `rear_wishbone_len`, `sus_angle_f/r`, `anchor_offset_f/r`
+(14). Řízení (1):
 `steer_axis_offset`. Brzdy (1): `pbrake_bias`. Vzhled (1): `spring_color`.
 
 ---

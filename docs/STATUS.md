@@ -26,7 +26,14 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající fáze: Roblox Test Environment & Rojo Integration (zadání uživatele)
+## Probíhající F4.3: Live Tune Catalog Reconciliation (větev f43-live-tune-reconciliation)
+
+- [x] Větev založena z 6cfb815; serve běží (PID 13536); Studio připojeno.
+- [x] Vlna 1 DODÁNA (Agent R): 19 fantomů opraveno, katalog 138 záznamů (82/14/2/3/37), 0 fantomů, adaptér + VehicleManager sladěny. Vedlejší efekt: 13 zastaralých asercí ve F4 testech (očekáváno).
+- [ ] Vlna 2 běží: Agent F (13 oprav + nový test_f43_reconciliation.py proti tichému no-op)
+- [x] Vlna 2 DODÁNA (Agent F): 13 asercí opraveno + test_f43_reconciliation.py; H 148=144/0/4. Commit+push na větvi.
+- [ ] Vlna 3 běží: Agent HS (jedno skutečné měření T03 0.6 vs 0.9 POUZE existujícími moduly, bez kódových změn; diagnóza nebo čísla)
+- [ ] Vlna 3: Agent Q (nezávislé QA) → merge do main → F4-3-CLOSURE.md (F4.3 NENÍ hotová bez ověřené runtime změny)
 
 - [x] Prostředí ověřeno: Rojo 7.7.1, lune/selene/stylua, port 34872 volný, repo čisté (c21c03d). Studio připojeno (1 instance, nesahám na ni).
 - [x] Klíčový fakt pro řidiče: fyziku A-Chassis 6C počítá KLIENT (Drive LocalScript ~60 Hz), server staví (Initialize); vstupy = sedící hráč přes VehicleSeat.

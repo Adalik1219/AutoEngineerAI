@@ -19,7 +19,7 @@ VehicleManager.TEMPLATE_NAME = "JeepTemplate"
 VehicleManager.TEMPLATES_FOLDER_NAME = "VehicleTemplates"
 VehicleManager.TUNE_MODULE_NAME = "A-Chassis Tune"
 
--- Mnozina MUTABLE_TUNE klicu (79 polozek, generovano z parameters.json).
+-- Mnozina MUTABLE_TUNE klicu (82 polozek, generovano z parameters.json, F4.3 live-rekonciliace).
 local MUTABLE_TUNE_SET = {
 	ABSThreshold = true,
 	Ackerman = true,
@@ -29,8 +29,8 @@ local MUTABLE_TUNE_SET = {
 	AutoUpThresh = true,
 	AxleDensity = true,
 	AxleSize = true,
-	Bias = true,
 	BrakeAccel = true,
+	BrakeBias = true,
 	BrakeDecel = true,
 	BrakeForce = true,
 	CGHeight = true,
@@ -39,7 +39,6 @@ local MUTABLE_TUNE_SET = {
 	ClutchKick = true,
 	Config = true,
 	CurveMult = true,
-	Damping = true,
 	DifferentialType = true,
 	EBrakeForce = true,
 	Electric = true,
@@ -48,8 +47,11 @@ local MUTABLE_TUNE_SET = {
 	FDMult = true,
 	FDiffCoast = true,
 	FDiffPower = true,
+	FDiffPreload = true,
 	FGyroDamp = true,
 	FGyroDampening = true,
+	FSusDamping = true,
+	FSusStiffness = true,
 	FWSteer = true,
 	FWheelDensity = true,
 	FinalDrive = true,
@@ -64,10 +66,12 @@ local MUTABLE_TUNE_SET = {
 	PBrakeForce = true,
 	PeakRPM = true,
 	PeakSharpness = true,
-	Preload = true,
+	RDiffPreload = true,
 	RGyroDamp = true,
 	RGyroDampening = true,
 	RPMEngage = true,
+	RSusDamping = true,
+	RSusStiffness = true,
 	RWheelDensity = true,
 	Ratios = true,
 	Redline = true,
@@ -83,7 +87,6 @@ local MUTABLE_TUNE_SET = {
 	SteerRatio = true,
 	SteerSpeed = true,
 	SteeringType = true,
-	Stiffness = true,
 	Superchargers = true,
 	SusRadius = true,
 	T2_BoostLag = true,
@@ -102,12 +105,13 @@ local MUTABLE_TUNE_SET = {
 	WeightDist = true,
 }
 
--- Zname odmitane klice mimo MUTABLE_TUNE s duvodem (dle katalogu):
--- READ_ONLY (3), SCRIPT_CONTROLLED (14), STRUCTURE_CONTROLLED (2), UNKNOWN (27).
+-- Zname odmitane klice mimo MUTABLE_TUNE s duvodem (dle katalogu F4.3):
+-- READ_ONLY (3), SCRIPT_CONTROLLED (7), STRUCTURE_CONTROLLED (2), UNKNOWN (3),
+-- PREJMENOVANO (15).
 local DENY_REASONS = {
 	["ElecRedline/ElecTransition2"] = "READ_ONLY: Gauges cte jine nazvy nez Tune (audit §15); nezapisovat",
-	FWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v Tune neexistuje (audit §10, §17.4)",
-	RWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v Tune neexistuje (audit §10, §17.4)",
+	FWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v live Tune neexistuje (audit §10, §17.4, F4.3)",
+	RWLgcyDensity = "READ_ONLY: mrtva non-PGS vetev, klic v live Tune neexistuje (audit §10, §17.4, F4.3)",
 	DownforceF = "SCRIPT_CONTROLLED: pritlak F je konstanta ve skriptu Aerodynamics, mimo Tune (audit §13)",
 	DownforceR = "SCRIPT_CONTROLLED: pritlak R je konstanta ve skriptu Aerodynamics, mimo Tune (audit §13)",
 	Drag = "SCRIPT_CONTROLLED: odpor je konstanta v Aerodynamics, mimo Tune (audit §13)",
@@ -117,9 +121,24 @@ local DENY_REASONS = {
 	WheelspinRatio = "SCRIPT_CONTROLLED: pomer prokluzu je v Simulated, mimo Tune (audit §10)",
 	WheelRadius = "STRUCTURE_CONTROLLED: polomer kol je geometrie dilu, ne parametr Tune (audit §10, katalog)",
 	Wheelbase = "STRUCTURE_CONTROLLED: rozvor/rozchod je geometrie, mimo Tune (audit §1, katalog)",
-	StAxisOffset = "UNKNOWN: klic v Tune CHYBI, Initialize:171 ho cte -> runtime error (audit §9, §17.1)",
-	CompressionRatio = "UNKNOWN: klic auditem nepotvrzen, jen ve vzorci HP_T (audit §5, katalog)",
-	StiffnessPending = "UNKNOWN: viz Stiffness/Damping - float-lane dekod nepotvrzen (audit §1, katalog PENDING)",
+	StAxisOffset = "UNKNOWN: klic v live Tune CHYBI, Initialize:171 ho cte -> runtime error (audit §9, §17.1, F4.3)",
+	CompressionRatio = "UNKNOWN: klic auditem potvrzen jen ve vzorci HP_T, hodnota v katalogu null (audit §5, katalog)",
+	Bias = "PREJMENOVANO: genericky klic neexistuje -> zapis BrakeBias (F4.3 live Tune)",
+	Damping = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusDamping / RSusDamping (F4.3 live Tune)",
+	Stiffness = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusStiffness / RSusStiffness (F4.3 live Tune)",
+	Preload = "PREJMENOVANO: genericky klic neexistuje -> zapis FDiffPreload / RDiffPreload (F4.3 live Tune)",
+	SlipThres = "PREJMENOVANO: klic stareho difu -> zapis FDiffSlipThres / RDiffSlipThres / CDiffSlipThres (F4.3 live Tune)",
+	LockThres = "PREJMENOVANO: klic stareho difu -> zapis FDiffLockThres / RDiffLockThres / CDiffLockThres (F4.3 live Tune)",
+	SusLength = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusLength / RSusLength (F4.3 live Tune)",
+	PreCompress = "PREJMENOVANO: genericky klic neexistuje -> zapis FPreCompress / RPreCompress (F4.3 live Tune)",
+	ExtensionLim = "PREJMENOVANO: genericky klic neexistuje -> zapis FExtensionLim / RExtensionLim (F4.3 live Tune)",
+	CompressLim = "PREJMENOVANO: genericky klic neexistuje -> zapis FCompressLim / RCompressLim (F4.3 live Tune)",
+	SusAngle = "PREJMENOVANO: genericky klic neexistuje -> zapis FSusAngle / RSusAngle (F4.3 live Tune)",
+	AnchorOffset = "PREJMENOVANO: genericky klic neexistuje -> zapis FAnchorOffset / RAnchorOffset (F4.3 live Tune)",
+	["Bias(PBrake)?"] = "PREJMENOVANO: odhad nazvu -> zapis PBrakeBias, hodnota 0 overena behem (F4.3 live Tune)",
+	["RDiffPower?"] = "PREJMENOVANO: odhad nazvu -> zapis RDiffPower (F4.3 live Tune)",
+	["RDiffCoast?"] = "PREJMENOVANO: odhad nazvu -> zapis RDiffCoast (F4.3 live Tune)",
+	SusCoilPending = "UNKNOWN: viz FSus*/RSus* zaznamy - dekod float-lane nepotvrzen (audit §1, katalog PENDING)",
 }
 
 -- Originalni hodnoty pro rollback: [vehicle] -> { [key] = deepCopy(hodnoty) }.
@@ -178,8 +197,134 @@ function VehicleManager.ResolveTemplate()
 	return template
 end
 
--- Klonuje sablonu do Workspace jako pracovni kopii s config_id v nazvu.
--- Original (sablona) zustava nedotcena; original rbxm neni ve stromu hry.
+-- F4.3-HR: oprava struktury sablony za behu (Agent HR, 2026-11-17).
+-- Pricina: vsechny A-Chassis skripty (Drive LocalScript, Initialize Script,
+-- Plugins/*, Simulated) jsou v sablone potomky ModuleScriptu 'A-Chassis Tune'
+-- a engine je proto nespousti ('lacking capability', overeno live vypisem
+-- vsech LuaSourceContainer s cestami). Sablona zustava nedotcena (bitova
+-- kopie originalu); oprava se deje POUZE na pracovni kopii vznikle Clone.
+-- RepairStructure presune cele podstromy 'A-Chassis Interface', 'Initialize',
+-- 'Plugins' a 'README' zpod Tune na koren kopie; jejich vzajemne relativni
+-- vazby (sourozenci pod spolecnym rodicem) zustavaji zachovany, Tune tabulka
+-- se nemeni, nic se nemaze. Dve kotvy Initialize, ktere ukazovaly na Tune
+-- jako rodice (car=script.Parent.Parent; require(script.Parent)), se prekotvi
+-- na koren kopie (car=script.Parent; require Tune jmenem) — bez toho by
+-- Initialize po presunu vyzadoval Model misto ModuleScriptu a build by
+-- neprobehl. Overene zavislosti (live, Server): Drive cte Tune pres
+-- require(car["A-Chassis Tune"]) a sourozence Car/Values/IsOn pod Interface
+-- (presunem celeho Interface nedotceno); Gauges pres
+-- require(car["A-Chassis Tune"].README) (README presunuto vedle Tune).
+VehicleManager.REPAIR_MOVE_NAMES = {
+	"A-Chassis Interface",
+	"Initialize",
+	"Plugins",
+	"README",
+}
+
+local function plainReplaceOnce(s, from, to)
+	local i, j = string.find(s, from, 1, true)
+	if not i then
+		return s, false
+	end
+	return string.sub(s, 1, i - 1) .. to .. string.sub(s, j + 1), true
+end
+
+-- Presune cele podstromy zpod Tune-ModuleScriptu na koren pracovni kopie
+-- (sablonu ani jeji potomky odmitne). Idempotentni: jiz presunute preskoci.
+-- Vrati true, pocet presunu / false, duvod. Prubeh loguje pres print.
+function VehicleManager.RepairStructure(vehicle)
+	if typeof(vehicle) ~= "Instance" then
+		return false, "ocekavan Instance vozidla"
+	end
+	local templatesFolder = VehicleManager.ResolveTemplatesFolder()
+	if templatesFolder and (vehicle == templatesFolder or vehicle:IsDescendantOf(templatesFolder)) then
+		return false, "odmitnuto: sablonu neopravovat (pouze pracovni kopie)"
+	end
+	local template = VehicleManager.ResolveTemplate()
+	if template and vehicle == template then
+		return false, "odmitnuto: cil je sablona JeepTemplate"
+	end
+	local tune = vehicle:FindFirstChild(VehicleManager.TUNE_MODULE_NAME)
+	if not tune or not tune:IsA("ModuleScript") then
+		return false, "Tune ModuleScript (A-Chassis Tune) v kopii nenalezen"
+	end
+	local moved = 0
+	for _, name in ipairs(VehicleManager.REPAIR_MOVE_NAMES) do
+		local child = tune:FindFirstChild(name)
+		if child then
+			child.Parent = vehicle
+			moved += 1
+			print(string.format("[RepairStructure] %s: '%s' (%s) presunuto na koren kopie",
+				vehicle:GetFullName(), name, child.ClassName))
+		else
+			local already = vehicle:FindFirstChild(name)
+			if already then
+				print(string.format("[RepairStructure] %s: '%s' jiz na koreni (%s), preskoceno",
+					vehicle:GetFullName(), name, already.ClassName))
+			else
+				print(string.format("[RepairStructure] %s: VAROVANI: '%s' nenalezeno ani pod Tune ani na koreni",
+					vehicle:GetFullName(), name))
+			end
+		end
+	end
+	-- Prekotveni dvou kotev Initialize na koren kopie (pouze klon, sablona
+	-- sahnuta neni). Zbytek Initialize (WaitForChild Interface/Plugins/README,
+	-- script.Parent["A-Chassis Interface"], script.Parent.Plugins) po presunu
+	-- cele ctverice na koren plati beze zmeny.
+	local init = vehicle:FindFirstChild("Initialize")
+	if init and init:IsA("Script") then
+		local src = init.Source
+		local patched = 0
+		local out, hit = plainReplaceOnce(src,
+			"local car=script.Parent.Parent",
+			"local car=script.Parent")
+		if hit then
+			src = out
+			patched += 1
+		end
+		out, hit = plainReplaceOnce(src,
+			"local _Tune=require(script.Parent)",
+			"local _Tune=require(script.Parent[\"A-Chassis Tune\"])")
+		if hit then
+			src = out
+			patched += 1
+		end
+		if patched > 0 then
+			init.Source = src
+		end
+		print(string.format("[RepairStructure] %s: Initialize kotvy prekotevny: %d/2",
+			vehicle:GetFullName(), patched))
+		-- MiscWeld (ModuleScript, potomek Initialize) kotvi vuz tremi hoppy
+		-- (MiscWeld -> Initialize -> Tune -> vuz); po presunu staci dva
+		-- (MiscWeld -> Initialize -> vuz). Bez toho by MiscWeld cetl
+		-- car = Workspace a navzdy visel na Workspace:WaitForChild("Misc").
+		local misc = init:FindFirstChild("MiscWeld")
+		if misc then
+			local msrc = misc.Source
+			local mout, mhit = plainReplaceOnce(msrc,
+				"car = script.Parent.Parent.Parent",
+				"car = script.Parent.Parent")
+			if mhit then
+				misc.Source = mout
+			end
+			print(string.format("[RepairStructure] %s: MiscWeld kotva: %s",
+				vehicle:GetFullName(), mhit and "prekotevena" or "nenalezena (beze zmeny)"))
+		else
+			print(string.format("[RepairStructure] %s: VAROVANI: MiscWeld pod Initialize nenalezen",
+				vehicle:GetFullName()))
+		end
+	else
+		print(string.format("[RepairStructure] %s: VAROVANI: Initialize (Script) na koreni nenalezen",
+			vehicle:GetFullName()))
+	end
+	return true, moved
+end
+
+-- Klonuje sablonu jako pracovni kopii s opravenou strukturou (RepairStructure).
+-- ZAMERNE NEPARENTUJE do Workspace: Initialize stavi podvozek pri vstupu do
+-- Workspace a cte Tune pres require, takze spravne poradi je
+-- CloneVehicle -> WriteTune -> DeployVehicle. Nasazeni: DeployVehicle.
+-- Original (sablona) zustava nedotcen; original rbxm neni ve stromu hry.
 function VehicleManager.CloneVehicle(configId)
 	local template, err = VehicleManager.ResolveTemplate()
 	if not template then
@@ -188,8 +333,22 @@ function VehicleManager.CloneVehicle(configId)
 	local clean = sanitizeConfigId(configId)
 	local clone = template:Clone()
 	clone.Name = string.format("Jeep_%s", clean)
-	clone.Parent = Workspace
+	local ok, rerr = VehicleManager.RepairStructure(clone)
+	if not ok then
+		clone:Destroy()
+		return nil, rerr
+	end
 	return clone
+end
+
+-- Explicitni nasazeni opravene pracovni kopie do Workspace (spusti build
+-- podvozku pres Initialize). Prijima pouze vystup CloneVehicle.
+function VehicleManager.DeployVehicle(vehicle)
+	if typeof(vehicle) ~= "Instance" then
+		return nil, "ocekavan Instance vozidla"
+	end
+	vehicle.Parent = Workspace
+	return vehicle
 end
 
 -- Bezpecne odstrani POUZE pracovni kopii z Workspace.
@@ -320,7 +479,7 @@ function VehicleManager.Rollback(vehicle)
 	return count
 end
 
--- Vrati serazeny seznam vsech MUTABLE_TUNE klicu (79 polozek dle katalogu).
+-- Vrati serazeny seznam vsech MUTABLE_TUNE klicu (82 polozek dle katalogu F4.3).
 function VehicleManager.GetMutableKeys()
 	local keys = {}
 	for key, _ in pairs(MUTABLE_TUNE_SET) do
