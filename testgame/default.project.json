@@ -29,7 +29,6 @@
       "StarterPlayerScripts": {
         "$className": "StarterPlayerScripts",
         "TestClient": {
-          "$className": "LocalScript",
           "$path": "src/StarterPlayer/StarterPlayerScripts/TestClient.client.lua"
         }
       }
