@@ -34,7 +34,8 @@ Otevřené body před implementací:
 - [x] Vlna 1 DODÁNA: A (mapa+šablona, SHA shoda) + B (Rojo projekt, build 0) + C (VehicleManager+RUNTIME-API) + D (řidič, lune 23/23) + E (harness+telemetrie T01–T07)
 - [x] Micro-fix T02 DODÁN: rovinka 3000 (BrakeZone 3000–3800, EndWall 3804), build+lint zelené.
 - [x] FÁZE UZAVŘENA (souborově): report ROBLOX-TEST-ENVIRONMENT-CLOSURE.md; build 0, lint 0, SHA shoda. Runtime A–E PENDING — čeká Studio Play s uživatelem.
-- [ ] Další krok s uživatelem: `rojo serve` → Accept v pluginu → MCP kontrola syncu → Play testy (mapa, spawn, řidič, telemetrie)
+- [x] Runtime kontrola Play Solo DODÁNA (2026-11-17): server+klient běží, harness idle (Remotes vytvořeny), spawn/rollback přes VehicleManager funkční, Initialize postavil 8 hingů (32→40), místo uklizeno. NÁLEZ: katalog/adaptér nesou 16 fantomových Tune klíčů (Bias→správně BrakeBias; Damping/Stiffness/Preload/Sus* jen jako F/R varianty) — důkaz `vehicle-data/analyzed/live-tune-keys.txt` (167 živých klíčů). Kapabilitní chyby v konzoli jsou staré (z předchozí session), v aktuální běží vše; zvuk 188608071 neschválen (neblokuje).
+- [ ] Další krok: F4.3 kalibrace katalogu proti live klíčům (P0: BrakeBias + F/R varianty) — POUZE po schválení; testovací jízda až na pokyn
 
 - [x] Výchozí stav: HEAD 66cb834 čistý, rbxm SHA shoda, Simulator read-only.
 - [x] Vlna 1 DODÁNA + ověřena koordinátorem: A (patched_config→Sim, 8 testů), B (backlog 79: P0=7/P1=41/P2=25/P3=6), C (mrtvá statika pryč, effect test, H 141=137/0/4, optimizer selftest zelený). MAPPING.md věta sladěna.
