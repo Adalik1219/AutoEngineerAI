@@ -26,7 +26,13 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající milník: matematická simulace + optimalizátor (vlastní brief uživatele, QA systém)
+## Probíhající fáze 4.1 + 4.2: Parameter Intelligence & Mapping Engine (zadání uživatele)
+
+- [x] Výchozí stav ověřen: HEAD 827352b čistý, RobloxSimulator read-only, chasis.rbxm SHA shoda.
+- [x] Zmrazená rozhraní koordinátorem: katalogový záznam (19 polí) + klasifikace 5 kategorií + mapping API (map_config/build_search_space).
+- [ ] Vlna 1: Agent A (katalog parameters.json + loader + CATALOG.md) + Agent B (mapping_engine + mapping/ + MAPPING.md)
+- [ ] Vlna 2: Agent C (QA: testy mapování + qa/qa-f4-parameter-intelligence.md, F4-01–F4-12) + Agent D (integrace: wiring search_space, test_f4_integration.py, draft PHASE-4 reportu)
+- [ ] Uzavření: re-verifikace, report reports/PHASE-4-PARAMETER-INTELLIGENCE.md, commit/push
 
 - [x] FÁZE 3 schválena → implementace spuštěna. Stack: Python 3, pouze stdlib. Souřadnice x vpřed / y vlevo / z vzhůru, SI, dt=1/240.
 - [x] Vlna 1 (8 implementačních agentů) DODÁNA 2026-11-16. Vlastní verifikace koordinátora: A exit 0 (21 kontrol), B exit 0, C exit 0 (3 scénáře + determinismus sha), D exit 0, E exit 0, F exit 0 (12 kontrol), G exit 0; H tests/run_all.py: 102 testů, 95 PASS, 3 FAIL, 4 PENDING/skipped (exit 1).
