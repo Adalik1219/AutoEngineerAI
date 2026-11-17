@@ -26,7 +26,12 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající: F4.4 Full T03 Autonomous Braking Validation
+## F4.4 UZAVŘENA (bez PASS): smyčka průchozí, přesnost pod laťkou — report F4-4-CLOSURE.md
+
+- [x] 6 platných jízd T03, telemetrie f44/ (8 JSON), Δ=11.49 < 3σ → FAIL poctivě (lockup bez ABS, brake-flapping, tolerance rychlosti).
+- [x] H 151/156, 1 systematický FAIL (SUMMARY full vs decimované) — test plní strážní funkci, neměnit.
+- [x] Originál+Simulator nedotčeny; místo uklizeno; vše pushnuto.
+- [ ] F5 NENÍ zahájen (čeká schválení): arbitrace Values.Brake, SUMMARY z kept-vzorků, roll kanál, RepairStructure bez Source, kampaň s ABS
 
 - [x] Výchozí stav: main d325e96 čistý, serve běží, Studio v Play (stará session — restart až po H1).
 - [ ] Vlna 1 běží: Agent H1 (brzdový mechanismus z Drive, slot auto-fill, startovní podmínky, brake_distance, repetitions, ABS kanál, regresní test)
