@@ -234,4 +234,30 @@ function TelemetryCollector:GetRunOutput(ctx: any): any
 	}
 end
 
+-- Decimace vzorku pro outbox (StringValue limit 200 kB, F44-T03-RUNS H1).
+-- Plna telemetrie zustava v behu (self.samples / navrat runOneScenario);
+-- do outboxu se uklada kazdy step-ty vzorek (vzdy prvni + posledni).
+-- maxKept=200 => ~140 kB pri ~700 B/vzorek (T01 40 s: step 12; T03: step 2).
+-- Summary + metriky se NEskrtaji; T03 metriky volajici prepocita z ulozenych
+-- (decimovanych) vzorku, aby nezavisly prepocet v test_f44_regression.py sedel.
+-- Vraci (decimovane_vzorky, step).
+function TelemetryCollector.DecimateForOutbox(samples: any, maxKept: number): ({ any }, number)
+	if typeof(samples) ~= "table" or #samples == 0 then
+		return {}, 1
+	end
+	maxKept = math.max(2, math.floor(maxKept or 200))
+	if #samples <= maxKept then
+		return samples, 1
+	end
+	local step = math.ceil(#samples / maxKept)
+	local kept: { any } = { samples[1] }
+	for i = 1 + step, #samples, step do
+		table.insert(kept, samples[i])
+	end
+	if kept[#kept] ~= samples[#samples] then
+		table.insert(kept, samples[#samples])
+	end
+	return kept, step
+end
+
 return TelemetryCollector

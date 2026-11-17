@@ -257,16 +257,33 @@ function VehicleManager.RepairStructure(vehicle)
 		if child then
 			child.Parent = vehicle
 			moved += 1
-			print(string.format("[RepairStructure] %s: '%s' (%s) presunuto na koren kopie",
-				vehicle:GetFullName(), name, child.ClassName))
+			print(
+				string.format(
+					"[RepairStructure] %s: '%s' (%s) presunuto na koren kopie",
+					vehicle:GetFullName(),
+					name,
+					child.ClassName
+				)
+			)
 		else
 			local already = vehicle:FindFirstChild(name)
 			if already then
-				print(string.format("[RepairStructure] %s: '%s' jiz na koreni (%s), preskoceno",
-					vehicle:GetFullName(), name, already.ClassName))
+				print(
+					string.format(
+						"[RepairStructure] %s: '%s' jiz na koreni (%s), preskoceno",
+						vehicle:GetFullName(),
+						name,
+						already.ClassName
+					)
+				)
 			else
-				print(string.format("[RepairStructure] %s: VAROVANI: '%s' nenalezeno ani pod Tune ani na koreni",
-					vehicle:GetFullName(), name))
+				print(
+					string.format(
+						"[RepairStructure] %s: VAROVANI: '%s' nenalezeno ani pod Tune ani na koreni",
+						vehicle:GetFullName(),
+						name
+					)
+				)
 			end
 		end
 	end
@@ -278,16 +295,16 @@ function VehicleManager.RepairStructure(vehicle)
 	if init and init:IsA("Script") then
 		local src = init.Source
 		local patched = 0
-		local out, hit = plainReplaceOnce(src,
-			"local car=script.Parent.Parent",
-			"local car=script.Parent")
+		local out, hit = plainReplaceOnce(src, "local car=script.Parent.Parent", "local car=script.Parent")
 		if hit then
 			src = out
 			patched += 1
 		end
-		out, hit = plainReplaceOnce(src,
+		out, hit = plainReplaceOnce(
+			src,
 			"local _Tune=require(script.Parent)",
-			"local _Tune=require(script.Parent[\"A-Chassis Tune\"])")
+			'local _Tune=require(script.Parent["A-Chassis Tune"])'
+		)
 		if hit then
 			src = out
 			patched += 1
@@ -295,8 +312,7 @@ function VehicleManager.RepairStructure(vehicle)
 		if patched > 0 then
 			init.Source = src
 		end
-		print(string.format("[RepairStructure] %s: Initialize kotvy prekotevny: %d/2",
-			vehicle:GetFullName(), patched))
+		print(string.format("[RepairStructure] %s: Initialize kotvy prekotevny: %d/2", vehicle:GetFullName(), patched))
 		-- MiscWeld (ModuleScript, potomek Initialize) kotvi vuz tremi hoppy
 		-- (MiscWeld -> Initialize -> Tune -> vuz); po presunu staci dva
 		-- (MiscWeld -> Initialize -> vuz). Bez toho by MiscWeld cetl
@@ -304,21 +320,32 @@ function VehicleManager.RepairStructure(vehicle)
 		local misc = init:FindFirstChild("MiscWeld")
 		if misc then
 			local msrc = misc.Source
-			local mout, mhit = plainReplaceOnce(msrc,
-				"car = script.Parent.Parent.Parent",
-				"car = script.Parent.Parent")
+			local mout, mhit = plainReplaceOnce(msrc, "car = script.Parent.Parent.Parent", "car = script.Parent.Parent")
 			if mhit then
 				misc.Source = mout
 			end
-			print(string.format("[RepairStructure] %s: MiscWeld kotva: %s",
-				vehicle:GetFullName(), mhit and "prekotevena" or "nenalezena (beze zmeny)"))
+			print(
+				string.format(
+					"[RepairStructure] %s: MiscWeld kotva: %s",
+					vehicle:GetFullName(),
+					mhit and "prekotevena" or "nenalezena (beze zmeny)"
+				)
+			)
 		else
-			print(string.format("[RepairStructure] %s: VAROVANI: MiscWeld pod Initialize nenalezen",
-				vehicle:GetFullName()))
+			print(
+				string.format(
+					"[RepairStructure] %s: VAROVANI: MiscWeld pod Initialize nenalezen",
+					vehicle:GetFullName()
+				)
+			)
 		end
 	else
-		print(string.format("[RepairStructure] %s: VAROVANI: Initialize (Script) na koreni nenalezen",
-			vehicle:GetFullName()))
+		print(
+			string.format(
+				"[RepairStructure] %s: VAROVANI: Initialize (Script) na koreni nenalezen",
+				vehicle:GetFullName()
+			)
+		)
 	end
 	return true, moved
 end
@@ -523,22 +550,21 @@ end
 -- na disku); CloneVehicle ho aplikuje na kazdou pracovni kopii (idempotentni).
 VehicleManager.DRIVE_INPUT_BRIDGE_MARKER = "AE_DRIVE_INPUT_BRIDGE"
 VehicleManager.DRIVE_INPUT_BRIDGE_ANCHOR = "\t\t--Inputs\n\t\tInputs(dt)"
-VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK =
-	"\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2): atributovy mustek pro bezridicske mereni.\n"
+VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2): atributovy mustek pro bezridicske mereni.\n"
 	.. "\t\t-- Drive cte JEN UserInputService (klavesy/gamepad); sedadlo nefunguje.\n"
-	.. "\t\t-- Server/operator nastavi car:SetAttribute(\"AE_Brake\"|\"AE_Throttle\"|\"AE_Steer\"),\n"
+	.. '\t\t-- Server/operator nastavi car:SetAttribute("AE_Brake"|"AE_Throttle"|"AE_Steer"),\n'
 	.. "\t\t-- klientsky Drive je v Heartbeat smycce ORuje do vstupu (brzda/plyn: max, volant: prepis).\n"
 	.. "\t\tdo\n"
-	.. "\t\t\tlocal _aeBrake = car:GetAttribute(\"AE_Brake\")\n"
-	.. "\t\t\tif typeof(_aeBrake) == \"number\" and _aeBrake > 0 then\n"
+	.. '\t\t\tlocal _aeBrake = car:GetAttribute("AE_Brake")\n'
+	.. '\t\t\tif typeof(_aeBrake) == "number" and _aeBrake > 0 then\n'
 	.. "\t\t\t\t_IBrake = math.max(_IBrake, math.min(1, _aeBrake))\n"
 	.. "\t\t\tend\n"
-	.. "\t\t\tlocal _aeThrot = car:GetAttribute(\"AE_Throttle\")\n"
-	.. "\t\t\tif typeof(_aeThrot) == \"number\" and _aeThrot > 0 then\n"
+	.. '\t\t\tlocal _aeThrot = car:GetAttribute("AE_Throttle")\n'
+	.. '\t\t\tif typeof(_aeThrot) == "number" and _aeThrot > 0 then\n'
 	.. "\t\t\t\t_IThrot = math.max(_IThrot, math.min(1, _aeThrot))\n"
 	.. "\t\t\tend\n"
-	.. "\t\t\tlocal _aeSteer = car:GetAttribute(\"AE_Steer\")\n"
-	.. "\t\t\tif typeof(_aeSteer) == \"number\" and _aeSteer ~= 0 then\n"
+	.. '\t\t\tlocal _aeSteer = car:GetAttribute("AE_Steer")\n'
+	.. '\t\t\tif typeof(_aeSteer) == "number" and _aeSteer ~= 0 then\n'
 	.. "\t\t\t\t_GSteerT = math.max(-1, math.min(1, _aeSteer))\n"
 	.. "\t\t\tend\n"
 	.. "\t\tend"
@@ -562,10 +588,7 @@ function VehicleManager.ApplyDriveInputBridge(vehicle)
 	if i == nil then
 		return false, "kotva Heartbeat/Inputs v Drive nenalezena"
 	end
-	drive.Source = string.sub(src, 1, i - 1)
-		.. VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK
-		.. "\n"
-		.. string.sub(src, i)
+	drive.Source = string.sub(src, 1, i - 1) .. VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK .. "\n" .. string.sub(src, i)
 	return true, "aplikovano"
 end
 

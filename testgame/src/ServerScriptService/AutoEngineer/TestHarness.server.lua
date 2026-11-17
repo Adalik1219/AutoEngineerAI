@@ -30,7 +30,7 @@ local TelemetryCollector = require(Self:WaitForChild("TelemetryCollector"))
 local RuntimeController = require(Self:WaitForChild("RuntimeController"))
 local VehicleManager = require(Self:WaitForChild("VehicleManager"))
 
-local CODE_VERSION = "ae-harness-0.2.0"
+local CODE_VERSION = "ae-harness-0.2.1"
 local VEHICLE_ID = "ae-test-vehicle"
 
 -- parameters.brakes (VehicleConfig, volny object) -> Tune klice. Pouze MUTABLE_TUNE
@@ -97,12 +97,16 @@ local function ensureVehicle(config: any, errors: { string }): Instance?
 	return deployed
 end
 
--- Startovni CFrame T03: dil StartLine v TestTracku (x=2, overeno z TestTrack.rbxmx).
+-- Startovni CFrame T03: dil StartLine v TestTracku (x=2, identita, overeno
+-- z TestTrack.rbxmx) + clearance +3 y nad desku (slab y=-0.45, sila 1.1 --
+-- bez odsazeni konci kola pod povrchem a solver rychlost sezere, F44-T03-RUNS
+-- H1). Orientace se NEMENI: smer jizdy +X dava applyStartSpeed pres
+-- RightVector (trat vede podel X, BrakeLine x=3000).
 -- Fallback: atribut workspace AE_Spawn; pak nil (bez presunu).
 local function findT03StartCFrame(): CFrame?
 	local found = workspace:FindFirstChild("StartLine", true)
 	if found ~= nil and found:IsA("BasePart") then
-		return (found :: BasePart).CFrame
+		return (found :: BasePart).CFrame + Vector3.new(0, 3, 0)
 	end
 	local attr = workspace:GetAttribute("AE_Spawn")
 	if typeof(attr) == "CFrame" then
@@ -112,12 +116,14 @@ local function findT03StartCFrame(): CFrame?
 end
 
 -- Startovni rychlost T03: vsechny BaseParty (DriveSeat explicitne -- Drive cte
--- DriveSeat.Velocity) dostanou AssemblyLinearVelocity = LookVector * speed.
+-- DriveSeat.Velocity) dostanou AssemblyLinearVelocity = RightVector * speed.
+-- Trat vede podel +X (BrakeLine x=3000); LookVector StartLine (0,0,-1) miril
+-- napric trati do svodidla (F44-T03-RUNS H1).
 local function applyStartSpeed(vehicle: Instance?, cf: CFrame, speed: number): ()
 	if vehicle == nil then
 		return
 	end
-	local v = cf.LookVector * speed
+	local v = cf.RightVector * speed
 	for _, d in vehicle:GetDescendants() do
 		if d:IsA("BasePart") then
 			(d :: BasePart).AssemblyLinearVelocity = v
@@ -137,6 +143,45 @@ local function entrySpeed(def: any): number
 		end
 	end
 	return 100
+end
+
+-- Outbox StringValue limit je 200 kB; T01-rep (40 s, 60 Hz) mel 1.68 MB
+-- (F44-T03-RUNS H1). Cap 200 ulozenych vzorku (~700 B/vzorek => ~140 kB,
+-- rezerva na summary + JSON rezii); faktor je adaptivni step = ceil(n/200).
+local OUTBOX_SAMPLE_CAP = 200
+
+-- Decimovana kopie behu pro outbox: vzorky se prolozi (plne zustavaji
+-- v `output`), summary + brake_distance vzdy (neskrtaji se). Je-li t03 beh,
+-- metriky se prepocitaji z ulozenych vzorku (konzistence s prepocetm testu).
+local function buildOutboxDoc(output: any, fullSamples: any, recomputeT03: boolean): any
+	local kept, step = TelemetryCollector.DecimateForOutbox(fullSamples, OUTBOX_SAMPLE_CAP)
+	local summary = (output.measurements :: any).summary
+	if recomputeT03 and typeof(summary) == "table" then
+		local m, _ = ScenarioRunner.ComputeT03Metrics(kept)
+		summary = { duration_s = summary.duration_s, state = summary.state, t03 = m }
+	end
+	local meas = {
+		rate_hz = (output.measurements :: any).rate_hz,
+		sample_count = #kept,
+		samples = kept,
+		summary = summary,
+		outbox_decimation = {
+			step = step,
+			kept_samples = #kept,
+			full_samples = if typeof(fullSamples) == "table" then #fullSamples else 0,
+		},
+	}
+	return {
+		run_id = output.run_id,
+		scenario_id = output.scenario_id,
+		vehicle_id = output.vehicle_id,
+		config_id = output.config_id,
+		timestamp = output.timestamp,
+		environment = output.environment,
+		measurements = meas,
+		completion_status = output.completion_status,
+		errors = output.errors,
+	}
 end
 
 local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Folder, rep: number): any
@@ -217,7 +262,12 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		table.insert(errors, "neplatny_run_vystup")
 		output.errors = errors
 	end
-	RuntimeController.WriteOutboxResult(bridge, output);
+	-- Outbox (StringValue limit 200 kB, F44-T03-RUNS H1): uloz decimovanou
+	-- kopii; plne vzorky + plne metriky zustavaji v navratu behu.
+	-- T03 metriky se pro outbox PREPOCITAJI z ulozenych (decimovanych) vzorku,
+	-- aby nezavisly prepocet v test_f44_regression.py sedel na 3 des. mista.
+	-- Summary (duration_s, state, t03) se NESKRTA, jen vzorky.
+	RuntimeController.WriteOutboxResult(bridge, buildOutboxDoc(output, collector.samples, isT03(def)));
 	(remotes:FindFirstChild("AEStatus") :: RemoteEvent):FireAllClients({ run_id = runId, status = completion })
 	return output
 end

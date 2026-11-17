@@ -72,6 +72,10 @@ function ScenarioRunner:Reset(): ()
 end
 
 -- Spawn faze: synchronni reset vozidla na startovni CFrame, nulove rychlosti, ustaleni.
+-- PivotTo pivotuje kolem PrimaryPart (VehicleManager.CloneVehicle nastavi
+-- PrimaryPart = DriveSeat na klonech; F4.4 M2 -- bez nej je placement kloubove
+-- sestavy nedefinovany). Rychlosti se nuluji (zadna zmena fyziky); vyskove
+-- odsazeni (+3 y pro T03) dodava volajici ve spawnCFrame (TestHarness).
 function ScenarioRunner:Spawn(def: any, runId: string, vehicle: Instance?, spawnCFrame: CFrame?): (boolean, string?)
 	self.def = def
 	self.runId = runId
