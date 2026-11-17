@@ -26,7 +26,12 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající fáze 4.1 + 4.2: Parameter Intelligence & Mapping Engine (zadání uživatele)
+## Probíhající fáze 4.2.1: Integration Closure & Calibration Preparation (zadání uživatele)
+
+- [x] Výchozí stav: HEAD 66cb834 čistý, rbxm SHA shoda, Simulator read-only.
+- [ ] Vlna 1 běží: Agent A (integration closure, patched_config→Sim) + Agent B (kalibrační backlog F4.3) + Agent C (optimizer audit, effect test)
+- [ ] Vlna 2: Agent D (nezávislé QA, report F4-2-1-INTEGRATION-CLOSURE.md)
+- [ ] Uzavření: verifikace 8 akceptačních bodů, commit/push, doporučení pro F4.3 (F4.3 NEZAČÍNAT bez schválení)
 
 - [x] Výchozí stav ověřen: HEAD 827352b čistý, RobloxSimulator read-only, chasis.rbxm SHA shoda.
 - [x] Zmrazená rozhraní koordinátorem: katalogový záznam (19 polí) + klasifikace 5 kategorií + mapping API (map_config/build_search_space).
