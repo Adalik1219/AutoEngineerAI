@@ -37,6 +37,9 @@ CATALOG_PATH = _os.path.join(_PROJECT_ROOT, "src", "Chassis", "catalog",
 #    tires.grip_lat/mu_road (krok, brzdy, pneumatiky).
 # backend_caps = tune_key tech katalogovych zaznamu, jejichz config_path
 # je v teto mnozine (podpora backendu; overenost resi build_search_space).
+# POZOR (F4.2.1, zbytková vada D2): Sim-čtené ≠ Tune-mapovatelné.
+# engine.peak_torque_nm / engine.peak_power_kw Sim čte, ale katalog k nim
+# nemá Tune protějšek (MAPPING.md §6/1) → nikdy nevstoupí do tune prostoru.
 SIM_SUPPORTED_CONFIG_PATHS = frozenset({
     "engine.peak_torque_nm", "engine.peak_power_kw",
     "engine.idle_rpm", "engine.redline_rpm", "engine.shift_rpm",
@@ -109,6 +112,11 @@ def _dynamic_specs(catalog_path=None):
 # final_drive [2.5, 4.2] pokrýva tovarni 2.866 i degradovane okraje;
 # nad ~4.0 si model vynuti 4. rychlostni stupen do 100 km/h a vazi V-max
 # prevodem (interierove optimum), pod ~2.6 chyba sila na kolech.
+# POZOR (F4.2.1, zbytková vada D1): min/max níže jsou LEGACY fallback pro
+# krok/jednotku; jediným zdrojem pravdy pro prostor jsou min/max z katalogu
+# (_dynamic_specs je bere z rec['min']/rec['max']). Až F4.3 doplní katalogové
+# rozsahy, musí se tyto statické meze sladit nebo odstranit — dnes je
+# _dynamic_specs nikdy nepoužije (FinalDrive: katalog min/max null).
 # engine.peak_torque_nm zde NENI (zamerne): nema Tune protejsek
 # (MAPPING.md §6, polozka 1) ani katalogovy zaznam, dynamicky prostor
 # pres build_search_space ho proto nikdy nevydá; mrtva statika by jen

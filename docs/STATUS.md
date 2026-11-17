@@ -30,8 +30,10 @@ Otevřené body před implementací:
 
 - [x] Výchozí stav: HEAD 66cb834 čistý, rbxm SHA shoda, Simulator read-only.
 - [x] Vlna 1 DODÁNA + ověřena koordinátorem: A (patched_config→Sim, 8 testů), B (backlog 79: P0=7/P1=41/P2=25/P3=6), C (mrtvá statika pryč, effect test, H 141=137/0/4, optimizer selftest zelený). MAPPING.md věta sladěna.
-- [ ] Vlna 2 běží: Agent D (nezávislé QA 8 bodů, report F4-2-1-INTEGRATION-CLOSURE.md)
-- [ ] Uzavření: verifikace 8 akceptačních bodů, commit/push, doporučení pro F4.3 (F4.3 NEZAČÍNAT bez schválení)
+- [x] Vlna 2 DODÁNA (Agent D): 8/8 PASS — patched_config v Simu, bias 46.000→51.842 m, fd 9.548→9.164 s, torque odmítnut, 27 UNKNOWN čistých, rbxm+Simulator nedotčeny, H 137/0/4.
+- [x] Zbytkové vady D1+D2 ošetřeny komentářem v search_space.py (LEGACY meze, Sim≠Tune); D3 (produkční projekce) je vstup F4.3.
+- [x] FÁZE 4.2.1 SPLNĚNA: H 141=137/0/4, optimizer selftest CONVERGED, report F4-2-1-INTEGRATION-CLOSURE.md.
+- [ ] Další krok: F4.3 Config Generator POUZE po samostatném schválení — blokováno: rozsahy 72 klíčů, motorový knob end-to-end (křivka), Studio sweepy S1–S9 (P0: FinalDrive→BrakeForce→Redline→IdleRPM→Ratios)
 
 - [x] Výchozí stav ověřen: HEAD 827352b čistý, RobloxSimulator read-only, chasis.rbxm SHA shoda.
 - [x] Zmrazená rozhraní koordinátorem: katalogový záznam (19 polí) + klasifikace 5 kategorií + mapping API (map_config/build_search_space).
