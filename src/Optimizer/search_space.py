@@ -109,14 +109,14 @@ def _dynamic_specs(catalog_path=None):
 # final_drive [2.5, 4.2] pokrýva tovarni 2.866 i degradovane okraje;
 # nad ~4.0 si model vynuti 4. rychlostni stupen do 100 km/h a vazi V-max
 # prevodem (interierove optimum), pod ~2.6 chyba sila na kolech.
+# engine.peak_torque_nm zde NENI (zamerne): nema Tune protejsek
+# (MAPPING.md §6, polozka 1) ani katalogovy zaznam, dynamicky prostor
+# pres build_search_space ho proto nikdy nevydá; mrtva statika by jen
+# matla safety_filter/_round_value/_diff_params.
 PARAM_DEFS = {
     "transmission.final_drive": {
         "min": 2.5, "max": 4.2, "step": 0.15, "unit": "-",
         "label": "staly prevod",
-    },
-    "engine.peak_torque_nm": {
-        "min": 180.0, "max": 250.0, "step": 5.0, "unit": "Nm",
-        "label": "spickovy moment motoru",
     },
     "brakes.bias_front": {
         "min": 0.55, "max": 0.70, "step": 0.01, "unit": "-",
@@ -125,10 +125,10 @@ PARAM_DEFS = {
 }
 
 # Poradi sond (koordinatni sestup). final_drive prvni: primarni paka
-# pro selftest se zhorsenym stalym prevodem.
+# pro selftest se zhorsenym stalym prevodem. engine.peak_torque_nm
+# zamerne chybi (nema Tune protejsek, viz PARAM_DEFS vyse).
 CORE_ORDER = [
     "transmission.final_drive",
-    "engine.peak_torque_nm",
     "brakes.bias_front",
 ]
 
@@ -161,7 +161,6 @@ def _plan_priority(plan):
     prios = plan.get("priorities") or []
     area_to_param = {
         "transmission": "transmission.final_drive",
-        "engine": "engine.peak_torque_nm",
         "powertrain": "transmission.final_drive",
         "brakes": "brakes.bias_front",
         "braking": "brakes.bias_front",

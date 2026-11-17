@@ -29,8 +29,8 @@ Otevřené body před implementací:
 ## Probíhající fáze 4.2.1: Integration Closure & Calibration Preparation (zadání uživatele)
 
 - [x] Výchozí stav: HEAD 66cb834 čistý, rbxm SHA shoda, Simulator read-only.
-- [ ] Vlna 1 běží: Agent A (integration closure, patched_config→Sim) + Agent B (kalibrační backlog F4.3) + Agent C (optimizer audit, effect test)
-- [ ] Vlna 2: Agent D (nezávislé QA, report F4-2-1-INTEGRATION-CLOSURE.md)
+- [x] Vlna 1 DODÁNA + ověřena koordinátorem: A (patched_config→Sim, 8 testů), B (backlog 79: P0=7/P1=41/P2=25/P3=6), C (mrtvá statika pryč, effect test, H 141=137/0/4, optimizer selftest zelený). MAPPING.md věta sladěna.
+- [ ] Vlna 2 běží: Agent D (nezávislé QA 8 bodů, report F4-2-1-INTEGRATION-CLOSURE.md)
 - [ ] Uzavření: verifikace 8 akceptačních bodů, commit/push, doporučení pro F4.3 (F4.3 NEZAČÍNAT bez schválení)
 
 - [x] Výchozí stav ověřen: HEAD 827352b čistý, RobloxSimulator read-only, chasis.rbxm SHA shoda.
