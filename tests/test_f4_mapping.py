@@ -417,17 +417,39 @@ class TestF4Integration(unittest.TestCase):
         self.assertIn("Horsepower",
                       build_search_space(sample_path, caps))
 
-    def test_f4_09_backend_bez_tune_caps(self):
-        """F4-09/NÁLEZ (Agent D): Optimizer/backend.py nevystavuje žádný
-        seznam Tune caps; search_space obsahuje peak_torque_nm bez protějšku."""
-        with open(os.path.join(ROOT, "src", "Optimizer", "backend.py"),
-                  encoding="utf-8") as fh:
-            backend_src = fh.read()
-        self.assertNotIn("backend_caps", backend_src)
-        self.assertNotIn("Horsepower", backend_src)
-        with open(os.path.join(ROOT, "src", "Optimizer", "search_space.py"),
-                  encoding="utf-8") as fh:
-            self.assertIn("engine.peak_torque_nm", fh.read())
+    def test_f4_09_backend_caps_ze_simu_a_prostor_bez_peak_torque(self):
+        """F4-09 (po Agentu D): backend_caps() existuje v search_space.py
+        (kanonický zdroj = Sim backend), vrací neprázdné Tune klíče;
+        search_space() je neprázdný a engine.peak_torque_nm neobsahuje
+        (nemá katalogový záznam ani Tune protějšek – explicitně odmítnut)."""
+        from src.Optimizer.search_space import (
+            backend_caps,
+            search_space,
+        )
+        caps = backend_caps(CATALOG_PATH)
+        self.assertTrue(caps)  # neprázdné
+        for key in caps:
+            self.assertIsInstance(key, str)
+            self.assertTrue(key)
+        self.assertIn("Bias", caps)
+        # Sim čte moment/výkon, ne Tune 'Horsepower' (draft D §1.4):
+        self.assertNotIn("Horsepower", caps)
+        tune_space = build_search_space(CATALOG_PATH, caps)
+        self.assertTrue(tune_space)  # neprázdný (dnes ['Bias'])
+        self.assertIn("Bias", tune_space)
+        cfg = {"schema_version": "1.0.0", "config_id": "cfg_qa_f409",
+               "vehicle_profile_id": "vp_qa", "chassis_adapter": "achassis-v1",
+               "parameters": {"transmission": {"final_drive": 3.0},
+                              "engine": {"peak_torque_nm": 205.0,
+                                         "horsepower": 210},
+                              "brakes": {"bias_front": 0.62}}}
+        space = search_space(cfg, None)
+        self.assertTrue(space)  # neprázdný
+        names = [s["name"] for s in space]
+        self.assertIn("brakes.bias_front", names)
+        self.assertNotIn("engine.peak_torque_nm", names)
+        for s in space:
+            self.assertLess(s["min"], s["max"])
 
 
 # --------------------------------------------------------------------------

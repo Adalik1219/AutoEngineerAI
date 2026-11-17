@@ -32,8 +32,10 @@ Otevřené body před implementací:
 - [x] Zmrazená rozhraní koordinátorem: katalogový záznam (19 polí) + klasifikace 5 kategorií + mapping API (map_config/build_search_space).
 - [x] Vlna 1 DODÁNA: A (125 záznamů, 79/14/2/3/27, loader exit 0) + B (map_config/build_search_space, selftest exit 0).
 - [x] Verifikace koordinátora: katalog 19 polí ✓; map_config na reálném katalogu mapuje Bias+FinalDrive, odmítá peak_torque_nm (očekáváno) — NÁLEZ: build_search_space vrací [] (PASS vs verified; backend_caps semantika). Předáno Agentu D.
-- [ ] Vlna 2 běží: Agent C (QA, F4-01–F4-12) + Agent D (integrace, wiring, draft reportu)
-- [ ] Uzavření: re-verifikace, report reports/PHASE-4-PARAMETER-INTELLIGENCE.md, commit/push
+- [x] Vlna 2 DODÁNA: Agent C (QA, 27 testů, F4-01–F4-12) + Agent D (integrace, dynamický prostor, draft reportu)
+- [x] QA report dokončen: V2–V5 + N1 (FWsBoneLen) doplněny; F4-09 FAIL→PASS (backend_caps 6 klíčů, prostor [bias_front], bez peak_torque_nm). Finále: 11× PASS, F4-08 PASS s výhradou.
+- [x] FÁZE 4.1+4.2 SPLNĚNY: report FINAL, H suite 128/0/4, rbxm+Simulator nedotčeny.
+- [ ] Další krok: F4.3 Config Generator (po zadání) — blokováno: ověřené rozsahy 70/77 klíčů, motorový knob end-to-end, Studio měření 31 PENDING
 
 - [x] FÁZE 3 schválena → implementace spuštěna. Stack: Python 3, pouze stdlib. Souřadnice x vpřed / y vlevo / z vzhůru, SI, dt=1/240.
 - [x] Vlna 1 (8 implementačních agentů) DODÁNA 2026-11-16. Vlastní verifikace koordinátora: A exit 0 (21 kontrol), B exit 0, C exit 0 (3 scénáře + determinismus sha), D exit 0, E exit 0, F exit 0 (12 kontrol), G exit 0; H tests/run_all.py: 102 testů, 95 PASS, 3 FAIL, 4 PENDING/skipped (exit 1).
