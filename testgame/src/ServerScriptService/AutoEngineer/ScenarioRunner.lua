@@ -740,6 +740,10 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 		end
 	end)
 	ScenarioRunner.CheckBrakeDiag(vehicle, brake)
+	-- F6-D: server aplikuje brzdny moment primo (brake==nil = manual, nesaha).
+	if brake ~= nil then
+		ScenarioRunner.ApplyServerBrake(vehicle, brake)
+	end
 end
 
 -- F5-A: read-only read-back pozadovane (AE_Brake) vs skutecne (Values.Brake) brzdy.
@@ -792,6 +796,84 @@ function ScenarioRunner.CheckBrakeDiag(vehicle: Instance?, brakeCmd: number?): (
 			)
 		)
 	end
+end
+
+-- F6-D: server-autoritativni brzda (vlastnik fyziky).
+-- Pricina (run-003): pri server-nil ownership klientsky Drive sice bezi
+-- (V1/V2 mosty, Values zrcadla), ale jeho zapisy motoru (#AV/#BV) se na
+-- serverem vlastnenych dilech NEAPLIKUJI (overeno obema smery: server 200 vs
+-- klient 0). Brzdeni videne ve F5 byla zablokovana-kola scrub (BV zamrzle na
+-- Initialize defaultu 5000), ne ucinek rampy. Proto brzdi PRIMO server:
+-- kazdy tick behu + kazde nulovani zapise #BV moment dle Tune
+-- (brzdna slozka vzorce Drive; bez ABS-emulace a bez EBrake/PBrake slozek)
+-- a #AV moment 0 (T03 nema plyn; ostatni scenare serverem nejezdi).
+-- Klientsky Drive tim nekonfliktuje (jeho zapisy se zahazuji).
+-- Manualni rezim (brake==nil) server nesaha.
+function ScenarioRunner.ReadBrakeForceConfig(vehicle: Instance?): (number?, number?)
+	if vehicle == nil then
+		return nil, nil
+	end
+	local ok, fb, rb = pcall(function()
+		local tune = (vehicle :: Instance):FindFirstChild("A-Chassis Tune", true)
+		if tune == nil or not (tune :: Instance):IsA("ModuleScript") then
+			return nil, nil
+		end
+		local tt = require(tune :: ModuleScript)
+		if typeof(tt) ~= "table" then
+			return nil, nil
+		end
+		local force = (tt :: any).BrakeForce
+		local bias = (tt :: any).BrakeBias
+		if typeof(force) ~= "number" or typeof(bias) ~= "number" then
+			return nil, nil
+		end
+		return (force :: number) * (bias :: number), (force :: number) * (1 - (bias :: number))
+	end)
+	if not ok then
+		return nil, nil
+	end
+	return fb, rb
+end
+
+function ScenarioRunner.ApplyServerBrake(vehicle: Instance?, brake01: number?): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	local b = if typeof(brake01) == "number" then math.max(0, math.min(1, brake01 :: number)) else 0
+	local fb, rb = ScenarioRunner.ReadBrakeForceConfig(vehicle)
+	if fb == nil or rb == nil then
+		return false, "brzdny_moment_neoveren:chybi_BrakeForce/BrakeBias_v_Tune"
+	end
+	local fps = 60
+	pcall(function()
+		fps = game:GetService("Workspace"):GetRealPhysicsFPS()
+	end)
+	if typeof(fps) ~= "number" or (fps :: number) <= 0 then
+		fps = 60
+	end
+	local factor = 60 / (fps :: number)
+	local count = 0
+	pcall(function()
+		local wheels = (vehicle :: Instance):FindFirstChild("Wheels", true)
+		local parts: { Instance } = if wheels ~= nil then wheels:GetChildren() else (vehicle :: Instance):GetDescendants()
+		for _, w in parts do
+			if w:IsA("BasePart") then
+				local isF = string.find(w.Name, "F", 1, true) ~= nil
+				for _, h in w:GetChildren() do
+					if h:IsA("HingeConstraint") and h.Name == "#BV" then
+						h.MotorMaxTorque = (if isF then (fb :: number) else (rb :: number)) * factor * b
+						count += 1
+					elseif h:IsA("HingeConstraint") and h.Name == "#AV" then
+						h.MotorMaxTorque = 0
+					end
+				end
+			end
+		end
+	end)
+	if count == 0 then
+		return false, "brzdny_moment_nezapsan:zadne_#BV_nenalezeno"
+	end
+	return true, nil
 end
 
 -- F5-FX2 stuck-brake: EXPLICITNI nulovani AE_Brake/AE_Throttle/AE_Steer
