@@ -58,6 +58,9 @@ ServerDrive.__index = ServerDrive
 
 ServerDrive._states = {}
 ServerDrive._guardWarned = {}
+-- F7.1-T01B diagnostika: pocet ticku bez jedineho #AV (rozliseni
+-- "pohon nedodaval" vs "pohon dodaval, vuz stal" pri analyze outlieru).
+ServerDrive._noavTicks = {}
 
 local function sdReadTune(vehicle: Instance?): any?
 	if vehicle == nil then
@@ -124,6 +127,7 @@ function ServerDrive.Reset(vehicle: Instance?)
 	end
 	ServerDrive._states[vehicle] = nil
 	ServerDrive._guardWarned[vehicle] = nil
+	ServerDrive._noavTicks[vehicle] = nil
 	pcall(function()
 		local veh = vehicle :: Instance
 		veh:SetAttribute("AE_RPM", nil)
@@ -462,6 +466,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 
 	local anyAV = false
 	local countBV = 0
+	local countAV = 0
 	st.tcsActive = false
 	st.absActive = false
 	for _, w in wheels do
@@ -546,6 +551,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 			av.MotorMaxTorque = tqOUT * (if w.Name == "RR" then diffR elseif w.Name == "RL" then diffR elseif w.Name == "FR" then diffF elseif w.Name == "FL" then diffF else 1)
 			av.AngularVelocity = st.spLimit
 			anyAV = true
+			countAV += 1
 		end
 		if bv ~= nil and bv:IsA("HingeConstraint") then
 			local base = if isF then fbF else fbR
@@ -555,6 +561,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 		end
 	end
 	if not anyAV then
+		ServerDrive._noavTicks[vehicle] = (ServerDrive._noavTicks[vehicle] or 0) + 1
 		return false, "moment_nezapsan:zadne_#AV_nenalezeno"
 	end
 
@@ -575,8 +582,19 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 		tcs = st.tcsActive,
 		abs = st.absActive,
 		bvCount = countBV,
+		avCount = countAV,
 	}
 end
+
+-- F7.1-T01B: pocet ticku bez dodaneho momentu v aktualnim behu (nil = zadny).
+function ServerDrive.NoAvTicks(vehicle: Instance?): number?
+	if vehicle == nil then
+		return nil
+	end
+	return ServerDrive._noavTicks[vehicle]
+end
+-- F7.1-T01B: pristup k diagnostice pohonu pro harness (souhrn behu).
+ScenarioRunner.ServerDrive = ServerDrive
 -- Konec F7.1-inline ServerDrive.
 ScenarioRunner.__index = ScenarioRunner
 

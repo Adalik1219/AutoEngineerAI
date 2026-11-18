@@ -358,6 +358,8 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 
 	runner:Finish(status, runner.failReason, vehicle)
 	collector:Stop()
+	-- F7.1-T01B: zachytit noav-counter PRED koncovym ClearDriveInputs (Reset ho maze).
+	local noavTicks = ScenarioRunner.ServerDrive.NoAvTicks(vehicle)
 	-- F7.1-RAW: plne vzorky do outboxu po strankach (manifest + p1..pN),
 	-- PRED sestavenim outputu, aby pripadna chyba byla ve vypisu.
 	-- Jen T01B (T01/T03 by zbytecne zahlcovaly outbox ~19 chunky na repliku).
@@ -420,6 +422,7 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 			t03 = t03metrics,
 			t01b = t01bmetrics,
 			completion_reason = runner.completionReason,
+			server_drive_noav_ticks = noavTicks,
 		},
 	})
 	local ok, _ = TelemetrySchema.ValidateRun(output)
