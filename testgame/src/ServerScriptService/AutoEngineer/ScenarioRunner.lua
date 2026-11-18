@@ -385,9 +385,9 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 	if st.tPsi > 0 then
 		local tpsi1 = st.tPsi / tune.Turbochargers
 		if st.tBoost < 1 then
-			st.tBoost += ((((((hpPrev * (bThrot * 1.2)) / tune.Horsepower) / 8) - ((st.tBoost / tpsi1 * (tpsi1 / 15)))) * ((8 / (tune.T_BoostLag / deltaTime)) * 2)) / tpsi1) * 15)
+			st.tBoost = st.tBoost + ((((((hpPrev*(bThrot*1.2)/tune.Horsepower)/8)-(((st.tBoost/tpsi1*(tpsi1/15)))))*((8/(tune.T_BoostLag/(deltaTime)))*2))/tpsi1)*15)
 		else
-			st.tBoost += ((((((hpPrev * (bThrot * 1.2)) / tune.Horsepower) / 8) - ((st.tBoost / tpsi1 * (tpsi1 / 15)))) * ((8 / (tune.T2_BoostLag / deltaTime)) * 2)) / tpsi1) * 15)
+			st.tBoost = st.tBoost + ((((((hpPrev*(bThrot*1.2)/tune.Horsepower)/8)-(((st.tBoost/tpsi1*(tpsi1/15)))))*((8/(tune.T2_BoostLag/(deltaTime)))*2))/tpsi1)*15)
 		end
 		if st.tBoost < 0.05 then
 			st.tBoost = 0.05
@@ -494,7 +494,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 				end
 			end
 			local avg = ((w.RotVelocity.Magnitude / math.max(0.001, cl.RotVelocity.Magnitude)) - 1) * (tune.FDiffPreload / 10)
-			diffF = math.ceil(math.max(0, math.min(2, 1 - (((tune.FDiffPower / 100) * avg * throt) + ((tune.FDiffCoast / 100) * avg * (1 - throt)))))) * 100) / 100
+			diffF = math.ceil(math.max(0,math.min(2,1-( ((tune.FDiffPower/100)*avg*throt) + ((tune.FDiffCoast/100)*avg*(1-throt)))))*100)/100
 			diffR = 2 - diffF
 		elseif w.Name == "FL" then
 			local cr = wheels[1]
@@ -505,7 +505,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 				end
 			end
 			local avg = ((w.RotVelocity.Magnitude / math.max(0.001, cr.RotVelocity.Magnitude)) - 1) * (tune.FDiffPreload / 10)
-			diffF = math.ceil(math.max(0, math.min(2, 1 - (((tune.FDiffPower / 100) * avg * throt) + ((tune.FDiffCoast / 100) * avg * (1 - throt)))))) * 100) / 100
+			diffF = math.ceil(math.max(0,math.min(2,1-( ((tune.FDiffPower/100)*avg*throt) + ((tune.FDiffCoast/100)*avg*(1-throt)))))*100)/100
 			diffR = 2 - diffF
 		elseif w.Name == "RR" then
 			local cl = wheels[1]
@@ -516,7 +516,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 				end
 			end
 			local avg = ((w.RotVelocity.Magnitude / math.max(0.001, cl.RotVelocity.Magnitude)) - 1) * (tune.RDiffPreload / 10)
-			diffR = math.ceil(math.max(0, math.min(2, 1 - (((tune.RDiffPower / 100) * avg * throt) + ((tune.RDiffCoast / 100) * avg * (1 - throt)))))) * 100) / 100
+			diffR = math.ceil(math.max(0,math.min(2,1-( ((tune.RDiffPower/100)*avg*throt) + ((tune.RDiffCoast/100)*avg*(1-throt)))))*100)/100
 			diffF = 2 - diffR
 		elseif w.Name == "RL" then
 			local cr = wheels[1]
@@ -527,7 +527,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 				end
 			end
 			local avg = ((w.RotVelocity.Magnitude / math.max(0.001, cr.RotVelocity.Magnitude)) - 1) * (tune.RDiffPreload / 10)
-			diffR = math.ceil(math.max(0, math.min(2, 1 - (((tune.RDiffPower / 100) * avg * throt) + ((tune.RDiffCoast / 100) * avg * (1 - throt)))))) * 100) / 100
+			diffR = math.ceil(math.max(0,math.min(2,1-( ((tune.RDiffPower/100)*avg*throt) + ((tune.RDiffCoast/100)*avg*(1-throt)))))*100)/100
 			diffF = 2 - diffR
 		end
 		local isF = sdIsFrontWheel(w.Name)
