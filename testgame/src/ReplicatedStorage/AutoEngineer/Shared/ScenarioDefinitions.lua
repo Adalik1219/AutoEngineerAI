@@ -49,6 +49,9 @@ ScenarioDefinitions.DEFINITIONS = {
 		brake_start_x = 2500,
 		gate_x = 2510,
 		wall_fail_x = 3600,
+		-- F7.1-NOSIT (rep-2 experiment): TestClient v T01B neusazuje postavu
+		-- (server-authorita nepotrebuje ridice; eliminuje weld/sit vektor).
+		no_testclient_sit = true,
 		track = { shape = "straight", length_studs = 3800, lane_half_width_studs = 4 },
 		surface = "DRY_ASPHALT",
 		initial_conditions = {

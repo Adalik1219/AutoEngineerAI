@@ -228,11 +228,19 @@ local function StartScenario(scenarioId: string, params: { [string]: any }?)
 		return
 	end
 	-- Ridic musi sedet: A-Chassis Drive bezi jen u klienta-ridice.
+	-- F7.1-NOSIT: scenar muze sednuti zakazat (def.no_testclient_sit) --
+	-- server-authorita ridice nepotrebuje; testuje se sit/weld vektor.
+	local nosit = def ~= nil and (def :: any).no_testclient_sit == true
 	local character = LocalPlayer.Character
 	local humanoid = nil
 	if character ~= nil then
 		humanoid = character:FindFirstChildOfClass("Humanoid")
 	end
+	if nosit then
+		RuntimeController.seat = seat
+		RuntimeController.scenarioId = scenarioId
+		RuntimeController.def = def
+	else
 	if humanoid == nil or seat.Occupant ~= humanoid then
 		if humanoid ~= nil then
 			seat:Sit(humanoid)
@@ -248,6 +256,7 @@ local function StartScenario(scenarioId: string, params: { [string]: any }?)
 			remote:FireServer({ type = "Error", message = "seat_failed" })
 			return
 		end
+	end
 	end
 
 	local p = params or {}
