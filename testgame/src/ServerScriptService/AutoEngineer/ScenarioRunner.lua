@@ -1322,7 +1322,11 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 			vehicle:SetAttribute("AE_Steer", steer)
 		end
 	end)
-	ScenarioRunner.CheckBrakeDiag(vehicle, brake)
+	-- F7.1-T01B: diagnostika Values.Brake se preskakuje — server-brzda
+	-- (ApplyServerBrake) obchazi klientsky bridge zamerne; overuje ji v-decay.
+	if kind ~= "straight_accel_brake" then
+		ScenarioRunner.CheckBrakeDiag(vehicle, brake)
+	end
 	-- Konec behu (nil,nil,nil = navrat do manualu): reset server-pohonu.
 	if throttle == nil and brake == nil and steer == nil then
 		ServerDrive.Reset(vehicle)
