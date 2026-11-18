@@ -122,11 +122,13 @@ end
 -- Trat vede podel +X (BrakeLine x=3000); F6: smer je dan geometrii trate,
 -- ne orientaci spawnCFrame (ta po yaw-fixu nese RightVector +Z, LookVector +X).
 -- LookVector StartLine (0,0,-1) miril napric trati do svodidla (F44-T03-RUNS H1).
+-- Rychlost dava TRACK_DIR (ScenarioRunner.T03_TRACK_DIR, +X); F7.1-N3: jediny
+-- zdroj smeru trate, zadna duplicitni definice.
 local function applyStartSpeed(vehicle: Instance?, _cf: CFrame, speed: number): ()
 	if vehicle == nil then
 		return
 	end
-	local v = Vector3.xAxis * speed
+	local v = ScenarioRunner.T03_TRACK_DIR * speed
 	for _, d in vehicle:GetDescendants() do
 		if d:IsA("BasePart") then
 			(d :: BasePart).AssemblyLinearVelocity = v

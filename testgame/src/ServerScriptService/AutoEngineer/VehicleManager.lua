@@ -347,6 +347,16 @@ function VehicleManager.DeployVehicle(vehicle)
 	if typeof(vehicle) ~= "Instance" then
 		return nil, "ocekavan Instance vozidla"
 	end
+	-- F7.1-N2: template-guard (stejna ochrana jako DestroyVehicle/RepairStructure):
+	-- nikdy neparentovat sablonu ani obsah VehicleTemplates do Workspace.
+	local templatesFolder = VehicleManager.ResolveTemplatesFolder()
+	if templatesFolder and (vehicle == templatesFolder or vehicle:IsDescendantOf(templatesFolder)) then
+		return nil, "odmitnuto: cil je sablona nebo jeji potomek (chrani se original)"
+	end
+	local template = VehicleManager.ResolveTemplate()
+	if template and vehicle == template then
+		return nil, "odmitnuto: cil je sablona JeepTemplate"
+	end
 	vehicle.Parent = Workspace
 	pcall(function()
 		local tune = vehicle:FindFirstChild("A-Chassis Tune", true)
