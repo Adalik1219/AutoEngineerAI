@@ -321,6 +321,18 @@ local function writeRawChunks(bridge: Folder, runId: string, fullSamples: any): 
 	return pages
 end
 
+-- F7.1-RAW-DEFER: plne vzorky se mezi replikami NEKODUJI (JSONEncode ~2 s by
+-- uspaval fyziku pred dalsi replikou — podezreni na rep-2 anomalii).
+-- Stash referenci; zapis (manifest + p1..pN) probehne az po celem briefu.
+local rawStash: { [string]: any } = {}
+
+local function flushRawStash(bridge: Folder): ()
+	for runId, samples in rawStash do
+		writeRawChunks(bridge, runId, samples)
+	end
+	table.clear(rawStash)
+end
+
 local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Folder, rep: number): (any, any)
 	local runId = string.format("RUN-%s-%s-r%d", tostring(config.config_id or "nocfg"), def.scenario_id, rep)
 	local runner = ScenarioRunner.new({})
@@ -447,15 +459,9 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	collector:Stop()
 	-- F7.1-T01B: zachytit noav-counter PRED koncovym ClearDriveInputs (Reset ho maze).
 	local noavTicks = ScenarioRunner.ServerDrive.NoAvTicks(vehicle)
-	-- F7.1-RAW: plne vzorky do outboxu po strankach (manifest + p1..pN),
-	-- PRED sestavenim outputu, aby pripadna chyba byla ve vypisu.
-	-- Jen T01B (T01/T03 by zbytecne zahlcovaly outbox ~19 chunky na repliku).
-	local rawPages = 0
+	-- F7.1-RAW-DEFER: jen stash, zapis az po briefu (flushRawStash).
 	if def.kind == "straight_accel_brake" then
-		rawPages = writeRawChunks(bridge, runId, collector.samples)
-	end
-	if def.kind == "straight_accel_brake" and rawPages == 0 then
-		table.insert(errors, "raw_telemetrie_nezapsana")
+		rawStash[runId] = collector.samples
 	end
 	-- F5-FX2 stuck-brake: na konci behu EXPLICITNE 0,0,0 + overeni, pak teprve
 	-- nil (navrat do manualniho rezimu; _IBrake zustane na 0, ne zaseknuta 1.0).
@@ -687,6 +693,7 @@ local function main(): ()
 	RuntimeController.BindSubmitConfig(remotes, function(config: any)
 		task.spawn(function()
 			runBrief(config, resolveScenarioIds(config))
+			flushRawStash(bridge)
 		end)
 	end)
 	-- F7.1: zive rizeni mimo replay-beh (Solo rig; vice hracu = BLOCKED, viz E).
@@ -705,6 +712,7 @@ local function main(): ()
 	if pending ~= nil then
 		task.spawn(function()
 			runBrief(pending, resolveScenarioIds(pending))
+			flushRawStash(bridge)
 		end)
 	end
 end
