@@ -789,3 +789,4 @@ function VehicleManager.EnsureTemplateBridge()
 end
 
 return VehicleManager
+-- F6 sync-anchor: plny re-sync po castecne aplikaci Rojo pluginem (chimera 5e003fe+823585d).
