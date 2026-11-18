@@ -9,12 +9,12 @@
 
 ## 1. Potvrzené příčiny (F6-run-001, Edit read-only + čtení kódu)
 
-1. **C — špatná orientace (kritická, NOVÁ přesná příčina).** Čelo vozu = lokální `-X`
-   (Collision_Front rel. −0.3,1.4,+7.7 ve světě šablony → lokálně −7.7,−0.3,−1.4).
-   `findT03StartCFrame` používá `StartLine.CFrame` beze změny orientace → vůz stojí
-   čelem k −X (k BackWall), rychlost +X. Vůz jede **bokem/pozpátku**, ne po dráze.
-   Dosavadní facing-gate četl `RightVector` spawnCFrame, nikdy čumák vozu.
-   Operátorova „rotace o 90°“ byla správný směr, špatný úhel: potřeba je **180° yaw**.
+1. **C — špatná orientace (kritická).** Čumák vozu sleduje `LookVector` spawnCFrame
+   (run-002 živě: `seatLook≈+Z`, `frontD≈+Z 8.5`). `findT03StartCFrame` vracel
+   `StartLine.CFrame` beze změny (look −Z) → vůz stál čelem +Z napříč tratí,
+   rychlost +X ho tlačila bokem. Facing-gate četl `RightVector` spawnCFrame
+   (vždy +X → vždy PASS) a maskoval to. Oprava: `StartLine.CFrame * yaw(−90°)`
+   (čumák → +X), rychlost `TRACK_DIR`, gate z čumáku vozu.
 2. **A — stale `Car.Value` (potvrzena).** `Drive` (l.21) čte `Car.Value` jednou při startu,
    `Initialize` klonuje Interface do PlayerGui při Situ (l.639–647) a po
    `DestroyVehicle` ho nikdy nemaže → mrtvý Drive, `#BV` na parkovacím defaultu 5000,

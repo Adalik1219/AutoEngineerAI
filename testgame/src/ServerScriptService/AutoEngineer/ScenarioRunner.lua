@@ -158,8 +158,8 @@ function ScenarioRunner.ReadStartRollDeg(vehicle: Instance?): number?
 end
 
 -- Facing +X ze spawnCFrame: X slozka RightVector (trat vede podel +X, H1).
--- F6: POZOR -- po yaw180-fixu nese spawnCFrame RightVector -X (cumak vozu je
--- -RightVector). Tato funkce zustava pro kompatibilitu; gate pouziva primarne
+-- F6: POZOR -- po yaw-fixu (-90°) sleduje cumak LookVector spawnCFrame.
+-- Tato funkce zustava pro kompatibilitu; gate pouziva primarne
 -- ReadVehicleFacingX (cumak skutecneho vozu).
 function ScenarioRunner.ReadSpawnFacingX(spawnCFrame: CFrame?): number?
 	if spawnCFrame == nil then
@@ -483,13 +483,16 @@ function ScenarioRunner.VerifyT03Start(vehicle: Instance?, def: any, spawnCFrame
 			)
 		)
 	end
-	-- F6: facing z CUMAKU vozu (primarne), fallback -RightVector spawnCFrame
-	-- (cumak = -RightVector po yaw180-fixu; stary prime test byl vzdy PASS).
+	-- F6: facing z CUMAKU vozu (primarne), fallback LookVector spawnCFrame
+	-- (cumak = LookVector po yaw-fixu -90°; stary prime test pres RightVector
+	-- byl vzdy PASS a maskoval spatnou orientaci).
 	local facingX = ScenarioRunner.ReadVehicleFacingX(vehicle)
 	if facingX == nil then
-		local srv = ScenarioRunner.ReadSpawnFacingX(spawnCFrame)
-		if srv ~= nil then
-			facingX = -srv
+		local okL, lv = pcall(function()
+			return (spawnCFrame :: CFrame).LookVector
+		end)
+		if okL and typeof(lv) == "Vector3" then
+			facingX = (lv :: Vector3).X
 		end
 	end
 	if facingX == nil then
