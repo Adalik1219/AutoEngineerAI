@@ -202,6 +202,7 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	local vehicle = ensureVehicle(config, errors)
 	collector:SetVehicle(vehicle :: Instance?)
 	if vehicle ~= nil then
+		-- Idempotentni: predesly beh mohl skoncit vyjimkou (leak pojistka).
 		activeVehicles[vehicle] = true
 	end
 

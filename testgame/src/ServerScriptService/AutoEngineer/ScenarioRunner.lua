@@ -543,7 +543,7 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 		local av = w:FindFirstChild("#AV")
 		local bv = w:FindFirstChild("#BV")
 		if av ~= nil and av:IsA("HingeConstraint") then
-			av.MotorMaxTorque = tqOUT * (if w.Name == "RR" then diffR elseif w.Name == "RL" then diffF elseif w.Name == "FR" then diffF elseif w.Name == "FL" then diffF else 1)
+			av.MotorMaxTorque = tqOUT * (if w.Name == "RR" then diffR elseif w.Name == "RL" then diffR elseif w.Name == "FR" then diffF elseif w.Name == "FL" then diffF else 1)
 			av.AngularVelocity = st.spLimit
 			anyAV = true
 		end

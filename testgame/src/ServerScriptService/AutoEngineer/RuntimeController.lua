@@ -129,6 +129,11 @@ function RuntimeController.BindDriveCmd(remotes: Folder, onCmd: (any, any) -> ()
 	local lastSeq: { [Player]: number } = {}
 	local lastTick: { [Player]: number } = {}
 	local evTyped = ev :: RemoteEvent
+	-- Uklid per-hrac stavu pri odchodu (jinak leak).
+	game:GetService("Players").PlayerRemoving:Connect(function(player: Player)
+		lastSeq[player] = nil
+		lastTick[player] = nil
+	end)
 	evTyped.OnServerEvent:Connect(function(player: Player, payload: any)
 		if typeof(payload) ~= "table" then
 			return
