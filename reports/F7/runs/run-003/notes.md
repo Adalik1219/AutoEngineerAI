@@ -9,7 +9,8 @@
 - RAW: p1..p7 po 150000 B + tail (6108/73121/86716), sestaveno + JSON-validovano
   (1970/1755/1757 vzorku = manifest). catch-up burst (dt=0: 501/420/124) = artefakt
   Heartbeat, integralni metriky nedotceny.
-- Rep-2 anomalie (kampane b/c) se NEOPAKOVALA: pricina = pasazer/weld (no-sit ciste).
+- Rep-2 anomalie (kampane b/c) se NEOPAKOVALA: passenger/weld je PODEZRELA
+  pricina (korelace: no-sit kampan cista), NENI prokazany root cause.
 
 ## Q4 manual (AEDriveCmd -> ServerDrive, unseated, server vlastni vse)
 - Q4.1 plyn PASS: mid-stream (0.6) thA=0.6, #AVtq=143, v=8.2 (server-owned).
@@ -20,7 +21,10 @@
 - Q4.4 steer BLOKOVAN: dyaw 0.004/3s; client-Drive v session nebezi
   (capability-denial) + server-ownership zahazuje gyro; chyba server-side
   steer-akutator (F7.2).
-- Validace PASS: clamp (5->1, -2->0, 9->1); stale-seq drop kod-overen.
+- Validace: clamp PASS (5->1, -2->0, 9->1); stale-seq CODE-VERIFIED,
+  runtime dup/stale test PENDING. Occupant: PENDING (vse unseated, validace
+  neimplementovana). Rozsah: overen ServerDrive harness, NE original A-Chassis
+  runtime (v teto session nebezi; PENDING/BLOCKED).
 - Ztrata vozu pri testu (pouze Q4 rig, ne T01B dukaz): poddimenzovane brzdne
   okno z v=190 + dead-man uvolnil brzdu -> sjezd do voidu. Lekce zapsana.
 

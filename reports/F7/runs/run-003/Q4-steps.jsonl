@@ -10,5 +10,6 @@
 {"Q4.3c_brake_PASS":"q4f 0.6 (6s): x -47->-53.6, v peak ~15-25; q4g 1.0 (5s): v=11.3->0.0, x -53.6->-56.5 (3 coule); brA=nil (dead-man uklid); ZAVER: brzda PASS"}
 {"Q4.4_steer_BLOKOVAN":"q4h 0.4+steer 1.0 (3s): dyaw=0.0044 (sum), zadna zmena kurzu; mechanismus: client Drive v teto session vubec nebezi (capability-denial v konzoli) + server vlastni vse (client gyro zapisy zahazovany); chyba server-side steer aktuator (scope F7.2); ZAVER: BLOKOVAN s dukazem"}
 {"Q4.5_clamp_PASS":"q4clamp (5,-2,9) mid-stream: AE_T=1, AE_B=0, AE_S=1; ZAVER: validace/clamp PASS"}
-{"Q4.6_stale_seq":"kod: p.seq<=lastSeq[player] -> drop (3 radky, trivialni); runtime: q4brk (700+) prebil q4spd (645-660) = higher-wins prokazano zive; cisty dup-test nebezel (slaby signal); ZAVER: kod-overeno"}
-{"Q4.7_occupancy":"vsechny Q4 kroky bez pasazera (occ=nil); server Occupant nekontroluje; ZAVER: manual funguje unseated (zjisteni, ne selhani; bezpecnostni poznamka pro produkci)"}
+{"Q4.6_stale_seq_CODE_VERIFIED_runtime_PENDING":"kod: p.seq<=lastSeq[player] -> drop; runtime: q4brk (700+) prebil q4spd (645-660) = higher-wins zive; cisty dup-test PENDING"}
+{"Q4.7_occupant_PENDING":"vsechny Q4 kroky bez pasazera (occ=nil); server Occupant nekontroluje ani nevaliduje (validace NEIMPLEMENTOVANA); manual funguje unseated = zjisteni, ne selhani"}
+{"Q4.8_rozsah_dukazu":"T01B+Q4 overuji ServerDrive harness; original A-Chassis (Drive/Initialize/Server) v teto session nebezi (capability-denial) = harness-verifikace NENI dukazem original-runtime (PENDING/BLOCKED)"}
