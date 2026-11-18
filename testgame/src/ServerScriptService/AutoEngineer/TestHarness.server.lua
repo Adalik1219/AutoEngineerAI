@@ -799,42 +799,26 @@ local function main(): ()
 						return
 					end
 					local c = entry.cmd
-					ScenarioRunner.WriteDriveAttributes(vehicle, c.throttle, c.brake, c.steer, "manual")
-					if ScenarioRunner.ServerSteer ~= nil then
-						local okS, errS = ScenarioRunner.ServerSteer.Step(vehicle, c.steer, dt)
-						if not okS then
-							warn(string.format("[AE_SERVER_STEER] %s", tostring(errS)))
-						end
+					-- P0: S0 prubezna kontrola (min. 10 Hz); "stop" = drop entry.
+					local s0res, s0diffs = ScenarioRunner.ServerSteer.S0Check(vehicle)
+					if s0res ~= "ok" then
+						lastManual[vehicle] = nil
+						return
 					end
+					ScenarioRunner.WriteDriveAttributes(vehicle, c.throttle, c.brake, c.steer, "manual")
+					-- Selhani Stepu = interni alarm (Step wrapper); entry drzi,
+					-- dalsi tick zkousi dal (diagnosticky stav, zadny spam).
+					ScenarioRunner.ServerSteer.Step(vehicle, c.steer, dt)
 				end)
 				if not ok then
 					lastManual[vehicle] = nil
 				end
 			end
-			-- Dopad navratu kol po zrusenem entry: steerT=0, Step bezi dal,
-			-- dokud IsCentered; replay-beh ma prednost (preskocit).
-			if ScenarioRunner.ServerSteer ~= nil then
-				for _, vehicle in ScenarioRunner.ServerSteer.SettlingList() do
-					pcall(function()
-						if (vehicle :: Instance).Parent == nil then
-							ScenarioRunner.ServerSteer.Forget(vehicle)
-							return
-						end
-						if activeVehicles[vehicle] == true then
-							return
-						end
-						local okS, errS = ScenarioRunner.ServerSteer.Step(vehicle, 0, dt)
-						if not okS then
-							warn(string.format("[AE_SERVER_STEER settle] %s", tostring(errS)))
-							ScenarioRunner.ServerSteer.Forget(vehicle)
-							return
-						end
-						if ScenarioRunner.ServerSteer.IsCentered(vehicle) then
-							ScenarioRunner.ServerSteer.Forget(vehicle)
-						end
-					end)
-				end
-			end
+			-- Dopad navratu kol po zrusenem entry (SettleTick: steerT=0, Step
+			-- bezi dal; chyba NIKDY nevede k Forget; replay-beh ma prednost).
+			ScenarioRunner.ServerSteer.SettleTick(dt, function(v: any): boolean
+				return activeVehicles[v] == true
+			end)
 		end)
 	end
 	RuntimeController.BindDriveCmd(remotes, function(player: any, cmd: any)

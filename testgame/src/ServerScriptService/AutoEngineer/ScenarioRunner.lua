@@ -1302,6 +1302,9 @@ ServerSteer._settling = {} -- [vehicle] = true (dopad navratu po zruseni entry)
 ServerSteer._warnedValues = {} -- [vehicle] = true (Values.SteerC chybi, warn 1x)
 ServerSteer.MAXTICKS = 3 -- dt-strop (D1): ticks=min(dt*60,0,3)
 ServerSteer.CENTER_STEERC = 0.005 -- |steerC| pod prahem = narovnano
+ServerSteer._s0 = {} -- [vehicle] = {snap, last} (S0 baseline + throttle)
+ServerSteer._warnedStep = {} -- [vehicle] = true (warn-once pri Step fail)
+ServerSteer._lastAlarmMsg = {} -- [vehicle] = string (warn-once na zpravu)
 ScenarioRunner.ServerSteer = ServerSteer
 
 local STEER_SETS = { "F", "FL", "FR" }
@@ -1330,12 +1333,17 @@ function ScenarioRunner.SnapshotVehicle(vehicle: Instance?): (any?, string?)
 	if vehicle == nil then
 		return nil, "chybi_vozidlo"
 	end
-	local snap: any = { parts = {}, roots = {}, heights = {}, count = 0, av = 0, bv = 0 }
+	local snap: any = { parts = {}, roots = {}, heights = {}, count = 0, av = 0, bv = 0, duplicates = {} }
 	local ok, err = pcall(function()
 		local veh = vehicle :: Instance
 		for _, d in veh:GetDescendants() do
 			snap.count += 1
-			snap.parts[ssPartIdentity(veh, d)] = true
+			local id = ssPartIdentity(veh, d)
+			-- P1: duplicitni identita = snapshot ERROR (zadny tichy PASS).
+			if snap.parts[id] == true then
+				table.insert(snap.duplicates, id)
+			end
+			snap.parts[id] = true
 			if d:IsA("HingeConstraint") then
 				if d.Name == "#AV" then
 					snap.av += 1
@@ -1392,19 +1400,26 @@ function ScenarioRunner.SnapshotVehicle(vehicle: Instance?): (any?, string?)
 	if not ok then
 		return nil, "snapshot_selhal:" .. tostring(err)
 	end
+	if #(snap.duplicates :: { string }) > 0 then
+		return nil, "duplicitni_identita:" .. table.concat(snap.duplicates, ";")
+	end
 	return snap, nil
 end
 
--- S0: porovnani aktualniho stavu se snapshotem. (true,{}) nebo (false, diffs).
-function ScenarioRunner.DiffSnapshot(vehicle: Instance?, snap: any): (boolean, { string })
+-- S0: porovnani aktualniho stavu se snapshotem.
+-- Vraci (ok, diffs, monErr): monErr ~= nil = CHYBA MONITORINGU (FAIL/ERROR,
+-- NIKDY PASS). heights (statika pro T0-d) se tu NEPorovnavaji — jsou baseline
+-- memo, jejich PASS/FAIL patri T0-d kriteriu, ne strukture.
+function ScenarioRunner.DiffSnapshot(vehicle: Instance?, snap: any): (boolean, { string }, string?)
 	local diffs: { string } = {}
 	if vehicle == nil then
-		return false, { "chybi_vozidlo" }
+		return false, { "chybi_vozidlo" }, "chybi_vozidlo"
 	end
 	if snap == nil then
-		return false, { "chybi_snapshot" }
+		return false, { "chybi_snapshot" }, "chybi_snapshot"
 	end
-	pcall(function()
+	local skipRoots = 0
+	local okAll = pcall(function()
 		local veh = vehicle :: Instance
 		local count = 0
 		local cur: { [string]: boolean } = {}
@@ -1433,7 +1448,9 @@ function ScenarioRunner.DiffSnapshot(vehicle: Instance?, snap: any): (boolean, {
 				local rok, root = pcall(function()
 					return (d :: BasePart):GetAssemblyRootPart()
 				end)
-				if rok and root ~= nil and seen[root] ~= true then
+				if not rok or root == nil then
+					skipRoots += 1
+				elseif seen[root] ~= true then
 					seen[root] = true
 					local own: string? = nil
 					pcall(function()
@@ -1488,7 +1505,13 @@ function ScenarioRunner.DiffSnapshot(vehicle: Instance?, snap: any): (boolean, {
 			table.insert(diffs, string.format("pocet_BV:%s->%s", tostring(snap.bv), tostring(bv)))
 		end
 	end)
-	return #diffs == 0, diffs
+	if not okAll then
+		return false, { "monitor_selhal" }, "monitor_selhal"
+	end
+	if skipRoots > 0 then
+		table.insert(diffs, "cteni_root_selhalo:" .. tostring(skipRoots))
+	end
+	return #diffs == 0, diffs, nil
 end
 
 -- Relativni natoceni ridiciho cepu vuci zakladne (D3/AC4): {sada=stupne}.
@@ -1530,12 +1553,17 @@ end
 
 -- Hlavni krok rizeni: steerT (-1..1, uz validovane/clampnute), dt ze Heartbeat.
 -- Vraci (true) nebo (false, duvod). Fail-closed: zadny castecny zapis na kola.
-function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): (boolean, string?)
+-- P1: kazde selhani = AE_SteerAlarm + warn-once (pres wrapper nize).
+function ServerSteer.StepInner(vehicle: Instance?, steerT: number?, dtRaw: number?): (boolean, string?)
 	if vehicle == nil then
 		return false, "chybi_vozidlo"
 	end
 	local veh = vehicle :: Instance
 	local tune = sdReadTune(veh)
+	if ServerSteer._tuneOverride ~= nil and (ServerSteer._tuneOverride :: any)[veh] ~= nil then
+		-- P0 self-test: injektovana Tune POUZE pro sandbox (produkce nedotcena).
+		tune = (ServerSteer._tuneOverride :: any)[veh]
+	end
 	if tune == nil then
 		return false, "chybi_Tune"
 	end
@@ -1581,7 +1609,8 @@ function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): 
 		vmag = (seat :: VehicleSeat).AssemblyLinearVelocity.Magnitude
 	end)
 	local sDecay: number = 1 - math.min(vmag / (tune.SteerDecay :: number), 1 - ((tune.MinSteer :: number) / 100))
-	-- Dvoufasove: validuj vsechny pritomne sady, pak zapis (zadny castecny).
+	-- Dvoufasove: validuj vsechny pritomne sady (vcetne pre-CFrame), pak zapis.
+	-- Zadny castecny zapis: pri selhani behem aplikace rollback jiz zapsanych.
 	local wheels: Instance? = nil
 	pcall(function()
 		wheels = veh:FindFirstChild("Wheels", true)
@@ -1589,7 +1618,7 @@ function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): 
 	if wheels == nil then
 		return false, "chybi_Wheels"
 	end
-	type SteerJob = { steer: BasePart, base: BasePart, deg: number }
+	type SteerJob = { steer: BasePart, base: BasePart, rad: number, pre: CFrame }
 	local jobs: { SteerJob } = {}
 	local found = 0
 	for _, setName in STEER_SETS do
@@ -1617,25 +1646,36 @@ function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): 
 		if not (steerP :: Instance):IsA("BasePart") or not (base :: Instance):IsA("BasePart") then
 			return false, "steer_base_nejenom_part:" .. setName
 		end
-		local deg: number
+		-- P0: stupnova cisla jako Drive, prevod math.rad PRAVE JEDNOU pri zapisu.
+		local rad: number
 		if setName == "F" then
-			deg = -math.deg(sc * (tune.SteerInner :: number) * sDecay) -- doslovne Drive 365
+			rad = -math.rad(sc * (tune.SteerInner :: number) * sDecay) -- doslovne Drive 365
 		elseif setName == "FL" then
-			deg = if sc >= 0 then -math.deg(sc * outer * sDecay) else -math.deg(sc * inner * sDecay)
+			rad = if sc >= 0 then -math.rad(sc * outer * sDecay) else -math.rad(sc * inner * sDecay)
 		else -- FR
-			deg = if sc >= 0 then -math.deg(sc * inner * sDecay) else -math.deg(sc * outer * sDecay)
+			rad = if sc >= 0 then -math.rad(sc * inner * sDecay) else -math.rad(sc * outer * sDecay)
 		end
-		table.insert(jobs, { steer = steerP :: BasePart, base = base :: BasePart, deg = deg })
+		local pre: CFrame = (steerP :: BasePart).CFrame
+		table.insert(jobs, { steer = steerP :: BasePart, base = base :: BasePart, rad = rad, pre = pre })
 	end
 	if found == 0 then
 		return false, "zadna_predni_sada"
 	end
-	for _, j in jobs do
+	for idx, j in jobs do
 		local okW = pcall(function()
-			(j.steer :: BasePart).CFrame = (j.base :: BasePart).CFrame * CFrame.Angles(0, math.rad(j.deg :: number), 0)
+			(j.steer :: BasePart).CFrame = (j.base :: BasePart).CFrame * CFrame.Angles(0, j.rad :: number, 0)
 		end)
 		if not okW then
-			return false, "zapis_CFrame_selhal"
+			-- P1: castecny zapis -> rollback jiz zapsanych, zaznam, FAIL.
+			local rbOk, rbFail = ServerSteer.RollbackJobs(jobs, idx - 1)
+			local msg = string.format(
+				"castecny_zapis:selhalo_kolo=%d,rollback_ok=%s,rollback_selhalo=%s",
+				idx,
+				tostring(rbOk),
+				table.concat(rbFail, ",")
+			)
+			ServerSteer.Alarm(veh, msg)
+			return false, msg
 		end
 	end
 	-- Publikace: AE_SteerC (telemetrie/D3/AC4) + Values.SteerC (SS6 kanal).
@@ -1660,7 +1700,22 @@ function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): 
 		ServerSteer._warnedValues[veh] = true
 		warn("[AE_SERVER_STEER] chybi Values.SteerC (SS6 friction neuvidi rejd)")
 	end
+	ServerSteer._warnedStep[veh] = nil
+	ServerSteer.ClearAlarm(vehicle)
 	return true, nil
+end
+
+-- Verejny wrapper Stepu s alarmem: uspech alarm maze, selhani zaznamenava.
+function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): (boolean, string?)
+	local ok, err = ServerSteer.StepInner(vehicle, steerT, dtRaw)
+	if not ok then
+		if vehicle ~= nil then
+			ServerSteer.Alarm(vehicle :: Instance, tostring(err))
+		else
+			warn("[AE_SERVER_STEER] " .. tostring(err))
+		end
+	end
+	return ok, err
 end
 
 -- Settle: po zruseni entry pokracovat Step(steerT=0) az do narovnani.
@@ -1679,6 +1734,138 @@ function ServerSteer.Forget(vehicle: Instance?): ()
 	ServerSteer._settling[vehicle :: Instance] = nil
 	ServerSteer._states[vehicle :: Instance] = nil
 	ServerSteer._warnedValues[vehicle :: Instance] = nil
+	ServerSteer._warnedStep[vehicle :: Instance] = nil
+	ServerSteer._s0[vehicle :: Instance] = nil
+end
+
+-- Diagnosticky alarm aktuatoru (P1): atribut + warn (warn-once na zpravu).
+function ServerSteer.Alarm(vehicle: Instance, msg: string): ()
+	pcall(function()
+		(vehicle :: Instance):SetAttribute("AE_SteerAlarm", string.sub(msg, 1, 200))
+	end)
+	if ServerSteer._lastAlarmMsg[vehicle] ~= msg then
+		ServerSteer._lastAlarmMsg[vehicle] = msg
+		warn("[AE_SERVER_STEER] " .. msg)
+	end
+end
+
+function ServerSteer.ClearAlarm(vehicle: Instance?): ()
+	if vehicle == nil then
+		return
+	end
+	ServerSteer._lastAlarmMsg[vehicle :: Instance] = nil
+	pcall(function()
+		(vehicle :: Instance):SetAttribute("AE_SteerAlarm", nil)
+	end)
+end
+
+-- Rollback jiz zapsanych kol (P1): obnova pre-CFrame pro prvnich n jobu.
+-- Vraci (true, {}) nebo (false, {indexy_selhavsich}).
+function ServerSteer.RollbackJobs(jobs: { any }, n: number): (boolean, { number })
+	local failed: { number } = {}
+	for i = 1, math.min(n, #jobs) do
+		local j = jobs[i]
+		local okR = pcall(function()
+			(j.steer :: BasePart).CFrame = j.pre :: CFrame
+		end)
+		if not okR then
+			table.insert(failed, i)
+		end
+	end
+	return #failed == 0, failed
+end
+
+-- Jeden tick dopadu navratu (P1): nikdy neForget pri chybe; chyba = alarm +
+-- diagnosticky stav (Step pokracuje). Forget jen IsCentered / zanik vozidla.
+-- skipFn(vehicle) -> true = preskocit (typicky aktivni replay-beh).
+function ServerSteer.SettleTick(dt: number, skipFn: any?): ()
+	for _, vehicle in ServerSteer.SettlingList() do
+		local alive = false
+		pcall(function()
+			alive = (vehicle :: Instance).Parent ~= nil
+		end)
+		if not alive then
+			ServerSteer.Forget(vehicle)
+		else
+			local skip = false
+			if typeof(skipFn) == "function" then
+				pcall(function()
+					skip = (skipFn :: any)(vehicle) == true
+				end)
+			end
+			if not skip then
+				local okS, errS = ServerSteer.Step(vehicle, 0, dt)
+				if not okS then
+					ServerSteer.Alarm(vehicle, "settle:" .. tostring(errS))
+					-- ZAMERNE bez Forget: diagnosticky stav, Step se zkousi dal.
+				elseif ServerSteer.IsCentered(vehicle) then
+					ServerSteer.Forget(vehicle)
+				else
+					ServerSteer.ClearAlarm(vehicle)
+				end
+			end
+		end
+	end
+end
+
+-- S0: explicitni armovani baseline pred T0 behem (vraci snap).
+function ServerSteer.S0Arm(vehicle: Instance?): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	local snap, err = ScenarioRunner.SnapshotVehicle(vehicle)
+	if snap == nil then
+		return false, "snapshot_selhal:" .. tostring(err)
+	end
+	ServerSteer._s0[vehicle :: Instance] = { snap = snap, last = 0 }
+	pcall(function()
+		(vehicle :: Instance):SetAttribute("AE_S0Alarm", nil)
+		(vehicle :: Instance):SetAttribute("AE_S0DiffCount", 0)
+	end)
+	return true, nil
+end
+
+-- S0: prubezna kontrola (min. 10 Hz, vola manual-loop). Pri zmene/erroru:
+-- zaznam + ClearDriveInputs + zruseni navratove hodnoty "stop" (volajici dropne entry).
+-- Vraci ("ok" | "stop", diffs).
+function ServerSteer.S0Check(vehicle: Instance?): (string, { string })
+	if vehicle == nil then
+		return "stop", { "chybi_vozidlo" }
+	end
+	local veh = vehicle :: Instance
+	local slot = ServerSteer._s0[veh]
+	if slot == nil then
+		local okA, errA = ServerSteer.S0Arm(vehicle)
+		if not okA then
+			return "stop", { "s0_arm_selhal:" .. tostring(errA) }
+		end
+		return "ok", {}
+	end
+	if os.clock() - (slot.last :: number) < 0.1 then
+		return "ok", {}
+	end
+	slot.last = os.clock()
+	local okD, diffs, monErr = ScenarioRunner.DiffSnapshot(vehicle, slot.snap)
+	if monErr ~= nil then
+		-- P0: chyba monitoringu = FAIL/ERROR, NIKDY PASS.
+		local msg = "s0_monitor_error:" .. tostring(monErr)
+		pcall(function()
+			veh:SetAttribute("AE_S0Alarm", string.sub(msg, 1, 200))
+		end)
+		warn("[AE_S0] " .. msg)
+		ScenarioRunner.ClearDriveInputs(vehicle)
+		return "stop", { msg }
+	end
+	if not okD then
+		pcall(function()
+			veh:SetAttribute("AE_S0Alarm", string.sub(table.concat(diffs, ";"), 1, 200))
+			veh:SetAttribute("AE_S0DiffCount", #diffs)
+		end)
+		warn("[AE_S0] zmena struktury: " .. table.concat(diffs, ";"))
+		ScenarioRunner.ClearDriveInputs(vehicle)
+		return "stop", diffs
+	end
+	return "ok", {}
 end
 
 -- Seznam vozidel cekajicich na dorovnani (snapshot pro smycku).
@@ -1712,6 +1899,333 @@ function ServerSteer.GetSteerC(vehicle: Instance?): number?
 		return nil
 	end
 	return st.steerC
+end
+
+-- P1 testovaci fixture (POUZE setup pro T0; NESPOUSTET bez schvaleni).
+-- Usadi hracuv Character do sedadla vozidla. Autorizace (AC6) se overuje
+-- porad stejne (hrac + Humanoid + SeatPart + Occupant) — zadne oslabeni politiky.
+function ScenarioRunner.SitTestDriver(vehicle: Instance?, player: any): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	if player == nil then
+		return false, "chybi_hrac"
+	end
+	local ok, err = pcall(function()
+		local veh = vehicle :: Instance
+		local seat: VehicleSeat? = nil
+		for _, d in veh:GetDescendants() do
+			if d:IsA("VehicleSeat") and d.Name == "DriveSeat" then
+				seat = d :: VehicleSeat
+				break
+			end
+		end
+		assert(seat ~= nil, "chybi_DriveSeat")
+		local ch = (player :: Player).Character
+		assert(ch ~= nil, "hrac_nema_Character")
+		local hum = ch:FindFirstChildOfClass("Humanoid")
+		assert(hum ~= nil, "chybi_Humanoid")
+		(seat :: VehicleSeat):Sit(hum :: Humanoid)
+	end)
+	if not ok then
+		return false, "sit_selhal:" .. tostring(err)
+	end
+	warn(string.format("[AE_TEST_FIXTURE] SitTestDriver hrac=%s vozidlo=%s", tostring((player :: Player).Name), (vehicle :: Instance):GetFullName()))
+	return true, nil
+end
+
+-- P0 ciselny self-test rampy/uhlu (cista matematika, zadne instance krome tune).
+-- Vraci tabulku ocekavanych hodnot pro T0-kontrolu (vnejsi/vnitrni uhly).
+function ServerSteer.SelfTestAngles(tune: any): (any?, string?)
+	if tune == nil then
+		return nil, "chybi_tune"
+	end
+	for _, k in { "SteerSpeed", "ReturnSpeed", "SteerRatio", "LockToLock", "Ackerman" } do
+		if typeof(tune[k]) ~= "number" then
+			return nil, "chybi_Tune_klic:" .. k
+		end
+	end
+	local outer: number = (tune.LockToLock * 180) / tune.SteerRatio
+	local inner: number = math.min(outer - (outer * (1 - tune.Ackerman)), outer * 1.2)
+	-- Pocet ticku rampy 0->1 a 1->0 (SteerSpeed/ReturnSpeed na 60Hz-tick).
+	local ticksUp = math.ceil(1 / tune.SteerSpeed)
+	local ticksDn = math.ceil(1 / tune.ReturnSpeed)
+	return {
+		outerDeg = outer,
+		innerDeg = inner,
+		ticksUp = ticksUp,
+		ticksDn = ticksDn,
+		-- ocekavane uhly kol pri v=0 (sDecay=1), stupne, znamenko Drive:
+		-- steer=+1: FL=-outer, FR=-inner; steer=-1: FL=+inner, FR=+outer.
+		plus1 = { FL = -outer, FR = -inner },
+		minus1 = { FL = inner, FR = outer },
+		zero = { FL = 0, FR = 0 },
+	}, nil
+end
+
+-- P0/P1 integracni self-test v sandbox Modelu (zadne auto, zadny Play-efekt).
+-- Overi: numeriku uhlu (31.2/28.08), fail-closed (bez zapisu), rollback
+-- mechanismus, settle-error retenci. Volat z T0-procedury, NE automaticky.
+-- Vraci (true, report) nebo (false, report s FAIL polozkami).
+function ServerSteer.SelfTestSandbox(): (boolean, { string })
+	local report: { string } = {}
+	local function check(name: string, cond: boolean, detail: string?): boolean
+		table.insert(report, (cond and "PASS " or "FAIL ") .. name .. (detail ~= nil and (" | " .. detail) or ""))
+		return cond
+	end
+	local allOk = true
+	local box: Instance? = nil
+	local tuneOverrideSet = false
+	local probeVeh: Instance? = nil
+	pcall(function()
+		local ss = game:GetService("ServerStorage")
+		box = Instance.new("Model")
+		;(box :: Instance).Name = "AE_SteerSelfTest"
+		;(box :: Instance).Parent = ss
+		-- kola: F komplet, FL komplet, FR NEKOMPLETNI (chybi Steer) pro fail-test
+		local wheels = Instance.new("Folder")
+		wheels.Name = "Wheels"
+		wheels.Parent = box
+		local function mkSet(name: string, withSteer: boolean): ()
+			local f = Instance.new("Folder")
+			f.Name = name
+			f.Parent = wheels
+			local arm = Instance.new("Folder")
+			arm.Name = "Arm"
+			arm.Parent = f
+			if withSteer then
+				local st = Instance.new("Part")
+				st.Name = "Steer"
+				st.Size = Vector3.new(1, 1, 1)
+				st.Parent = arm
+			end
+			local base = Instance.new("Part")
+			base.Name = "Base"
+			base.Size = Vector3.new(2, 1, 2)
+			base.Anchored = true
+			base.Parent = f
+		end
+		mkSet("F", true)
+		mkSet("FL", true)
+		mkSet("FR", false)
+		local seat = Instance.new("VehicleSeat")
+		seat.Name = "DriveSeat"
+		seat.Parent = box
+		local vals = Instance.new("Folder")
+		vals.Name = "Values"
+		vals.Parent = box
+		local sc = Instance.new("NumberValue")
+		sc.Name = "SteerC"
+		sc.Parent = vals
+		probeVeh = box
+	end)
+	if probeVeh == nil then
+		return false, { "FAIL sandbox_build" }
+	end
+	-- tune override POUZE pro sandbox (produkce nedotcena)
+	ServerSteer._tuneOverride = ServerSteer._tuneOverride or {}
+	;(ServerSteer._tuneOverride :: any)[probeVeh :: Instance] = {
+		SteeringType = "New",
+		SteerSpeed = 0.05,
+		ReturnSpeed = 0.1,
+		SteerDecay = 330,
+		MinSteer = 10,
+		SteerRatio = 15,
+		LockToLock = 2.6,
+		Ackerman = 0.9,
+		SteerInner = 45,
+	}
+	tuneOverrideSet = true
+	local function cleanup(): ()
+		pcall(function()
+			if probeVeh ~= nil then
+				ServerSteer.Forget(probeVeh)
+				;(probeVeh :: Instance):Destroy()
+			end
+		end)
+		if tuneOverrideSet then
+			ServerSteer._tuneOverride = nil
+		end
+	end
+	-- 1) numerika: pumpuj Step(steerT=1) do ustalen; FL=-31.2, FR: FR sada
+	--    je nekompletni -> nejdriv docasne dopln FR pro ciselny test
+	pcall(function()
+		local fr = (probeVeh :: Instance):FindFirstChild("Wheels", true):FindFirstChild("FR")
+		local arm = (fr :: Instance):FindFirstChild("Arm")
+		local st = Instance.new("Part")
+		st.Name = "Steer"
+		st.Size = Vector3.new(1, 1, 1)
+		st.Parent = arm
+	end)
+	for _ = 1, 60 do
+		ServerSteer.Step(probeVeh, 1, 1 / 60)
+	end
+	local ang = ServerSteer.MeasureAngles(probeVeh)
+	local flOk = ang ~= nil and math.abs((ang :: any).FL - -31.2) <= 0.5
+	local frOk = ang ~= nil and math.abs((ang :: any).FR - -28.08) <= 0.5
+	allOk = check("uhly_plus1_FL_-31.2", flOk, ang ~= nil and string.format("FL=%.2f", (ang :: any).FL) or "?") and allOk
+	allOk = check("uhly_plus1_FR_-28.08", frOk, ang ~= nil and string.format("FR=%.2f", (ang :: any).FR) or "?") and allOk
+	-- steer=-1: FL=+28.08, FR=+31.2
+	for _ = 1, 60 do
+		ServerSteer.Step(probeVeh, -1, 1 / 60)
+	end
+	ang = ServerSteer.MeasureAngles(probeVeh)
+	local fl2 = ang ~= nil and math.abs((ang :: any).FL - 28.08) <= 0.5
+	local fr2 = ang ~= nil and math.abs((ang :: any).FR - 31.2) <= 0.5
+	allOk = check("uhly_minus1_FL_+28.08", fl2, nil) and allOk
+	allOk = check("uhly_minus1_FR_+31.2", fr2, nil) and allOk
+	-- steer=0 -> narovnani
+	for _ = 1, 60 do
+		ServerSteer.Step(probeVeh, 0, 1 / 60)
+	end
+	ang = ServerSteer.MeasureAngles(probeVeh)
+	local z0 = ang ~= nil and math.abs((ang :: any).FL) <= 0.5 and math.abs((ang :: any).FR) <= 0.5
+	allOk = check("uhly_zero", z0, nil) and allOk
+	-- 2) fail-closed: odeber FL.Steer -> Step musi vratit false a F zustat
+	local fSteer = (probeVeh :: Instance):FindFirstChild("Wheels", true):FindFirstChild("F"):FindFirstChild("Arm", true):FindFirstChild("Steer")
+	local fPre: CFrame? = nil
+	pcall(function()
+		fPre = (fSteer :: BasePart).CFrame
+	end)
+	local flSteer = (probeVeh :: Instance):FindFirstChild("Wheels", true):FindFirstChild("FL"):FindFirstChild("Arm", true):FindFirstChild("Steer")
+	pcall(function()
+		(flSteer :: Instance):Destroy()
+	end)
+	local okF, errF = ServerSteer.Step(probeVeh, 1, 1 / 60)
+	local fSame = false
+	pcall(function()
+		fSame = ((fSteer :: BasePart).CFrame == fPre)
+	end)
+	allOk = check("failclosed_false", okF == false, tostring(errF)) and allOk
+	allOk = check("failclosed_F_nezmeneno", fSame == true, nil) and allOk
+	-- 3) rollback mechanismus: rucni zmena + RollbackJobs obnova
+	pcall(function()
+		(fSteer :: BasePart).CFrame = (fSteer :: BasePart).CFrame * CFrame.Angles(0, 0.5, 0)
+	end)
+	local rbOk, rbFail = ServerSteer.RollbackJobs({ { steer = fSteer, pre = fPre } }, 1)
+	local rbSame = false
+	pcall(function()
+		rbSame = ((fSteer :: BasePart).CFrame == fPre)
+	end)
+	allOk = check("rollback_obnova", rbOk == true and rbSame == true, nil) and allOk
+	-- 4) settle-error retence: rozbite vozidlo (bez Wheels) -> SettleTick drzi
+	local broken = Instance.new("Model")
+	broken.Name = "AE_SteerBroken"
+	broken.Parent = game:GetService("ServerStorage")
+	ServerSteer.Settle(broken)
+	ServerSteer.SettleTick(1 / 60)
+	local still = false
+	for _, v in ServerSteer.SettlingList() do
+		if v == broken then
+			still = true
+		end
+	end
+	local alarm = broken:GetAttribute("AE_SteerAlarm")
+	allOk = check("settle_error_drzi", still == true, nil) and allOk
+	allOk = check("settle_error_alarm", alarm ~= nil, tostring(alarm)) and allOk
+	pcall(function()
+		broken:Destroy()
+	end)
+	ServerSteer.Forget(broken)
+	cleanup()
+	return allOk, report
+end
+
+-- P0 S0 self-test v sandbox Modelu (6 pripadu dle review).
+-- beze zmeny / odebrany / pridany / zmeneny root / zmeneny ownership /
+-- chyba monitoringu. Volat z T0-procedury, NE automaticky.
+function ServerSteer.SelfTestS0(): (boolean, { string })
+	local report: { string } = {}
+	local function check(name: string, cond: boolean, detail: string?): boolean
+		table.insert(report, (cond and "PASS " or "FAIL ") .. name .. (detail ~= nil and (" | " .. detail) or ""))
+		return cond
+	end
+	local allOk = true
+	local box: Instance? = nil
+	pcall(function()
+		box = Instance.new("Model")
+		;(box :: Instance).Name = "AE_S0SelfTest"
+		local a = Instance.new("Part")
+		a.Name = "A"
+		a.Size = Vector3.new(2, 2, 2)
+		a.Parent = box
+		local b = Instance.new("Part")
+		b.Name = "B"
+		b.Size = Vector3.new(3, 1, 1)
+		b.Position = Vector3.new(0, 5, 0)
+		b.Parent = box
+		;(box :: Instance).Parent = game:GetService("ServerStorage")
+	end)
+	if box == nil then
+		return false, { "FAIL sandbox_build" }
+	end
+	local function cleanup(): ()
+		pcall(function()
+			if box ~= nil then
+				(box :: Instance):Destroy()
+			end
+		end)
+	end
+	-- 1) beze zmeny
+	local snap = ScenarioRunner.SnapshotVehicle(box)
+	allOk = check("s0_snap_ok", snap ~= nil, nil) and allOk
+	local okD, diffs, mon = ScenarioRunner.DiffSnapshot(box, snap)
+	allOk = check("s0_beze_zmeny", okD == true and #diffs == 0 and mon == nil, nil) and allOk
+	-- 2) odebrany dil
+	local bPart: Instance? = nil
+	pcall(function()
+		bPart = (box :: Instance):FindFirstChild("B")
+	end)
+	pcall(function()
+		(bPart :: Instance):Destroy()
+	end)
+	local ok2, d2 = ScenarioRunner.DiffSnapshot(box, snap)
+	local hasChybi = false
+	for _, x in d2 do
+		if string.sub(x, 1, 9) == "chybi_dil" then
+			hasChybi = true
+		end
+	end
+	allOk = check("s0_odebrany_dil", ok2 == false and hasChybi, table.concat(d2, ";")) and allOk
+	-- 3) pridany dil (vrat B, pridej C)
+	pcall(function()
+		local nb = Instance.new("Part")
+		nb.Name = "B"
+		nb.Size = Vector3.new(3, 1, 1)
+		nb.Position = Vector3.new(0, 5, 0)
+		nb.Parent = box
+		local c = Instance.new("Part")
+		c.Name = "C"
+		c.Size = Vector3.new(1, 1, 1)
+		c.Parent = box
+	end)
+	local ok3, d3 = ScenarioRunner.DiffSnapshot(box, snap)
+	local hasNovy = false
+	for _, x in d3 do
+		if string.sub(x, 1, 8) == "novy_dil" then
+			hasNovy = true
+		end
+	end
+	allOk = check("s0_pridany_dil", ok3 == false and hasNovy, nil) and allOk
+	-- 4) zmeneny root (ukotveni B = zmena assembly/anchored)
+	pcall(function()
+		local nb2 = (box :: Instance):FindFirstChild("B")
+		if nb2 ~= nil and (nb2 :: Instance):IsA("BasePart") then
+			(nb2 :: BasePart).Anchored = true
+		end
+	end)
+	local ok4, d4 = ScenarioRunner.DiffSnapshot(box, snap)
+	allOk = check("s0_zmeneny_root", ok4 == false and #d4 > 0, table.concat(d4, ";")) and allOk
+	-- 5) chyba monitoringu (poskozeny snapshot) = ERROR, nikdy PASS
+	local ok5, d5, mon5 = ScenarioRunner.DiffSnapshot(box, "nesmysl")
+	allOk = check("s0_monitor_error", ok5 == false and mon5 ~= nil, tostring(mon5)) and allOk
+	local ok6, d6, mon6 = ScenarioRunner.DiffSnapshot(nil, snap)
+	allOk = check("s0_monitor_error_nil", ok6 == false and mon6 ~= nil, nil) and allOk
+	-- (zmena ownership: jen v Play s hracem; T0-procedura ji overi na voze,
+	--  zde preskoceno — GetNetworkOwner v Edit nema vyznam.)
+	table.insert(report, "SKIP s0_ownership (jen Play s hracem, viz T0-procedura)")
+	cleanup()
+	return allOk, report
 end
 
 -- F4.4 F3 / F5-A arbitrace: zapis ridiciho vystupu do atributu vozu (server->klient replikace).
