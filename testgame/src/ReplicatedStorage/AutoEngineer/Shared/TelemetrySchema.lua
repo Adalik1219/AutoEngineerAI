@@ -3,7 +3,7 @@
 
 local TelemetrySchema = {}
 
-TelemetrySchema.SCHEMA_VERSION = "1.0.0"
+TelemetrySchema.SCHEMA_VERSION = "1.1.0"
 TelemetrySchema.MODE = "roblox-runtime"
 
 local REQUIRED_SAMPLE = { "t", "pos", "vel", "accel", "yaw_rate", "roll_deg", "inputs" }
@@ -74,7 +74,7 @@ function TelemetrySchema.ToTestResult(run: any, extra: any): any
 		end
 	end
 	return {
-		schema_version = "1.0.0",
+		schema_version = "1.1.0",
 		result_id = extra.result_id or ("tr_" .. tostring(run.run_id)),
 		config_id = run.config_id,
 		scenario_id = run.scenario_id,

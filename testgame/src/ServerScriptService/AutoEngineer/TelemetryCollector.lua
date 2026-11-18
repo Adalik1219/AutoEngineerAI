@@ -59,6 +59,32 @@ local function readString(parent: Instance?, name: string): string?
 	return nil
 end
 
+local function readAttrNumber(vehicle: Instance?, name: string): number?
+	if vehicle == nil then
+		return nil
+	end
+	local ok, v = pcall(function()
+		return (vehicle :: Instance):GetAttribute(name)
+	end)
+	if not ok or typeof(v) ~= "number" then
+		return nil
+	end
+	return v
+end
+
+local function readAttrBool(vehicle: Instance?, name: string): boolean?
+	if vehicle == nil then
+		return nil
+	end
+	local ok, v = pcall(function()
+		return (vehicle :: Instance):GetAttribute(name)
+	end)
+	if not ok or typeof(v) ~= "boolean" then
+		return nil
+	end
+	return v
+end
+
 function TelemetryCollector.new(opts: any): any
 	local self = setmetatable({}, TelemetryCollector)
 	opts = opts or {}
@@ -136,12 +162,21 @@ function TelemetryCollector:SampleOnce(t: number): any?
 	-- Roll: kloneni kolem podelne osy X pri facing +X = Z-slozka ToOrientation
 	-- (stejna konvence jako ScenarioRunner.ReadStartRollDeg; zivi Evaluate roll_gt_45).
 	local values = readValues(self.vehicle)
-	local rpm = readNumber(values, "RPM")
-	local gear = readNumber(values, "Gear") or readNumber(values, "GearNum")
+	-- F7.1: server-pohon publikuje stav v atributech (AE_RPM/AE_Gear/...);
+	-- atribut ma prednost (server-autorita), Values je fallback (klient).
+	local rpm = readAttrNumber(self.vehicle, "AE_RPM")
+	if rpm == nil then
+		rpm = readNumber(values, "RPM")
+	end
+	local gear = readAttrNumber(self.vehicle, "AE_Gear")
+	if gear == nil then
+		gear = readNumber(values, "Gear") or readNumber(values, "GearNum")
+	end
 	if gear == nil then
 		local gs = readString(values, "Gear")
 		gear = if gs ~= nil then tonumber(gs) else nil
 	end
+	local absActive = readAttrBool(self.vehicle, "AE_ABSActive")
 	-- ABS signaly (A-Chassis Drive, overeno live Agent H1): Drive kazdy frame
 	-- zapisuje Values.ABS (BoolValue, stav _ABS: default z _Tune.ABSEnabled,
 	-- prepinatelny klavesou ToggleABS) a Values.ABSActive (BoolValue, true prave
@@ -149,7 +184,16 @@ function TelemetryCollector:SampleOnce(t: number): any?
 	-- ve vozidle (Drive nebezi / sablona bez Values), je vysledkem nil => null,
 	-- nikdy se nevymysli; duvod hlasi ScenarioRunner.ComputeT03Metrics.
 	local absEnabled = readBool(values, "ABS")
-	local absActive = readBool(values, "ABSActive")
+	if absActive == nil then
+		absActive = readBool(values, "ABSActive")
+	end
+	-- F7.1: skutecnost vs prikaz (AE_ThrotAct/AE_BrakeAct pise ServerDrive) + fps.
+	local actT = readAttrNumber(self.vehicle, "AE_ThrotAct")
+	local actB = readAttrNumber(self.vehicle, "AE_BrakeAct")
+	local fpsNow: number? = nil
+	pcall(function()
+		fpsNow = game:GetService("Workspace"):GetRealPhysicsFPS()
+	end)
 
 	local sample = {
 		t = t,
@@ -163,7 +207,9 @@ function TelemetryCollector:SampleOnce(t: number): any?
 		rpm = rpm, -- nil => null, neni-li ve Values
 		gear = gear, -- nil => null
 		abs_enabled = absEnabled, -- nil => null, neni-li Values.ABS
-		abs_active = absActive, -- nil => null, neni-li Values.ABSActive
+		abs_active = absActive, -- nil => null; F7.1: atribut server-pohonu ma prednost
+		actual = { throttle = actT, brake = actB }, -- skutecnost (nil = mimo server-pohon)
+		fps = fpsNow, -- merene physics fps ve vzorku (D: hypotéza r2)
 		inputs = { throttle = self.inputs.throttle, brake = self.inputs.brake, steer = self.inputs.steer },
 	}
 	return sample

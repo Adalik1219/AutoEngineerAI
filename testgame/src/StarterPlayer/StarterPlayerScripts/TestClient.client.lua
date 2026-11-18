@@ -69,6 +69,22 @@ if remote == nil then
 	remote.Parent = aeFolder
 end
 
+-- F7.1: server-autoritativni pohon (AEDriveCmd). Klient posila navrh pohonu,
+-- server je jediny zapisovac #AV/#BV (server-nil ownership). ApplyToSeat
+-- zustava jako nouzovy manual-fallback (Drive ho za nil-ownership ignoruje).
+local driveCmd: RemoteEvent? = nil
+local driveSeq = 0
+task.spawn(function()
+	local folder = ReplicatedStorage:WaitForChild(RUN_REMOTES_FOLDER, 60)
+	if folder == nil then
+		return
+	end
+	local ev = folder:WaitForChild("AEDriveCmd", 60)
+	if ev ~= nil and ev:IsA("RemoteEvent") then
+		driveCmd = ev
+	end
+end)
+
 local function clamp(v: number, lo: number, hi: number): number
 	if v < lo then
 		return lo
@@ -274,6 +290,19 @@ local function StartScenario(scenarioId: string, params: { [string]: any }?)
 		end
 		local out = Driver.step(c, dt, fb)
 		ApplyToSeat(s, out.throttle, out.brake, out.steer)
+		-- F7.1: navrh pohonu serveru (server validuje + zapisuje, klient nenahrazuje).
+		if driveCmd ~= nil then
+			driveSeq += 1
+			pcall(function()
+				(driveCmd :: RemoteEvent):FireServer({
+					throttle = out.throttle,
+					brake = out.brake,
+					steer = out.steer,
+					seq = driveSeq,
+					run_id = RuntimeController.scenarioId,
+				})
+			end)
+		end
 		if out.done == true then
 			if out.doneReason == "completed" then
 				Finish("completed", "completed")

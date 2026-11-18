@@ -33,6 +33,11 @@ local VehicleManager = require(Self:WaitForChild("VehicleManager"))
 local CODE_VERSION = "ae-harness-0.2.1"
 local VEHICLE_ID = "ae-test-vehicle"
 
+-- F7.1: mnozina vozidel s aktivnim replay-behem. Prikazy AEDriveCmd pro tato
+-- vozidla se ignoruji (autorita je deterministicky replay, ne klient).
+-- Klice: vozidlo -> true; cisti se pri konci behu (i pri fail).
+local activeVehicles: { [Instance]: boolean } = {}
+
 -- parameters.brakes (VehicleConfig, volny object) -> Tune klice. Pouze MUTABLE_TUNE
 -- (VehicleManager); ABSEnabled/TCSEnabled tu ZAMERNE chybi -- nejsou mutable,
 -- harness je nezapisuje (default true ze sablony, overeno live Agent H1).
@@ -196,6 +201,9 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	local errors: { string } = {}
 	local vehicle = ensureVehicle(config, errors)
 	collector:SetVehicle(vehicle :: Instance?)
+	if vehicle ~= nil then
+		activeVehicles[vehicle] = true
+	end
 
 	local seed = def.seed or 0
 	local spawnCFrame: CFrame? = nil
@@ -354,6 +362,9 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	local outboxDoc = buildOutboxDoc(output, collector.samples, isT03(def))
 	RuntimeController.WriteOutboxResult(bridge, outboxDoc);
 	(remotes:FindFirstChild("AEStatus") :: RemoteEvent):FireAllClients({ run_id = runId, status = completion })
+	if vehicle ~= nil then
+		activeVehicles[vehicle] = nil
+	end
 	return output, outboxDoc
 end
 
@@ -512,6 +523,18 @@ local function main(): ()
 		task.spawn(function()
 			runBrief(config, resolveScenarioIds(config))
 		end)
+	end)
+	-- F7.1: zive rizeni mimo replay-beh (Solo rig; vice hracu = BLOCKED, viz E).
+	-- Replay smycka je autorita: pri aktivnim behu se klientsky navrh ignoruje.
+	RuntimeController.BindDriveCmd(remotes, function(_player: any, cmd: any)
+		local vehicle = findVehicleSlot()
+		if vehicle == nil then
+			return
+		end
+		if activeVehicles[vehicle] == true then
+			return
+		end
+		ScenarioRunner.WriteDriveAttributes(vehicle, cmd.throttle, cmd.brake, cmd.steer, "manual")
 	end)
 	local pending = RuntimeController.ReadInboxConfig(bridge, nil)
 	if pending ~= nil then

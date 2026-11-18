@@ -725,7 +725,8 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 	end
 	local kind = if typeof(scenarioKind) == "string" then scenarioKind else "unknown"
 	-- F7.1-T03-guard: v T03 je plyn vzdy 0 (baseline nesmi uhnout; assert).
-	-- Mimo straight_accel se plyn ignoruje (F7.2+); steer server do F7.2 nepouziva.
+	-- Plyn je povolen jen straight_accel (replay T01/T02) a manual (zive rizeni
+	-- pres AEDriveCmd); jinde se ignoruje. Steer server do F7.2 nepouziva.
 	if typeof(throttle) == "number" and (throttle :: number) > 0 then
 		if kind == "straight_brake_100_0" then
 			if ServerDrive._guardWarned[vehicle] ~= true then
@@ -733,10 +734,10 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 				warn("[AE_THROTTLE_GUARD] plyn v T03 ignorovan (baseline ochrana)")
 			end
 			throttle = 0
-		elseif kind ~= "straight_accel" then
+		elseif kind ~= "straight_accel" and kind ~= "manual" then
 			if ServerDrive._guardWarned[vehicle] ~= true then
 				ServerDrive._guardWarned[vehicle] = true
-				warn(string.format("[AE_THROTTLE_GUARD] plyn ignorovan:kind=%s (povolen jen straight_accel)", kind))
+				warn(string.format("[AE_THROTTLE_GUARD] plyn ignorovan:kind=%s (povolen jen straight_accel/manual)", kind))
 			end
 			throttle = 0
 		end

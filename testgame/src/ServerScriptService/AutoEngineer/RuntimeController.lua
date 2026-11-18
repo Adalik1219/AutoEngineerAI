@@ -43,6 +43,7 @@ function RuntimeController.EnsureRemotes(): Folder
 		{ name = "AETelemetry", class = "RemoteEvent" }, -- server -> sber: stav prubehu
 		{ name = "AEStatus", class = "RemoteEvent" }, -- server -> kdokoli: completed/failed
 		{ name = "AESubmitConfig", class = "RemoteFunction" }, -- klient/bridge -> server: VehicleConfig JSON
+		{ name = "AEDriveCmd", class = "RemoteEvent" }, -- klient -> server: navrh pohonu (server je autorita, F7.1)
 	}
 	for _, d in defs do
 		if remotes:FindFirstChild(d.name) == nil then
@@ -117,6 +118,46 @@ function RuntimeController.BindSubmitConfig(remotes: Folder, onConfig: (any) -> 
 		onConfig(decoded)
 		return { accepted = true, config_id = decoded.config_id }
 	end
+end
+
+-- F7.1: prijem navrhu pohonu od klienta (RemoteEvent, server je autorita).
+-- Klient jen NAVRHUJE {throttle 0..1, brake 0..1, steer -1..1, seq, run_id};
+-- server validuje (clamp + rostouci seq + rate-limit ~60/s) a teprve pak vola
+-- onCmd(player, cmd). Nevalidni vstup = warn + drop (zadny kick, zadny zapis).
+function RuntimeController.BindDriveCmd(remotes: Folder, onCmd: (any, any) -> ()): ()
+	local ev = remotes:WaitForChild("AEDriveCmd")
+	local lastSeq: { [Player]: number } = {}
+	local lastTick: { [Player]: number } = {}
+	(ev :: RemoteEvent).OnServerEvent:Connect(function(player: Player, payload: any)
+		if typeof(payload) ~= "table" then
+			return
+		end
+		local p = payload :: any
+		if typeof(p.throttle) ~= "number" or typeof(p.brake) ~= "number" or typeof(p.steer) ~= "number" then
+			return
+		end
+		if typeof(p.seq) ~= "number" then
+			return
+		end
+		local now = os.clock()
+		local ls = lastSeq[player]
+		if ls ~= nil and (p.seq :: number) <= ls then
+			return -- stale/duplicitni prikaz
+		end
+		local lt = lastTick[player]
+		if lt ~= nil and (now - lt) < (1 / 60) - 0.001 then
+			return -- rate-limit ~60/s
+		end
+		lastSeq[player] = p.seq :: number
+		lastTick[player] = now
+		onCmd(player, {
+			throttle = math.max(0, math.min(1, p.throttle :: number)),
+			brake = math.max(0, math.min(1, p.brake :: number)),
+			steer = math.max(-1, math.min(1, p.steer :: number)),
+			seq = p.seq,
+			run_id = if typeof(p.run_id) == "string" then p.run_id else "",
+		})
+	end)
 end
 
 return RuntimeController
