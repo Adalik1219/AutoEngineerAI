@@ -34,6 +34,7 @@
 --       rozhodnuti vlastnika scenaru, ScenarioDefinitions nevlastnim).
 
 local ScenarioRunner = {}
+local ServerDrive = require(script.Parent:WaitForChild("ServerDrive"))
 ScenarioRunner.__index = ScenarioRunner
 
 -- F5 Agent D: deterministicke startovni podminky T03 (vlastnik: startovni blok).
@@ -718,9 +719,27 @@ end
 ScenarioRunner.BRAKE_DIAG_TOL = 0.08
 ScenarioRunner.BRAKE_DIAG_SAMPLES = 45
 ScenarioRunner._brakeDiagState = {}
-function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: number?, brake: number?, steer: number?): ()
+function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: number?, brake: number?, steer: number?, scenarioKind: string?): ()
 	if vehicle == nil then
 		return
+	end
+	local kind = if typeof(scenarioKind) == "string" then scenarioKind else "unknown"
+	-- F7.1-T03-guard: v T03 je plyn vzdy 0 (baseline nesmi uhnout; assert).
+	-- Mimo straight_accel se plyn ignoruje (F7.2+); steer server do F7.2 nepouziva.
+	if typeof(throttle) == "number" and (throttle :: number) > 0 then
+		if kind == "straight_brake_100_0" then
+			if ServerDrive._guardWarned[vehicle] ~= true then
+				ServerDrive._guardWarned[vehicle] = true
+				warn("[AE_THROTTLE_GUARD] plyn v T03 ignorovan (baseline ochrana)")
+			end
+			throttle = 0
+		elseif kind ~= "straight_accel" then
+			if ServerDrive._guardWarned[vehicle] ~= true then
+				ServerDrive._guardWarned[vehicle] = true
+				warn(string.format("[AE_THROTTLE_GUARD] plyn ignorovan:kind=%s (povolen jen straight_accel)", kind))
+			end
+			throttle = 0
+		end
 	end
 	pcall(function()
 		if throttle == nil then
@@ -740,6 +759,20 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 		end
 	end)
 	ScenarioRunner.CheckBrakeDiag(vehicle, brake)
+	-- Konec behu (nil,nil,nil = navrat do manualu): reset server-pohonu.
+	if throttle == nil and brake == nil and steer == nil then
+		ServerDrive.Reset(vehicle)
+	end
+	-- F7.1: plyn>0 v straight_accel -> server-autoritativni pohon (ServerDrive,
+	-- verny port Drive: #AV moment + #BV plna formule vcetne EBrake/tqABS).
+	-- Jinak legacy brzdna cesta (F6-D, cisla beze zmeny; T03 vzdy tudy).
+	if typeof(throttle) == "number" and (throttle :: number) > 0 then
+		local ok, err = ServerDrive.Step(vehicle, throttle :: number, if typeof(brake) == "number" then brake :: number else 0)
+		if not ok then
+			warn(string.format("[AE_SERVER_DRIVE] %s", tostring(err)))
+		end
+		return
+	end
 	-- F6-D: server aplikuje brzdny moment primo (brake==nil = manual, nesaha).
 	if brake ~= nil then
 		ScenarioRunner.ApplyServerBrake(vehicle, brake)
@@ -799,6 +832,9 @@ function ScenarioRunner.CheckBrakeDiag(vehicle: Instance?, brakeCmd: number?): (
 end
 
 -- F6-D: server-autoritativni brzda (vlastnik fyziky).
+-- F7.1: brzdna cesta je LEGACY (cisla beze zmeny; T03 a vse s throttle==0
+-- tudy vzdy). Plyn resi ServerDrive.Step (verny port Drive) volany
+-- z WriteDriveAttributes pri throttle>0 v straight_accel.
 -- Pricina (run-003): pri server-nil ownership klientsky Drive sice bezi
 -- (V1/V2 mosty, Values zrcadla), ale jeho zapisy motoru (#AV/#BV) se na
 -- serverem vlastnenych dilech NEAPLIKUJI (overeno obema smery: server 200 vs
@@ -902,6 +938,8 @@ function ScenarioRunner.ClearDriveInputs(vehicle: Instance?): (boolean, string?)
 		return false, "chybi_vozidlo"
 	end
 	ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0)
+	-- F7.1: s nulovanim vstupu reset server-pohonu (gear/RPM/rampa/stav + AE_* atributy).
+	ServerDrive.Reset(vehicle)
 	local ok, b, t, s = pcall(function()
 		return (vehicle :: Instance):GetAttribute("AE_Brake"),
 			(vehicle :: Instance):GetAttribute("AE_Throttle"),

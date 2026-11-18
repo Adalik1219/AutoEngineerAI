@@ -267,7 +267,7 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		task.wait(step)
 		t += step
 		local throttle, brake, steer = runner:DriverInputs(t)
-		ScenarioRunner.WriteDriveAttributes(vehicle, throttle, brake, steer)
+		ScenarioRunner.WriteDriveAttributes(vehicle, throttle, brake, steer, def.kind)
 		collector:SetInputs(throttle, brake, steer)
 		local sample = collector:SampleOnce(t)
 		if sample == nil then
