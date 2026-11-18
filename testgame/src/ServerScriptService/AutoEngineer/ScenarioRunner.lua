@@ -809,6 +809,18 @@ end
 -- a #AV moment 0 (T03 nema plyn; ostatni scenare serverem nejezdi).
 -- Klientsky Drive tim nekonfliktuje (jeho zapisy se zahazuji).
 -- Manualni rezim (brake==nil) server nesaha.
+-- F7.1-K1: presny front/rear matcher. Kola jsou FL/FR/F (predni) a RL/RR/R
+-- (zadni) -- viz Drive Initialize:405/:434 a steering :364-:429 (presna
+-- rovnost, ne substring). Neznamy nazev = fail-closed (false + duvod),
+-- nikdy tiche rear. Duvod: substring "F" trefi cokoli s pismenem F.
+function ScenarioRunner.IsFrontWheel(name: string): (boolean, string?)
+	if name == "FL" or name == "FR" or name == "F" then
+		return true, nil
+	elseif name == "RL" or name == "RR" or name == "R" then
+		return false, nil
+	end
+	return false, string.format("kolo_nerozpoznano:%s", tostring(name))
+end
 function ScenarioRunner.ReadBrakeForceConfig(vehicle: Instance?): (number?, number?)
 	if vehicle == nil then
 		return nil, nil
@@ -858,7 +870,12 @@ function ScenarioRunner.ApplyServerBrake(vehicle: Instance?, brake01: number?): 
 		local parts: { Instance } = if wheels ~= nil then wheels:GetChildren() else (vehicle :: Instance):GetDescendants()
 		for _, w in parts do
 			if w:IsA("BasePart") then
-				local isF = string.find(w.Name, "F", 1, true) ~= nil
+				-- F7.1-K1: presny matcher (FL/FR/F = predni); neznamy nazev
+				-- = fail-closed rear + duvod (misto ticheho prehozeni biasu).
+				local isF, fErr = ScenarioRunner.IsFrontWheel(w.Name)
+				if fErr ~= nil then
+					warn(string.format("[AE_K1] %s (kolo %s povazovano za zadni)", tostring(fErr), tostring(w:GetFullName())))
+				end
 				for _, h in w:GetChildren() do
 					if h:IsA("HingeConstraint") and h.Name == "#BV" then
 						h.MotorMaxTorque = (if isF then (fb :: number) else (rb :: number)) * factor * b
