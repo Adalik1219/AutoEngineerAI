@@ -128,7 +128,7 @@ function RuntimeController.BindDriveCmd(remotes: Folder, onCmd: (any, any) -> ()
 	local ev = remotes:WaitForChild("AEDriveCmd")
 	local lastSeq: { [Player]: number } = {}
 	local lastTick: { [Player]: number } = {}
-	(ev :: RemoteEvent).OnServerEvent:Connect(function(player: Player, payload: any)
+	;(ev :: RemoteEvent).OnServerEvent:Connect(function(player: Player, payload: any)
 		if typeof(payload) ~= "table" then
 			return
 		end
