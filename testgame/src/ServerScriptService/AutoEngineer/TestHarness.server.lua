@@ -62,9 +62,19 @@ end
 
 -- Slot auto-fill (F4.4): chybi-li AE_VehicleSlot, zaloz variantu z inbox configu:
 -- CloneVehicle(config_id) -> WriteTune (brzdy, pouze MUTABLE klice) -> DeployVehicle.
+-- F7.1-T01B: s forceFresh=true se stavajici slot nejdrive znici a postavi znovu
+-- (pristine vehicle kazdou repliku; eliminuje prenaseny stav vozu — spanek,
+-- rezidualni momenty, ownership-split; S4 lifecycle kazdou repliku).
+-- Po deploy ceka na #AV (Initialize LoadDelay), usadi hrace a overi reclaim.
 -- Vraci vozidlo k pouziti, nebo nil + chyby se jiz zapsanymi duvody.
-local function ensureVehicle(config: any, errors: { string }): Instance?
+local function ensureVehicle(config: any, errors: { string }, forceFresh: boolean?): Instance?
 	local slot = findVehicleSlot()
+	if slot ~= nil and forceFresh == true then
+		pcall(function()
+			VehicleManager.DestroyVehicle(slot)
+		end)
+		slot = nil
+	end
 	if slot ~= nil then
 		return slot
 	end
@@ -99,6 +109,71 @@ local function ensureVehicle(config: any, errors: { string }): Instance?
 			VehicleManager.DestroyVehicle(clone)
 		end)
 		return nil
+	end
+	if forceFresh == true then
+		-- Cekej na dostavbu pohonu (Initialize LoadDelay ~3 s): prvni #AV.
+		local deadline = os.clock() + 20
+		local avReady = false
+		while os.clock() < deadline do
+			local found = false
+			pcall(function()
+				for _, d in (deployed :: Instance):GetDescendants() do
+					if d:IsA("HingeConstraint") and d.Name == "#AV" then
+						found = true
+						break
+					end
+				end
+			end)
+			if found then
+				avReady = true
+				break
+			end
+			task.wait(0.5)
+		end
+		if not avReady then
+			table.insert(errors, "fresh_deploy_bez_AV:Initialize_nedostavel_do_20s")
+			pcall(function()
+				VehicleManager.DestroyVehicle(deployed)
+			end)
+			return nil
+		end
+		-- Usad hrace (server-side Sit; klientsky TestClient dosadi pri Startu).
+		local seat: Instance? = nil
+		pcall(function()
+			seat = (deployed :: Instance):FindFirstChild("DriveSeat", true)
+		end)
+		local seated = false
+		pcall(function()
+			local players = game:GetService("Players"):GetPlayers()
+			local plr = players[1]
+			local char = if plr ~= nil then plr.Character else nil
+			local hum = if char ~= nil then char:FindFirstChildOfClass("Humanoid") else nil
+			if seat ~= nil and hum ~= nil then
+				(seat :: VehicleSeat):Sit(hum)
+				seated = true
+			end
+		end)
+		if not seated then
+			table.insert(errors, "fresh_deploy_sit_selhal:chybi_hrac_nebo_postava")
+			pcall(function()
+				VehicleManager.DestroyVehicle(deployed)
+			end)
+			return nil
+		end
+		task.wait(1.0)
+		-- Reclaim s jednim retry (prvni pokus muze trefit dostavbu, overeno S4).
+		local okOwn, ownErr = ScenarioRunner.ReclaimServerOwnership(deployed)
+		if not okOwn then
+			task.wait(2.0)
+			okOwn, ownErr = ScenarioRunner.ReclaimServerOwnership(deployed)
+		end
+		if not okOwn then
+			table.insert(errors, "fresh_deploy_reclaim_selhal:" .. tostring(ownErr))
+			pcall(function()
+				VehicleManager.DestroyVehicle(deployed)
+			end)
+			return nil
+		end
 	end
 	return deployed
 end
@@ -241,7 +316,9 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	local runner = ScenarioRunner.new({})
 	local collector = TelemetryCollector.new({ rateHz = ScenarioDefinitions.SAMPLE_RATE_HZ })
 	local errors: { string } = {}
-	local vehicle = ensureVehicle(config, errors)
+	-- F7.1-T01B: pristine vehicle kazdou repliku (S4 lifecycle; eliminace
+	-- prenaseneho stavu). Ostatni scenare (T03 baseline) beze zmeny reuse.
+	local vehicle = ensureVehicle(config, errors, def.kind == "straight_accel_brake")
 	collector:SetVehicle(vehicle :: Instance?)
 	if vehicle ~= nil then
 		-- Idempotentni: predesly beh mohl skoncit vyjimkou (leak pojistka).
@@ -422,7 +499,7 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 			t03 = t03metrics,
 			t01b = t01bmetrics,
 			completion_reason = runner.completionReason,
-			server_drive_noav_ticks = noavTicks,
+			server_drive_noav_ticks = noavTicks or 0,
 		},
 	})
 	local ok, _ = TelemetrySchema.ValidateRun(output)
