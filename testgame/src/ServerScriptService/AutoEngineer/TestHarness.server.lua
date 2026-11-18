@@ -699,6 +699,47 @@ local function main(): ()
 	end)
 	-- F7.1: zive rizeni mimo replay-beh (Solo rig; vice hracu = BLOCKED, viz E).
 	-- Replay smycka je autorita: pri aktivnim behu se klientsky navrh ignoruje.
+	-- F7.1-Q4 (manual drive loop): manualni povel je diskretni event, ale
+	-- ServerDrive potrebuje aplikaci kazdy tick (rampy, razeni). Proto se
+	-- posledni manualni povel drzi a Heartbeat smycka ho prehrava 60 Hz,
+	-- dokud neprijde novejsi (stale >1.0 s = dead-man stop 0,0,0).
+	local lastManual: { [Instance]: any } = {}
+	local manualLoopOn = false
+	local function ensureManualLoop(): ()
+		if manualLoopOn then
+			return
+		end
+		manualLoopOn = true
+		local hb = game:GetService("RunService").Heartbeat
+		hb:Connect(function()
+			local targets: { Instance } = {}
+			for vehicle, _ in lastManual do
+				table.insert(targets, vehicle)
+			end
+			for _, vehicle in targets do
+				local entry = lastManual[vehicle]
+				local ok = pcall(function()
+					if (vehicle :: Instance).Parent == nil then
+						lastManual[vehicle] = nil
+						return
+					end
+					if activeVehicles[vehicle] == true then
+						return
+					end
+					if os.clock() - (entry.t :: number) > 1.0 then
+						ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0, "manual")
+						lastManual[vehicle] = nil
+						return
+					end
+					local c = entry.cmd
+					ScenarioRunner.WriteDriveAttributes(vehicle, c.throttle, c.brake, c.steer, "manual")
+				end)
+				if not ok then
+					lastManual[vehicle] = nil
+				end
+			end
+		end)
+	end
 	RuntimeController.BindDriveCmd(remotes, function(_player: any, cmd: any)
 		local vehicle = findVehicleSlot()
 		if vehicle == nil then
@@ -707,6 +748,8 @@ local function main(): ()
 		if activeVehicles[vehicle] == true then
 			return
 		end
+		lastManual[vehicle] = { cmd = cmd, t = os.clock() }
+		ensureManualLoop()
 		ScenarioRunner.WriteDriveAttributes(vehicle, cmd.throttle, cmd.brake, cmd.steer, "manual")
 	end)
 	local pending = RuntimeController.ReadInboxConfig(bridge, nil)
