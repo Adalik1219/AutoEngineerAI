@@ -95,6 +95,26 @@ Frekvence vzorkovani: 60 Hz. `run_id = hash(scenario_version, driver_version, va
   Rizeni (`WriteDriveAttributes`) tato zmena netkne (Agent A).
   F44 kampaň: v0 kolísala 94.5–100 (entry-tolerance porušena 2×) —
   tato brána takový běh nově odmítne před měřením.
+- FX3 opravy mericiho retezce (Agent FX3, 2026-11-18, `reports/F5-QA.md` G4.1–3;
+  implementace `ScenarioRunner.lua`, zadna live jizda):
+  1. Sit-event transfer vlastnictvi: usednuti priradi celou sestavu klientovi,
+     server pak cte stale repliky (S1: zamrzla telemetrie). `Spawn` (best-effort)
+     + `SpawnT03Verified` (striktni gate) volaji
+     `ReclaimServerOwnership` = `SetNetworkOwner(nil)` na vsech BasePart +
+     overeni `GetNetworkOwner()==nil`, jinak void
+     (`ownership_neovereno:<cizich>/<celkem>_dilu_drzi_klient`). Handoff H1:
+     volat i na Sit-event; overeno zive, ze nil PO usednuti drzi.
+  2. Post-gate bleed 2–4 studs/s: `ApplyT03StartSpeed` nastavuje kolum
+     (dily pod kontejnerem `Wheels`) i uhlovou rychlost omega = v/R
+     (R = Size.X/2, stejne R jako ABS prokluzovy prah Drive; osa
+     `up x dir`, valeni bez prokluzu); pred speed-setem `WaitForBrakeDecay`
+     ceka na `Values.Brake → 0` (tol 0.02, timeout 3 s, jinak void
+     `brzda_nedoznela`). Entry tol ZUSTAVA ±1 — bleed je aparaturovy
+     artefakt, ne fyzika; 2–3 by poustelo predbrzdene behy. Handoff H1:
+     od gate zadny wait, minimalni okno gate→prvni vzorek.
+  3. Jeden slot: `EnsureSlotName` prejmenuje vozidlo ze `Spawn` vzdy na
+     `AE_VehicleSlot` (idempotentni pojistka); `DeployVehicle` (H1) ma klon
+     prejmenovat primo (dnes `Jeep_*` → 3 klony/brief).
 
 ## T04 – Konstantni polomer / skidpad
 

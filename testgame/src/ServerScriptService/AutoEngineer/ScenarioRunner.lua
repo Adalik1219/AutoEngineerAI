@@ -64,6 +64,15 @@ ScenarioRunner.T03_FACING_MIN_X = 0.9
 -- armuj mereni (vstupni rychlost + gate).
 ScenarioRunner.SETTLE_VSPEED_TOL = 2.0
 ScenarioRunner.SETTLE_MAX_S = 3.0
+-- FX3 (G4.3, jeden slot): kanonicke jmeno pracovniho slotu. Handoff H1:
+-- VehicleManager.DeployVehicle prejmenuje klon na SLOT_NAME; pojistka je
+-- ScenarioRunner.EnsureSlotName volana ze Spawnu.
+ScenarioRunner.SLOT_NAME = "AE_VehicleSlot"
+-- FX3 (G4.2, _InBrake-dozneni): zbytkovy brzdny moment < 2 % je hluboko pod
+-- rozlisenim entry gate (+-1 studs/s pri v = 100); timeout 3 s kryje i pomaly
+-- BrakeDecel. Blizsi fyzika u WaitForBrakeDecay.
+ScenarioRunner.BRAKE_DECAY_TOL = 0.02
+ScenarioRunner.BRAKE_DECAY_MAX_S = 3.0
 
 ScenarioRunner.State = {
 	IDLE = "idle",
@@ -183,6 +192,132 @@ function ScenarioRunner.ReadVerticalSpeed(vehicle: Instance?): number?
 	return math.abs((v :: Vector3).Y)
 end
 
+-- FX3 (G4.1, Sit-event transfer vlastnictvi): usednuti priradi celou 167-dilnou
+-- sestavu sedicimu klientovi (engine automatic); server pak cte stale/jumpy
+-- repliky a meri garbage (S1: zamrzla telemetrie x==2.00/v==100.00). Pred
+-- briefem nastaveny nil-ownership po usednuti NEPLATI. Overeno zive (E-final-II
+-- G1 mezikut): nil APLIKOVANY PO usednuti DRZI (0/167 klient, 8 s+ pri trvalem
+-- sezeni; transfer se deje POUZE na Sit-event, ne kontinualne) + diagnosticky
+-- puls 30 prokazal fresh telemetrii. Proto: reclaim PO usednuti, pred kazdym
+-- repem (Spawn/SpawnT03Verified tuto funkci volaji), a harness (H1, mimo
+-- mandat) ji ma volat i na Sit-event. Bez overeni GetNetworkOwner()==nil se
+-- rychlost/gate nesmi armit -- jinak void s duvodem.
+function ScenarioRunner.ReclaimServerOwnership(vehicle: Instance?): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	local parts: { BasePart } = {}
+	local okCollect = pcall(function()
+		if (vehicle :: Instance):IsA("BasePart") then
+			table.insert(parts, vehicle :: BasePart)
+		end
+		for _, d in (vehicle :: Instance):GetDescendants() do
+			if d:IsA("BasePart") then
+				table.insert(parts, d :: BasePart)
+			end
+		end
+	end)
+	if not okCollect then
+		return false, "ownership_neovereno:vyber_dilu_selhal"
+	end
+	if #parts == 0 then
+		return false, "ownership_neovereno:zadne_BasePart_k_reclaimu"
+	end
+	for _, part in parts do
+		pcall(function()
+			(part :: BasePart):SetNetworkOwner(nil)
+		end)
+	end
+	local foreign = 0
+	local okCheck = true
+	for _, part in parts do
+		local ok, owner = pcall(function()
+			return (part :: BasePart):GetNetworkOwner()
+		end)
+		if not ok then
+			okCheck = false
+			break
+		end
+		if owner ~= nil then
+			foreign += 1
+		end
+	end
+	if not okCheck then
+		return false, "ownership_neovereno:cteni_GetNetworkOwner_selhalo"
+	end
+	if foreign > 0 then
+		return false, string.format("ownership_neovereno:%d/%d_dilu_drzi_klient", foreign, #parts)
+	end
+	return true, nil
+end
+
+-- FX3 (G4.3, jeden slot): pojistka ze strany ScenarioRunner. Handoff H1:
+-- VehicleManager.DeployVehicle ma klon prejmenovat na SLOT_NAME; Spawn tuto
+-- funkci vola vzdy, takze kazdy rep konci v jednom slotu (idempotentni,
+-- reference pres Instance se prejmenovanim nerozbiji).
+function ScenarioRunner.EnsureSlotName(vehicle: Instance?): boolean
+	if vehicle == nil then
+		return false
+	end
+	local ok = pcall(function()
+		if (vehicle :: Instance).Name ~= ScenarioRunner.SLOT_NAME then
+			(vehicle :: Instance).Name = ScenarioRunner.SLOT_NAME
+		end
+	end)
+	return ok
+end
+
+-- FX3 (G4.2, _InBrake-dozneni): cteni skutecne brzdy Values.Brake (NumberValue;
+-- _GBrake, zapisuje Drive kazdy frame). nil = Drive nebezi / Values chybi.
+function ScenarioRunner.ReadBrakeValue(vehicle: Instance?): number?
+	if vehicle == nil then
+		return nil
+	end
+	local ok, val = pcall(function()
+		local values = (vehicle :: Instance):FindFirstChild("Values", true)
+		if values == nil then
+			return nil
+		end
+		local b = (values :: Instance):FindFirstChild("Brake")
+		if b ~= nil and (b:IsA("NumberValue") or b:IsA("IntValue")) then
+			return (b :: NumberValue).Value
+		end
+		return nil
+	end)
+	if not ok then
+		return nil
+	end
+	return val
+end
+
+-- FX3 (G4.2, _InBrake-dozneni): po ClearDriveInputs(0,0,0) CEKAT, dokud
+-- Values.Brake -> ~0, a TEPRVE pak speed-set. Fyzika: klientsky _IBrake drzi
+-- 1.0 i po briefu (nil atribut posledni prikaz nemaze); nula zapsana serverem
+-- dojde pres replikaci az dalsi Heartbeat a _InBrake dobiha rampou BrakeDecel.
+-- Nastavi-li se rychlost driv, prvni vzorky brzdi zbytkovym momentem pri
+-- roztocenych kolech a scrubuji -- druha slozka post-gate bleedu. Chybi-li
+-- Values/Brake (Drive nebezi), neni co cekat -- true (stejna filozofie jako
+-- CheckBrakeDiag "cekam"). Timeout = void s duvodem.
+function ScenarioRunner.WaitForBrakeDecay(vehicle: Instance?): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	local deadline = os.clock() + ScenarioRunner.BRAKE_DECAY_MAX_S
+	while true do
+		local b = ScenarioRunner.ReadBrakeValue(vehicle)
+		if b == nil then
+			return true, nil
+		end
+		if math.abs(b) <= ScenarioRunner.BRAKE_DECAY_TOL then
+			return true, nil
+		end
+		if os.clock() >= deadline then
+			return false, string.format("brzda_nedoznela:Values.Brake=%.3f_tol=%.2f", b, ScenarioRunner.BRAKE_DECAY_TOL)
+		end
+		task.wait(0.1)
+	end
+end
+
 -- ABS konfigurace z Tune POUZE pro cteni (zadny zapis, zadny WriteTune).
 -- Vraci (config, status): config = { abs_threshold, abs_enabled } (nil hodnoty
 -- pri chybejicim klici); status = "ok" | "pending:<duvod>".
@@ -212,17 +347,70 @@ end
 
 -- Nastaveni startovni rychlosti T03: RightVector spawnCFrame * speed na vsechny
 -- BaseParty (DriveSeat explicitne; stejna semantika jako TestHarness, H1).
+-- FX3 (G4.2, post-gate bleed 2-4 studs/s): krome linearni rychlosti se kolum
+-- nastavuje i UHLOVA rychlost omega = v / R kolem lateralni osy. Fyzika:
+-- valeni bez prokluzu vyzaduje nulovou rychlost kontaktniho bodu kola,
+-- V_cm + omega x (-R*up) = 0, coz pri dir kolmem na up dava
+-- omega = (up x dir) * (v/R), kde dir je smer jizdy (RightVector spawnCFrame).
+-- Drive pocita povrchovou rychlost kola jako |RotVelocity * (size.x/2)|
+-- (ABS prokluzovy prah, hlavicka) -- proto se R bere stejne: R = Size.X / 2
+-- konkretniho dilu kola. Kolo s nulovym uhlovym momentem pri v = 100
+-- a nulovem plynu je prudky prechodovy odpor v prvnich krocich
+-- (drivetrain-scrub) -- presne ten bleed, ktery voidoval S3 3/3.
+-- Nekola (karoserie) dostanou nulovou uhlovou rychlost. Kola = dily,
+-- jejichz nazev nebo rodic/prarodic obsahuje "wheel" (kontejner "Wheels"
+-- v A-Chassis sablone); neni-li zadne kolo rozpoznano, plati linear-only
+-- fallback (beh se nerusi -- rychlostni gate dale hlida v0).
+function ScenarioRunner.IsWheelPart(part: Instance?): boolean
+	if part == nil then
+		return false
+	end
+	local node: Instance? = part
+	for _ = 1, 3 do
+		if node == nil then
+			return false
+		end
+		local ok, nm = pcall(function()
+			return (node :: Instance).Name
+		end)
+		if ok and typeof(nm) == "string" and string.find(string.lower(nm), "wheel", 1, true) ~= nil then
+			return true
+		end
+		node = (node :: Instance).Parent
+	end
+	return false
+end
+
 function ScenarioRunner.ApplyT03StartSpeed(vehicle: Instance?, spawnCFrame: CFrame, speed: number): boolean
 	if vehicle == nil or spawnCFrame == nil or typeof(speed) ~= "number" then
 		return false
 	end
 	local ok = pcall(function()
-		local v = (spawnCFrame :: CFrame).RightVector * speed
+		local cf: CFrame = spawnCFrame :: CFrame
+		local dir = cf.RightVector
+		local up = cf.UpVector
+		local axle = up:Cross(dir)
+		local axleLen = axle.Magnitude
+		if axleLen < 1e-6 then
+			axle = Vector3.zAxis * -1
+		else
+			axle /= axleLen
+		end
+		local v = dir * speed
 		for _, d in (vehicle :: Instance):GetDescendants() do
 			if d:IsA("BasePart") then
 				local part = d :: BasePart
 				part.AssemblyLinearVelocity = v
-				part.AssemblyAngularVelocity = Vector3.zero
+				if ScenarioRunner.IsWheelPart(part) then
+					local r = part.Size.X / 2
+					if typeof(r) == "number" and r > 0.05 then
+						part.AssemblyAngularVelocity = axle * (speed / r)
+					else
+						part.AssemblyAngularVelocity = Vector3.zero
+					end
+				else
+					part.AssemblyAngularVelocity = Vector3.zero
+				end
 			end
 		end
 	end)
@@ -315,6 +503,12 @@ function ScenarioRunner:Spawn(def: any, runId: string, vehicle: Instance?, spawn
 	self.stopT = nil
 	self.startInfo = nil
 	self.absPending = nil
+	-- FX3 (G4.3/G4.1): jeden slot + server-ownership pred nulovanim (best-effort;
+	-- striktni gate s voidem je v SpawnT03Verified; ostatni scenare gate nemaji).
+	if vehicle ~= nil then
+		ScenarioRunner.EnsureSlotName(vehicle)
+		ScenarioRunner.ReclaimServerOwnership(vehicle)
+	end
 	-- F5-FX2 stuck-brake: pred startem mereni EXPLICITNE nuluj vstupy
 	-- (0,0,0 + overeni; best-effort, duvod se propise do failReason pri voidu).
 	if vehicle ~= nil then
@@ -375,6 +569,23 @@ function ScenarioRunner:SpawnT03Verified(vehicle: Instance?, spawnCFrame: CFrame
 		self.failReason = "startovni_podminky:" .. tostring(settleErr)
 		return false, self.failReason
 	end
+	-- FX3 (G4.1): PO usednuti reclaim + OVERENI nil-ownershipu; jinak void.
+	-- Musi predchazet VSEM zpetnym ctenim (decay, pre-roll, gate) -- na
+	-- klientem vlastnenych dilech server cte stale repliky (S1).
+	local okOwn, ownErr = ScenarioRunner.ReclaimServerOwnership(vehicle)
+	if not okOwn then
+		self.state = ScenarioRunner.State.FAILED
+		self.failReason = "startovni_podminky:" .. tostring(ownErr)
+		return false, self.failReason
+	end
+	-- FX3 (G4.2): zero uz zapsano (Spawn/ClearDriveInputs) -- pockat na decay
+	-- Values.Brake -> 0 PRED speed-setem, jinak prvni vzorky scrubuji.
+	local okDecay, decayErr = ScenarioRunner.WaitForBrakeDecay(vehicle)
+	if not okDecay then
+		self.state = ScenarioRunner.State.FAILED
+		self.failReason = "startovni_podminky:" .. tostring(decayErr)
+		return false, self.failReason
+	end
 	-- F5-FX2 (4): roll ~= 0 over PRED nastavenim rychlosti (jinak void).
 	-- Rychlost se na rozhoupanou sestavu vubec nenastavuje.
 	local preRoll = ScenarioRunner.ReadStartRollDeg(vehicle)
@@ -390,6 +601,15 @@ function ScenarioRunner:SpawnT03Verified(vehicle: Instance?, spawnCFrame: CFrame
 	local ok = false
 	local reasons: { string } = {}
 	local info: any = nil
+	-- FX3 (G4.2, first-tol): entry_tol ZUSTAVA +-1 (default; def muze zpresnit,
+	-- ne rozsirit nad fyzikalni smysl). Proc NE 2-3: bleed 2-4 studs/s je
+	-- aparaturovy artefakt (drivetrain-scrub + _InBrake-dozneni), ne fyzika
+	-- brzdeni; sirsi tol by poustela predbrzdene/rozhoupane behy a zkreslila
+	-- brake_distance. Spravny fix je odstranit pricinu (decay-wait vyse +
+	-- omega v ApplyT03StartSpeed + minimalni okno gate->prvni vzorek), ne
+	-- roztahnout branu. GATE->SAMPLE (H1, mimo mandat): od uspesneho gate
+	-- zadny wait -- harness musi collector startovat a prvni vzorek brat bez
+	-- prodlevy, jinak se bleed vrati oknem.
 	for _ = 1, ScenarioRunner.T03_START_RETRIES do
 		ScenarioRunner.ApplyT03StartSpeed(vehicle, spawnCFrame, entrySpeed)
 		ok, reasons, info = ScenarioRunner.VerifyT03Start(vehicle, def, spawnCFrame)
