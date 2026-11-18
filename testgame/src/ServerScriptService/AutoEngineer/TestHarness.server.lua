@@ -203,11 +203,17 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		end
 	end
 	runner:Spawn(def, runId, vehicle, spawnCFrame)
+	-- F5-FX2: Spawn voiduje s duvodem (nulovani vstupu, settle-timeout,
+	-- roll pred rychlosti) — takovy beh se nemeri, jen se zapise failed.
+	local startFailed: string? = nil
+	if runner:GetState() == ScenarioRunner.State.FAILED and runner.failReason ~= nil then
+		startFailed = tostring(runner.failReason)
+		table.insert(errors, startFailed)
+	end
 	-- F5 FX D-1: po applyStartSpeed znovu OVERIT rychlost z DriveSeat
 	-- (read-back helper ScenarioRunner.ReadDriveSeatXzSpeed); pri neshode
 	-- mimo toleranci fail behu s duvodem, ne slepe pokracovani.
-	local startFailed: string? = nil
-	if isT03(def) and vehicle ~= nil and spawnCFrame ~= nil then
+	if startFailed == nil and isT03(def) and vehicle ~= nil and spawnCFrame ~= nil then
 		local want = entrySpeed(def)
 		applyStartSpeed(vehicle, spawnCFrame, want)
 		local tol = ScenarioRunner.T03_DEFAULT_ENTRY_TOL
@@ -233,11 +239,25 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		run_id = runId,
 		scenario_id = def.scenario_id,
 	})
+	-- F5-FX2 stuck-brake: pred startem mereni EXPLICITNE 0,0,0 + overeni.
+	if startFailed == nil and vehicle ~= nil then
+		local okZero, zeroErr = ScenarioRunner.ClearDriveInputs(vehicle)
+		if not okZero then
+			startFailed = tostring(zeroErr)
+			table.insert(errors, startFailed)
+		end
+	end
 	collector:Start()
-
 	local t = 0
 	local step = 1 / ScenarioDefinitions.SAMPLE_RATE_HZ
 	local status = "running"
+	-- F5-FX2 first-sample entry check (post-gate bleed, D-2, pouze T03):
+	-- prvni platny vzorek musi byt 100±1 (entry_tol defu), jinak void s duvodem.
+	local firstChecked = false
+	if startFailed ~= nil then
+		status = "failed"
+		runner.failReason = startFailed
+	end
 	while status == "running" do
 		task.wait(step)
 		t += step
@@ -248,11 +268,42 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		if sample == nil then
 			table.insert(errors, "chybi_merici_part")
 		end
+		if not firstChecked and isT03(def) and sample ~= nil and typeof(sample.vel) == "table" then
+			firstChecked = true
+			local v0 = ScenarioRunner.XzSpeed(sample.vel)
+			if v0 ~= nil then
+				local want = entrySpeed(def)
+				local ftol = ScenarioRunner.T03_DEFAULT_ENTRY_TOL
+				if def.initial_conditions ~= nil and typeof((def.initial_conditions :: any).entry_tol) == "number" then
+					ftol = (def.initial_conditions :: any).entry_tol
+				end
+				if math.abs(v0 - want) > (ftol :: number) then
+					local fsReason = string.format(
+						"first_sample_mimo_toleranci:cil=%.1f_tol=%.1f_mereno=%.2f",
+						want,
+						ftol :: number,
+						v0
+					)
+					table.insert(errors, fsReason)
+					status = "failed"
+					runner.failReason = fsReason
+					break
+				end
+			end
+		end
 		status = runner:Evaluate(sample or {}, def, t)
 	end
-	runner:Finish(status, runner.failReason)
+
+	runner:Finish(status, runner.failReason, vehicle)
 	collector:Stop()
-	-- F4.4 F3 / F5-A: zruseni atributoveho mustku (nil = manualni rezim; zadna zaseknuta brzda/plyn).
+	-- F5-FX2 stuck-brake: na konci behu EXPLICITNE 0,0,0 + overeni, pak teprve
+	-- nil (navrat do manualniho rezimu; _IBrake zustane na 0, ne zaseknuta 1.0).
+	if vehicle ~= nil then
+		local okEnd, endErr = ScenarioRunner.ClearDriveInputs(vehicle)
+		if not okEnd then
+			table.insert(errors, tostring(endErr))
+		end
+	end
 	ScenarioRunner.WriteDriveAttributes(vehicle, nil, nil, nil)
 
 	local completion = if status == "completed" and startFailed == nil then "completed" else "failed"

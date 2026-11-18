@@ -101,3 +101,250 @@ nevytvořen. Postava/klient nedotčeni.
 3. Restart Play Solo (koordinátor přes MCP) → čerstvá session s F5 kódem.
 4. Poté znovu Agent E: kampaň 3+3 f55 + statistika + `test_summary_aggregate`
    (očekává PASS) → teprve pak F5-CLOSURE.
+
+---
+# Beh E-retry — 2026-11-17 (plna kampan, CERSTVA Play Solo session s FX kodem)
+
+**Verdikt: BLOCKED — kampaň neprovedena (live session stale pre-F5/FX kód).**
+**Žádná f55 data nevznikla (adresář `vehicle-data/telemetry/f55/` ZÁMĚRNĚ
+nevytvořen). H suite: 159 běhů = 155 PASS / 0 FAIL / 4 PENDING → PASS (s PENDING).
+Regrese `test_f44_regression`: 11 testů OK (f44 legacy zelená; f55-striktní část
+PENDING — kohorta neexistuje, `summary_aggregate`/`roll_deg-present` netestovány).
+F5-CLOSURE: NEDOPORUČUJI.**
+
+Session: `17ce64ee-a452-4e5c-b95d-45e66be3b314` (Play, tatáž instance jako F44/F5).
+`start_stop_play` nikdy nevoláno (zákaz); šablona nedotčena (pouze čtení);
+žádný teleport, žádné sezení, žádná jízda — pouze read-only sondy `execute_luau`.
+Disk: main `726dae8` (F5 FX), `git status` čistý.
+
+## R0. Freshness gate (live) — FAIL → STOP
+
+Živé sondy (Server, read-only):
+
+- `VerifyT03Start:false | ReadStartRollDeg:false | SpawnT03Verified:false |
+  ReadDriveSeatXzSpeed:false | CheckBrakeDiag:false` — F5/D API živě ABSENT
+  (`WriteDriveAttributes:true` — existuje i ve starém kódu, ne F5-marker).
+- `bridge_OR_IBrake:true | bridge_assign_IBrake:false` — starý OR-můstek živě.
+- `TH kept_marker:false | reverify_marker:false` — FX C-1/D-1 živě ABSENT.
+- `ScenarioDefinitions` žije v `ReplicatedStorage.AutoEngineer.Shared`
+  (ne pod `ServerScriptService.AutoEngineer`); `ListIds` → `T01..T07`
+  (T03 dostupná, `SAMPLE_RATE_HZ=60`). Scenario-kontrakt splněn.
+- Bridge ve Workspace/ReplicatedStorage: NENALEZEN (idle, bez reziduí).
+
+Závěr freshness: **živě běží pre-F5 kód (F4.4/F3); FX `726dae8` není nasazen.
+Podmínka „čerstvá Play Solo session s FX kódem" není splněna → STOP+BLOCKED.
+Restart Play je mimo můj mandát (nikdy `start_stop_play`).**
+
+## R1. Ověření FX na disku (C-1/D-1 pryč) — PASS
+
+Pracovní strom = `726dae8`, čistý. `TestHarness.server.lua`:
+`outboxDoc` 8×, `entry_speed_mimo_toleranci_po_apply` 1×,
+`runBrief` agreguje `distances` z `outboxDoc.measurements.summary.t03`
+(l.422+), `runOneScenario` vrací `(output, outboxDoc)`.
+Předchozí nálezy C-1 (FULL-agregace) a D-1 (neověřený `applyStartSpeed`)
+jsou na disku odstraněny. Live ověření čeká na fresh session (PENDING).
+
+## R2. Kampaň 3+3 f55 — BLOCKED (0/6, 0 voidů, 0 náhrad)
+
+Jízda na starém kódu by vyrobila neplatná f55 data (bez `roll_deg`,
+full-SUMMARY) — vědomě neprovedena. Konfigy `cfg_f55_b06/b09` na disku
+neexistují (F44 analogie: Tune brake-bias 0.6 vs 0.9, viz F44-T03-RUNS;
+Tune-delta pro f55 musí definovat koordinátor). Void-budget nedotčen (max 2).
+`TEST-SCENARIOS.md` v repu neexistuje — jelo by se výhradně T03 (`scenario_ids`
+živě ověřeny: T01–T07, kampaň by byla T03-only).
+
+## R3. Statistika — N/A (žádná data, žádné umělé PASS)
+
+Kritéria (Δ means > 3σ_pooled, 6 nenulových drah, repeatabilita 5 %)
+nevyhodnocena. Verdikt kampaně je BLOCKED (měření), nikoli FAIL fyziky.
+
+## R4. Suite + regrese
+
+- `tests/run_all.py`: **159 běhů, PASS 155, FAIL 0, ERROR 0, PENDING 4 →
+  VYSLEDEK: PASS (s 4 PENDING)** (stejné 4 legitimní PENDING jako minule).
+- `tests/test_f44_regression`: **11 testů OK** (f44 legacy zelená vč.
+  `test_summary_aggregate` v legacy toleranci a pin `roll_deg`-absence).
+  f55-striktní část **PENDING** (kohorta f55 neexistuje; exact-kept shoda
+  a `roll_deg`-present netestovány, ne PASS).
+
+## R5. Cleanup — PASS
+
+Live: `slot=0 | jeep=0 | gui=0 | bridge=0` (idle, bez reziduí).
+Disk: `git status` čistý; f55 adresář záměrně nevytvořen.
+Postava/klient nedotčeni.
+
+## R6. Mapování F5 body 1–10 (retry)
+
+1. arbitrace → PENDING (disk PASS, live absent)
+2. init/slot auto-fill → PENDING (disk PASS-nezměněn, live netestován)
+3. SUMMARY zdroj → PENDING (disk FX PASS, live absent — C-1 pryč z disku)
+4. rychlost 100±1 → PENDING (disk FX PASS, live absent — D-1 pryč z disku)
+5. ABS stav → PENDING (disk read-only PASS, live netestován)
+6. roll kanál → PENDING (disk PASS, live netestován; f44 absence pinována OK)
+7. cleanup → PASS
+8. suite → PASS (155/0/4; f55-striktní část PENDING)
+9. kampaň 3+3 → BLOCKED/PENDING (0/6, příčina: stale session)
+10. repeatabilita 5 % → PENDING (žádná data)
+
+## R7. Doporučení (F5-CLOSURE se nedoporučuje)
+
+1. C-1/D-1 na disku OPRAVENY (`726dae8`) — ověřeno čtením, není co dalšího opravovat.
+2. Definovat `cfg_f55_b06/b09` Tune-delta (koordinátor).
+3. Restart Play Solo (koordinátor přes MCP) → čerstvá session s FX kódem.
+4. Poté znovu Agent E: kampaň 3+3 f55 + statistika + `test_summary_aggregate`
+   (očekává PASS) → teprve pak F5-CLOSURE.
+
+---
+# Beh E-final — 2026-11-18 (kampan 3+3 f55 v OVERENE session)
+
+**Verdikt: BLOCKED — aparatura (0/6 platnych). 9 void behu ve 3 seriich
+(b06; b09 0 briefu — neprovedeno). Void-budget max 2 prekrocen.
+`vehicle-data/telemetry/f55/` ZAMERNE nevytvoren (zadny platny beh;
+completed-with-garbage dle M2/M3 precedentu nezapisuji).
+H suite: 159 behu = 155 PASS / 0 FAIL / 4 PENDING → PASS (s PENDING).
+Regrese `test_f44_regression`: 11 testu OK (f44 legacy zelena; f55-striktni
+cast PENDING — kohorta neexistuje). F5-CLOSURE: NEDOPORUCUJI.**
+
+Session: `17ce64ee-a452-4e5c-b95d-45e66be3b314` (Play Solo, F5 FX `726dae8`).
+`start_stop_play` nikdy nevolano (zakaz); sablona nedotcena (pouze klony
+pres `CloneVehicle`; zadny zapis do sablony/disku krome tohoto reportu);
+postava primo nemanipulovana (presun pouze harness-`Spawn` auta na start
+T03 + eject side-effect `DestroyVehicle`); zadny FAIL potlacen.
+Konfigy: `cfg_f55_b06` (`brakes.BrakeBias=0.6`), `cfg_f55_b09` (0.9,
+nedoruceno — viz blokery); `scenario_ids=["T03"]`, inbox pres
+`AESubmitConfig:InvokeServer` (Client), outbox verbatim cten.
+
+## F0. Freshness gate (live) — PASS
+
+Zive sondy (Server, read-only `execute_luau`):
+- `ScenarioRunner`: `VerifyT03Start:true | SpawnT03Verified:true |
+  ReadStartRollDeg:true | ReadABSConfig:true | CheckBrakeDiag:true |
+  ComputeT03Metrics:true` ✓
+- `TestHarness`: `WriteDriveAttributes(via ScenarioRunner):true |
+  ReadDriveSeatXzSpeed:true | outboxDoc:true |
+  entry_speed_mimo_toleranci_po_apply:true` (FX D-1 re-verifikace zive) ✓
+- `VehicleManager`: `RepairStructure:true | _IBrake_assign_:true` (F5-A) ✓
+- Bridge inbox/outbox 0/0; `StartLine` x=2 ✓; remotes
+  `AERunBrief/AETelemetry/AEStatus/AESubmitConfig` ✓;
+  `TestClient` LocalScript u klienta ✓; hrac + postava existuji.
+- Disk: `726dae8`, `git status` cisty krome tohoto reportu.
+
+**Zaver: zive bezi F5 FX kod. Podminka cerstve session SPLNENA → kampan
+spustena (3 briefy b06).**
+
+## F1. Prubeh kampane (3 briefy b06, 9 behu, 0 platnych)
+
+Spolecne: `CloneVehicle→WriteTune(BrakeBias)→DeployVehicle→rename
+AE_VehicleSlot→SetNetworkOwner(nil)` pres MCP (capability OK; F44-M4
+precedent — server-thread harnessu na `drive.Source` pada, viz F1.0).
+
+F1.0 Setup-serie (budget-exempt, environmental, 0 voidu pocitano):
+prvni submit prijal harness (`accepted:true`), ale `runBrief` zemrel bez
+outboxu: `ApplyDriveInputBridge` (V.M. l.531) cte `drive.Source` →
+`The current thread cannot read 'Source' (lacking capability
+PluginOrOpenCloud)` (konzole, `TestHarness:66←192←422←457`).
+`RepairStructure` verify-Only prosla. Obchvat: slot postaven rucne pres
+MCP (ma capability) — `SLOT_OK tune=0.6`, 167 dilu, DriveSeat ✓.
+
+Serie V1 (b06 brief#1; postava STALA v spawn-volumu (3.2,3.9,1.2)):
+3/3 overlap instant-stop — v0≈0 (gate ~100 pass, smrt az po gatu):
+r1 v0=0.0046 d=0.00098 dur=1.2; r2 v0=0.0196 d=0.917 dur=20.0 timeout;
+r3 v0=0.0298 d=0.645 dur=8.45. Vse `completed`, `errors=[]`.
+SUMMARY: mean=0.5212 delta=175.86 `repeatability_ok=false`.
+Zaver: VOID 3× (proceduralni: zadna vstupni rychlost v mereni).
+POZITIVUM: SUMMARY mean sedne exaktne z kept-run-docs
+((0.00098+0.91746+0.64502)/3=0.52115) → **C-1 fix ZIVE OVEREN**.
+
+Serie V2 (b06 brief#2; postava sedela od zacatku, ownership 167/167
+server): 3/3 `roll_gt_45 + nezastaveno_do_timeout` (failed):
+r1 v0=87.61 d=8.90; r2 v0=97.18 d=17.357; r3 v0=96.21 d=18.612
+(rollmax r1 = 45.6° — marginalni). SUMMARY mean=14.956 delta=64.92.
+Zaver: VOID 3× (prevraceni z rozhoupane sestavy se zamotanou postavou).
+
+Serie V3 (b06 brief#3; F44-recept: eject→postava stoji na x=29.7 mimo
+drahu, FRESH slot, cisty Sit z dalky):
+r1 v0=86.64 d=10.98 dur=8.6 `completed` BEZ errors — spin po doskoku
+(yaw_rate_max 7.5, peak_decel 327.8, lat 3.2; bral 86→11, ne ciste brzdeni);
+r2 `startovni_podminky:roll_pred_startem_nenulovy:-8.7_deg` (pre-start
+refusal — FX self-protekce FUNGUJE, v0=100 d=0.001);
+r3 v0=100(first-sample) d=0.001 `completed` BEZ errors — instant-stop
+100→0 za 31 ms (decel x=-2999.9, pozice beze zmeny: prekazka ve spawnu).
+SUMMARY mean=3.661 delta=299.88. Zaver: VOID 3×.
+(Outbox po kazde serii transientne cisten; void JSON ZAMERNE
+neulozeny do `f55/` — completed-with-garbage dle M2/M3 precedentu.)
+
+b09: 0 briefu. Slot 0.9 nikdy nepostaven — po 3 neuspesnych seriich b06
+by dalsi briefy byly plytvani behy; aparatura prokazane nedodava.
+
+## F2. Statistika — N/A → BLOCKED (aparatura), nikoli FAIL fyziky
+
+0 platnych drah (6 vyzadovano). Delta>3σ ani 5% repeatabilita
+nevyhodnoceny — pipeline k nim nedojde. Verdikt kampane je BLOCKED
+(merici retezec), nikoli FAIL fyziky ani PASS.
+
+## F3. Suite + regrese
+
+- `tests/run_all.py`: **159 behu, PASS 155, FAIL 0, ERROR 0, PENDING 4 →
+  VYSLEDEK: PASS (s 4 PENDING)** (4 legitimni: Studio-pending, schema
+  Faze 5, 2× VariantStore baseline).
+- `tests/test_f44_regression.py`: **11 testu OK** (f44 legacy zelena vc.
+  `test_summary_aggregate` v legacy toleranci + pin `roll_deg`-absence).
+  f55-striktni cast **PENDING** (kohorta neexistuje; exact-kept shoda
+  a `roll_deg`-present netestovany, ne PASS).
+
+## F4. Nalezy (disk/kod NEMENEN — predano vlastnikum)
+
+1. **Auto-fill crash v Play Solo server-threadu** (V.M. l.531
+   `drive.Source` read → capability). Kazdy inbox-brief bez pripraveneho
+   slotu umre bez outboxu. Obchvat (MCP postavi slot) overen 2×.
+   Fix (H1): auto-fill bez cteni `Source` v server-threadu.
+2. **D-2 gap (novy): post-gate bleed.** Gate nameri ~100 (pass), prvni
+   vzorek 86.6 (V3-r1); V3-r3 `completed` bez errors s d=0.001.
+   Fix (D): fail pri first-sample mimo `entry_tol` (H1).
+3. **Stuck-brake:** klientsky `_IBrake` drzi 1.0 po briefu (nil atribut
+   poslední prikaz nemaze) — overeno pulsem (100→stop za 23 studu).
+   Novy brief rampou prepise (OK), ale auto mezi briefy stoji na
+   zabrzdenych kolech. Fix (A/D): explicitni `_IBrake=0` pri nil.
+4. **Spawn-drop + zamcena kola (bez ABS) = rock/spin loterie:** V3-r1 spin
+   (yaw 7.5), V2 3/3 roll>45, F44 "bounce/rock loterie".
+   Fix (H1/D): spawn-settle-go (dosadnout, ustálit, TEPVE rychlost+gate).
+5. **Prekazka ve spawnu = instant-stop** (postava/ejecta; V3-r3 100→0 za
+   31 ms). Fix (operator): pred kampani postava mimo drahu + audit okoli
+   StartLine; (kod): obsazenost sedadla pred speed-setem.
+POZITIVA zive overena: `roll_deg` v KAZDEM vzorku (F5-C) ✓;
+`roll_gt_45` abort 3× ✓; pre-start roll refusal 1× ✓; SUMMARY z kept
+exaktne ✓; ABS read-only (`enabled=false`, `active=false`) ✓;
+entry re-verify gate bezi ✓.
+
+## F5. Cleanup — PASS (overeno zive + disk)
+
+Live: slot znicen (`DestroyVehicle=true`), `AE_VehicleSlot`/`Jeep_*` 0,
+bridge inbox/outbox 0/0. Postava primo nemanipulovana (stoji na
+(-0.6,3.9,2.3) po ejectu — DOPORUCENI operatorovi preparkovat mimo
+drahu pred dalsi kampani). Disk: `git status` cisty krome tohoto
+reportu; `f55/` zamerne nevytvoren; sablona nedotcena.
+
+## F6. Mapovani F5 bodu 1-10 (final)
+
+1. arbitrace → PASS (brzdne prikazy server→klient→fyzika prokazany
+   rampami + zastavenimi ve V2/V3).
+2. init/slot auto-fill → FAIL (crash l.531 v session; operator-obchvat
+   overen; ceka kod-fix).
+3. SUMMARY zdroj → PASS (C-1 zive exakten z kept, §F1-V1).
+4. rychlost 100±1 → PENDING + nalez D-2 (gate bezi; post-gate bleed).
+5. ABS stav → PASS (read-only tvar ve vsech bezich).
+6. roll kanal → PASS (kanal + oba gaty zive).
+7. cleanup → PASS.
+8. suite → PASS (155/0/4; f55-striktni PENDING).
+9. kampan 3+3 → BLOCKED (0/6; 9 voidu > budget 2; aparatura §F1).
+10. repeatabilita 5 % → PENDING (0 dat).
+
+## F7. Doporuceni (F5-CLOSURE se NEDOPORUCUJE)
+
+1. H1/D: spawn-settle-go + first-sample entry check + `_IBrake=0` pri nil
+   (§F4 body 2-4).
+2. Koordinator: postava mimo drahu + spawn-vicinity audit pred kampani;
+   definovat `cfg_f55_b06/b09` Tune-delta (hotovo ad-hoc: BrakeBias
+   0.6/0.9 — stvrdit).
+3. Pote znovu Agent E: nejdriv 1 smoke-beh, pak 3+3 f55 + statistika +
+   `test_summary_aggregate` (ocekava PASS) → teprve pak F5-CLOSURE.

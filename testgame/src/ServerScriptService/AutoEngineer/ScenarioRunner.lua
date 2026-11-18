@@ -59,6 +59,11 @@ ScenarioRunner.T03_DEFAULT_ENTRY_TOL = 1.0
 ScenarioRunner.T03_START_RETRIES = 3
 ScenarioRunner.T03_ROLL_TOL_DEG = 5
 ScenarioRunner.T03_FACING_MIN_X = 0.9
+-- F5-FX2 spawn-settle-go: po Deploy + nulovani rychlosti cekej, dokud
+-- |vertikalni rychlost| < 2 studs/s AND |roll| < 5 deg (max 3 s), pak teprve
+-- armuj mereni (vstupni rychlost + gate).
+ScenarioRunner.SETTLE_VSPEED_TOL = 2.0
+ScenarioRunner.SETTLE_MAX_S = 3.0
 
 ScenarioRunner.State = {
 	IDLE = "idle",
@@ -151,6 +156,31 @@ function ScenarioRunner.ReadSpawnFacingX(spawnCFrame: CFrame?): number?
 		return nil
 	end
 	return (rv :: Vector3).X
+end
+
+-- F5-FX2: vertikalni rychlost (drop po spawnu) pro settle-go. |Y| slozka
+-- AssemblyLinearVelocity DriveSeat (fallback PrimaryPart); nil pri chybe.
+function ScenarioRunner.ReadVerticalSpeed(vehicle: Instance?): number?
+	if vehicle == nil then
+		return nil
+	end
+	local part: BasePart? = nil
+	local seat = ScenarioRunner.FindDriveSeat(vehicle)
+	if seat ~= nil then
+		part = seat :: BasePart
+	elseif (vehicle :: Instance):IsA("Model") then
+		part = ((vehicle :: Model).PrimaryPart :: any) :: BasePart?
+	end
+	if part == nil then
+		return nil
+	end
+	local ok, v = pcall(function()
+		return (part :: BasePart).AssemblyLinearVelocity
+	end)
+	if not ok or typeof(v) ~= "Vector3" then
+		return nil
+	end
+	return math.abs((v :: Vector3).Y)
 end
 
 -- ABS konfigurace z Tune POUZE pro cteni (zadny zapis, zadny WriteTune).
@@ -285,6 +315,16 @@ function ScenarioRunner:Spawn(def: any, runId: string, vehicle: Instance?, spawn
 	self.stopT = nil
 	self.startInfo = nil
 	self.absPending = nil
+	-- F5-FX2 stuck-brake: pred startem mereni EXPLICITNE nuluj vstupy
+	-- (0,0,0 + overeni; best-effort, duvod se propise do failReason pri voidu).
+	if vehicle ~= nil then
+		local okZero, zeroErr = ScenarioRunner.ClearDriveInputs(vehicle)
+		if not okZero then
+			self.state = ScenarioRunner.State.FAILED
+			self.failReason = "startovni_podminky:" .. tostring(zeroErr)
+			return false, self.failReason
+		end
+	end
 	if vehicle ~= nil and spawnCFrame ~= nil and vehicle:IsA("Model") then
 		pcall(function()
 			vehicle:PivotTo(spawnCFrame)
@@ -325,6 +365,27 @@ function ScenarioRunner:SpawnT03Verified(vehicle: Instance?, spawnCFrame: CFrame
 		if typeof(s) == "number" then
 			entrySpeed = s
 		end
+	end
+	-- F5-FX2 spawn-settle-go: po Deploy + nulovani rychlosti cekej na usednuti
+	-- (|vy| < 2 AND |roll| < 5 deg, max 3 s), pak teprve armuj mereni.
+	-- Timeout = void s duvodem (rock/spin loterie z rozhoupane sestavy, F4).
+	local okSettle, settleErr = ScenarioRunner.WaitForSettle(vehicle)
+	if not okSettle then
+		self.state = ScenarioRunner.State.FAILED
+		self.failReason = "startovni_podminky:" .. tostring(settleErr)
+		return false, self.failReason
+	end
+	-- F5-FX2 (4): roll ~= 0 over PRED nastavenim rychlosti (jinak void).
+	-- Rychlost se na rozhoupanou sestavu vubec nenastavuje.
+	local preRoll = ScenarioRunner.ReadStartRollDeg(vehicle)
+	if preRoll == nil then
+		self.state = ScenarioRunner.State.FAILED
+		self.failReason = "startovni_podminky:roll_neoveren_pred_rychlosti:chybi_PrimaryPart_nebo_DriveSeat"
+		return false, self.failReason
+	elseif math.abs(preRoll) > ScenarioRunner.T03_ROLL_TOL_DEG then
+		self.state = ScenarioRunner.State.FAILED
+		self.failReason = string.format("startovni_podminky:roll_pred_startem_nenulovy:%.1f_deg", preRoll)
+		return false, self.failReason
 	end
 	local ok = false
 	local reasons: { string } = {}
@@ -467,6 +528,59 @@ function ScenarioRunner.CheckBrakeDiag(vehicle: Instance?, brakeCmd: number?): (
 		)
 	end
 end
+
+-- F5-FX2 stuck-brake: EXPLICITNI nulovani AE_Brake/AE_Throttle/AE_Steer
+-- (WriteDriveAttributes 0,0,0) + overeni zpetnym prectenim. nil atribut
+-- posledni prikaz nemaze (klientsky _IBrake drzi 1.0 i po briefu, F4-F1.0),
+-- proto se pise 0, ne nil. Vraci (true) nebo (false, duvod).
+function ScenarioRunner.ClearDriveInputs(vehicle: Instance?): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0)
+	local ok, b, t, s = pcall(function()
+		return (vehicle :: Instance):GetAttribute("AE_Brake"),
+			(vehicle :: Instance):GetAttribute("AE_Throttle"),
+			(vehicle :: Instance):GetAttribute("AE_Steer")
+	end)
+	if not ok then
+		return false, "vstupni_nuly_neovereny:GetAttribute_selhalo"
+	end
+	if b ~= 0 or t ~= 0 or s ~= 0 then
+		return false,
+			string.format(
+				"vstupni_nuly_neovereny:AE_Brake=%s_AE_Throttle=%s_AE_Steer=%s",
+				tostring(b),
+				tostring(t),
+				tostring(s)
+			)
+	end
+	return true, nil
+end
+
+-- F5-FX2 spawn-settle-go: po Deploy + nulovani rychlosti cekej, dokud
+-- |vertikalni rychlost| < SETTLE_VSPEED_TOL AND |roll| < T03_ROLL_TOL_DEG
+-- (max SETTLE_MAX_S, krok 0.1 s), pak teprve armuj mereni.
+-- Vraci (true) pri usednuti, (false, duvod) pri timeoutu (volajici voiduje).
+function ScenarioRunner.WaitForSettle(vehicle: Instance?): (boolean, string?)
+	local deadline = os.clock() + ScenarioRunner.SETTLE_MAX_S
+	while true do
+		local vy = ScenarioRunner.ReadVerticalSpeed(vehicle)
+		local roll = ScenarioRunner.ReadStartRollDeg(vehicle)
+		if
+			vy ~= nil
+			and roll ~= nil
+			and vy < ScenarioRunner.SETTLE_VSPEED_TOL
+			and math.abs(roll) < ScenarioRunner.T03_ROLL_TOL_DEG
+		then
+			return true, nil
+		end
+		if os.clock() >= deadline then
+			return false, string.format("settle_timeout:vy=%s_roll=%s", tostring(vy), tostring(roll))
+		end
+		task.wait(0.1)
+	end
+end
 -- Vyhodnoceni ukonceni; vraci "running" | "completed" | "failed".
 function ScenarioRunner:Evaluate(sample: any, def: any, t: number): string
 	if sample == nil then
@@ -506,13 +620,20 @@ function ScenarioRunner:Evaluate(sample: any, def: any, t: number): string
 	return "running"
 end
 
-function ScenarioRunner:Finish(status: string, reason: string?): ()
+function ScenarioRunner:Finish(status: string, reason: string?, vehicle: Instance?): ()
 	if status == "completed" then
 		self.state = ScenarioRunner.State.COMPLETED
 	else
 		self.state = ScenarioRunner.State.FAILED
 	end
 	self.failReason = reason
+	-- F5-FX2 stuck-brake: na konci behu EXPLICITNE nuluj vstupy
+	-- (0,0,0 + overeni; best-effort — volajici muze overit sam).
+	if vehicle ~= nil then
+		pcall(function()
+			ScenarioRunner.ClearDriveInputs(vehicle)
+		end)
+	end
 end
 
 -- XZ slozka vektoru {x,y,z} (vodorovna rychlost / vzdalenost); nil pri chybejicich datech.

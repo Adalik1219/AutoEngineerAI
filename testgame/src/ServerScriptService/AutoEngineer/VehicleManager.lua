@@ -518,17 +518,41 @@ VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2
 	.. "\t\t\tend\n"
 	.. "\t\tend"
 
+VehicleManager.TEMPLATE_BRIDGE_ATTR = "AE_BridgeApplied"
+
 -- Aplikuje mustek do Drive LocalScriptu vozidla (sablona i pracovni kopie).
 -- Idempotentni: obsahuje-li Drive marker, vrati true + "jiz aplikovano".
+-- F5-FX2 capability-safe: nejdrive atribut sablony AE_BridgeApplied (bez cteni
+-- Source -- klon dedi patchovany Drive z operator-stepu EnsureTemplateBridge);
+-- jinak pcall Source read/write s jasnym failem (server-thread bez
+-- PluginOrOpenCloud na Source nesmi sahnout, F1.0 auto-fill crash l.531).
 function VehicleManager.ApplyDriveInputBridge(vehicle)
 	if typeof(vehicle) ~= "Instance" then
 		return false, "ocekavan Instance vozidla"
+	end
+	-- 1) Sablona jiz patchnuta operator-stepem => klon dedi Drive bez Source.
+	local tplOk, tplBridged = pcall(function()
+		local tpl = VehicleManager.ResolveTemplate()
+		if tpl == nil then
+			return nil
+		end
+		return tpl:GetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR)
+	end)
+	if tplOk and tplBridged == true then
+		return true, "sablona patchnuta (AE_BridgeApplied), klon dedi Drive bez cteni Source"
 	end
 	local drive = vehicle:FindFirstChild("Drive", true)
 	if drive == nil or not drive:IsA("LocalScript") then
 		return false, "Drive LocalScript ve vozidle nenalezen"
 	end
-	local src = drive.Source
+	-- 2) Capability-safe cteni Source (server-thread dale jen pres pcall).
+	local okRead, src = pcall(function()
+		return drive.Source
+	end)
+	if not okRead or typeof(src) ~= "string" then
+		return false,
+			"Drive.Source nelze cist v tomto vlakne (chybi capability PluginOrOpenCloud); priprav sablonu operator-stepem EnsureTemplateBridge"
+	end
 	if string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_MARKER, 1, true) then
 		return true, "jiz aplikovano"
 	end
@@ -537,8 +561,58 @@ function VehicleManager.ApplyDriveInputBridge(vehicle)
 	if i == nil then
 		return false, "kotva Heartbeat/Inputs v Drive nenalezena"
 	end
-	drive.Source = string.sub(src, 1, i - 1) .. VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK .. "\n" .. string.sub(src, i)
+	local patched = string.sub(src, 1, i - 1) .. VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK .. "\n" .. string.sub(src, i)
+	local okWrite, werr = pcall(function()
+		drive.Source = patched
+	end)
+	if not okWrite then
+		return false,
+			"Drive.Source nelze zapsat v tomto vlakne (chybi capability PluginOrOpenCloud); priprav sablonu operator-stepem EnsureTemplateBridge: "
+				.. tostring(werr)
+	end
 	return true, "aplikovano"
+end
+
+-- F5-FX2 operator-step (pouze MCP, ma capability PluginOrOpenCloud): aplikuje
+-- mustek na ZIVOu sablonu v session a nastavi atribut AE_BridgeApplied.
+-- Klony pak prochazeji ApplyDriveInputBridge bez cteni Source (server-thread
+-- safe). Idempotentni. Nikdy nesaha na .rbxm na disku.
+function VehicleManager.EnsureTemplateBridge()
+	local template, terr = VehicleManager.ResolveTemplate()
+	if not template then
+		return false, terr
+	end
+	local already = template:GetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR)
+	if already == true then
+		return true, "sablona jiz patchnuta (AE_BridgeApplied)"
+	end
+	local drive = template:FindFirstChild("Drive", true)
+	if drive == nil or not drive:IsA("LocalScript") then
+		return false, "Drive LocalScript v sablone nenalezen"
+	end
+	local okRead, src = pcall(function()
+		return drive.Source
+	end)
+	if not okRead or typeof(src) ~= "string" then
+		return false, "Drive.Source sablony nelze cist ani s operator capability: " .. tostring(src)
+	end
+	if string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_MARKER, 1, true) then
+		template:SetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR, true)
+		return true, "blok v sablone detekovan, atribut AE_BridgeApplied doplnen"
+	end
+	local i = string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_ANCHOR, 1, true)
+	if i == nil then
+		return false, "kotva Heartbeat/Inputs v Drive sablony nenalezena"
+	end
+	local patched = string.sub(src, 1, i - 1) .. VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK .. "\n" .. string.sub(src, i)
+	local okWrite, werr = pcall(function()
+		drive.Source = patched
+	end)
+	if not okWrite then
+		return false, "Drive.Source sablony nelze zapsat: " .. tostring(werr)
+	end
+	template:SetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR, true)
+	return true, "sablona patchnuta, AE_BridgeApplied=true"
 end
 
 return VehicleManager
