@@ -111,27 +111,37 @@ local function ensureVehicle(config: any, errors: { string }, forceFresh: boolea
 		return nil
 	end
 	if forceFresh == true then
-		-- Cekej na dostavbu pohonu (Initialize LoadDelay ~3 s): prvni #AV.
-		local deadline = os.clock() + 20
-		local avReady = false
+		-- Cekej na KOMPLETNI dostavbu (F7.1-BUILD-WAIT): prvni #AV nestaci,
+		-- pivot uprostred stavby rozbije geometrii (levitace, free-spin).
+		-- Signal: 167 dilu + 4 #AV + 4 #BV, stabilni ve 2 po sobe jdoucich
+		-- vzorcich (1 s od sebe); timeout 60 s => void repliky.
+		local deadline = os.clock() + 60
+		local builtReady = false
+		local prevParts = -1
 		while os.clock() < deadline do
-			local found = false
+			local parts, av, bv = 0, 0, 0
 			pcall(function()
 				for _, d in (deployed :: Instance):GetDescendants() do
-					if d:IsA("HingeConstraint") and d.Name == "#AV" then
-						found = true
-						break
+					if d:IsA("BasePart") then
+						parts += 1
+					elseif d:IsA("HingeConstraint") then
+						if d.Name == "#AV" then
+							av += 1
+						elseif d.Name == "#BV" then
+							bv += 1
+						end
 					end
 				end
 			end)
-			if found then
-				avReady = true
+			if parts >= 165 and av == 4 and bv == 4 and parts == prevParts then
+				builtReady = true
 				break
 			end
-			task.wait(0.5)
+			prevParts = parts
+			task.wait(1.0)
 		end
-		if not avReady then
-			table.insert(errors, "fresh_deploy_bez_AV:Initialize_nedostavel_do_20s")
+		if not builtReady then
+			table.insert(errors, "fresh_deploy_nedostaven:chybi_kompletni_build_do_60s")
 			pcall(function()
 				VehicleManager.DestroyVehicle(deployed)
 			end)
