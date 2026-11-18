@@ -1,0 +1,19 @@
+Konzole Play-session (T01B kampan 8 + Q4 manualni testy), zkraceno na podstatne.
+Plny vypis: desitky radku "Cannot start client script ... (lacking capability RunClientScript)"
+a "Cannot start server script 'Server'/'Initialize' (lacking capability RunServerScript)".
+
+Vysvetleni (overeno): vsechny skripty fyzickeho vozu (Drive, Initialize, Server,
+AC6 pluginy, zvuky) v teto Studio-session nemohou startovat — sandbox prostredi
+(MCP/assistant kontext). To NEOVLIVNUJE vysledky:
+- T01B jezdi pres ServerDrive (inline ve ScenarioRunner, server-script harnessu),
+  nikoli pres skripty vozu; noav=0 + moment na #AV prokazan.
+- Q4 manualni cesta (AEDriveCmd -> ServerDrive) je nezavisla na skriptech vozu.
+- Q4.4 steer je prave proto BLOKOVAN: client-Drive (jediny steer-akutator)
+  v teto session nebezi + server vlastni vse.
+
+Asset chyby (neblokujici, zvuky vozu):
+- rbxassetid://188608071 "Asset is not approved for the requester" (opakovane)
+- rbxassetid://203785492 "Asset type does not match requested type"
+
+Zadne chyby TestHarness/ScenarioRunner/RuntimeController (zadne compile/runtime
+errory harnessu v cele session) = novy manual-loop kod bezi ciste.

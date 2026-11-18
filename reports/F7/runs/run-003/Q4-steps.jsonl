@@ -1,0 +1,14 @@
+{"AE_Steer_attr":0,"Q4_verdikt":"parcialni PASS: plyn/brzda/release/validace plne funkcni pres skutecnou client->server cestu; steer BLOKOVAN (viz Q4.4)","before":"slot prirozeny Edit-stav; reclaim=true (server vlastni vse); zadny brief nebezi (inbox prazdny); zadny pasazer (occ=nil)"}
+{"Q4.0_baseline":"v=0.0, occ=nil, AE attrs nil (manualni rezim, zadny replay)"}
+{"Q4.1a_single_shot":"seq=1 th=0.5 -> thA=0.05 (pouze 1 tick; SPUSTEC: manual loop chybi, diskretni povel = jeden Step)"}
+{"Q4.1b_loop_nasazen":"commit ab03ce8 (Heartbeat 60Hz replay + dead-man 1.0s); commit c755522 (dead-man pres ClearDriveInputs)"}
+{"Q4.1c_q4diag":"bg stream 0.6 (seq 501+, 8s); MID-STREAM: AE_Throttle=0.6, thA=0.6, rpm=1054, #AVtq=143, v=8.2, vlastnik kol=nil-server; ZAVER: plny retezec client->server->ServerDrive->pohyb PROKAZAN"}
+{"Q4.1d_flaky_patrona":"poznamka: client execute bg vlakna obcas nedoruci (q4srv/q4b/q4d tiche); fg streamy take (q4c/q4d/q4e); mechanismus prokazan q4diag + server-side replikaci; flaky je testovaci patrona, ne kod"}
+{"Q4.2_release":"po konci q4diag streamu: dead-man (1.0s) -> AE_Throttle=0, thA=nil (Reset), #AVtq=0, v=8.2->0.0; ZAVER: release/dead-man PASS (motor se opravdu zastavi, zadny dobeh)"}
+{"Q4.3a_selhal_spatne":"q4spd 0.8 (12s) -> v=190, q4brk 1.0 (5s) nestacil (z 190 treba ~8s); dead-man uvolnil brzdu; vuz sjel z hrany (-1024) do voidu, dily zniceny; LEKCE: brzdne okno dimenzovat na rychlost + hlidat pozici + brzda jen na trati"}
+{"Q4.3b_pivot_past":"PivotTo do (200,2.55) = zaboření (kola ve vzduchu, #AV 56 rad/s, v=0.1); oprava PivotTo (200,6)+usednuti (seatY 3.79/3.80); LEKCE: nikdy pivot do jizdni vysky; jinak test na prirozene pozici"}
+{"Q4.3c_brake_PASS":"q4f 0.6 (6s): x -47->-53.6, v peak ~15-25; q4g 1.0 (5s): v=11.3->0.0, x -53.6->-56.5 (3 coule); brA=nil (dead-man uklid); ZAVER: brzda PASS"}
+{"Q4.4_steer_BLOKOVAN":"q4h 0.4+steer 1.0 (3s): dyaw=0.0044 (sum), zadna zmena kurzu; mechanismus: client Drive v teto session vubec nebezi (capability-denial v konzoli) + server vlastni vse (client gyro zapisy zahazovany); chyba server-side steer aktuator (scope F7.2); ZAVER: BLOKOVAN s dukazem"}
+{"Q4.5_clamp_PASS":"q4clamp (5,-2,9) mid-stream: AE_T=1, AE_B=0, AE_S=1; ZAVER: validace/clamp PASS"}
+{"Q4.6_stale_seq":"kod: p.seq<=lastSeq[player] -> drop (3 radky, trivialni); runtime: q4brk (700+) prebil q4spd (645-660) = higher-wins prokazano zive; cisty dup-test nebezel (slaby signal); ZAVER: kod-overeno"}
+{"Q4.7_occupancy":"vsechny Q4 kroky bez pasazera (occ=nil); server Occupant nekontroluje; ZAVER: manual funguje unseated (zjisteni, ne selhani; bezpecnostni poznamka pro produkci)"}
