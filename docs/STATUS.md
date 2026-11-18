@@ -26,7 +26,7 @@ Otevřené body před implementací:
 2. Float/CFrame verifikace A-Chassis ve Studiu (A-CHASSIS-AUDIT postup + RUN-001).
 3. Schválení architektury uživatelem (FÁZE 3) → teprve pak FÁZE 4+.
 
-## Probíhající: F5 Runtime Stabilization (4 větve: a-brake-arb, b-structure, c-telemetry, d-startcond)
+## F5 UZAVŘENA (BLOCKED): F5-CLOSURE.md — kola zamčená + Drive stale; H 155/0/4; předání F6
 
 - [x] Výchozí stav: main eafecdc čistý, serve běží, Studio v Play (pouze čtení).
 - [x] Vlna 1 DODÁNA + ověřena koordinátorem: A (arbitrace, server autoritativní) + B (no-Source RepairStructure; DŮKAZ pokusem: neměněný klon staví 32→40 hingů, cap-errors byly zastaralé) + C (SUMMARY z kept, roll_deg, dynamické f*/) + D (start 100±1 verify, ABS read-only). H 155/0/4, lint+build OK.

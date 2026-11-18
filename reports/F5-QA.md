@@ -501,3 +501,295 @@ zadaný operator-step).
 2. Pote znovu Agent E (ja nebo nastupce): smoke 1 brief → 3+3 f55 +
    statistika + `test_summary_aggregate` (ocekava PASS) → teprve pak
    F5-CLOSURE. `cfg_f55_b06/b09` = BrakeBias 0.6/0.9 (overeno, stvrdit).
+
+---
+# Beh E2-final — 2026-11-18 (kampan 3+3 f55, FX3 `f2a3eaf`, tataz session)
+
+**Verdikt: BLOCKED — 0/6 platnych (3 void behy b06, vse `first_sample_mimo_toleranci`,
+duvod systematicky a deterministicky reprodukovan; void-budget max 2/varianta
+prekrocen). b09: 0 briefu (neprovedeno — stejna deterministicka vada pred
+jakymkoli brzdenim, dalsi briefy by byly plytvani). `vehicle-data/telemetry/f55/`
+ZAMERNE nevytvoren (zadny platny beh; completed-with-garbage dle M2/M3/E-final
+precedentu se nezapisuje). H suite: 159 = 155 PASS / 0 FAIL / 4 PENDING → PASS
+(s PENDING). Regrese `test_f44_regression`: 11 OK (f44 legacy zelena;
+f55-striktni cast PENDING — kohorta neexistuje). F5-CLOSURE: NEDOPORUCUJI.**
+
+Session: `17ce64ee-a452-4e5c-b95d-45e66be3b314` (Play Solo, zivy kod FX3 `f2a3eaf`).
+`start_stop_play` nikdy nevolano (zakaz); sablona `.rbxm` na disku nedotcena
+(`git status` cisty krome tohoto reportu); zadny teleport mimo start T03
+(pouze harness-`Spawn`/muj diagnosticky `PivotTo` na StartLine + eject
+side-effect `DestroyVehicle`); zadny FAIL potlacen (vsechny voidy nize).
+Konfigy: `cfg_f55_b06` (`brakes.BrakeBias=0.6`, overeno ctenim Tune),
+`cfg_f55_b09` (0.9, nedoruceno); `scenario_ids=["T03"]`, inbox pres
+`AESubmitConfig:InvokeServer` (Client), outbox verbatim cten (Server).
+
+## H0. Operator-step + freshness (live) — PASS
+
+- `EnsureTemplateBridge` pres MCP: prvni volani `ensure=true`
+  ("sablona patchnuta, AE_BridgeApplied=true"), overeni `attr=true`,
+  `marker=true` (Drive obsahuje `AE_DRIVE_INPUT_BRIDGE`). Sablona na disku
+  nesahnuta (pouze zivy atribut v session — zadany operator-step).
+- Freshness FX3: `VerifyT03Start/SpawnT03Verified/ReadDriveSeatXzSpeed/
+  ReclaimServerOwnership/EnsureSlotName/ReadBrakeValue/WaitForBrakeDecay/
+  ClearDriveInputs` ✓; TH `outboxDoc/first_sample/ClearDriveInputs/
+  entry_po_apply` ✓; VM `_IBrake/EnsureTemplateBridge` ✓;
+  `ScenarioDefinitions` → `T01..T07`, T03 `kind=straight_brake_100_0` ✓;
+  bridge 0/0; `StartLine` ✓; remotes
+  `AERunBrief/AETelemetry/AEStatus/AESubmitConfig` ✓; hrac + postava existuji.
+- Disk: `f2a3eaf`, `git status` cisty krome tohoto reportu.
+- Zaver: zive bezi F5 FX3 kod. Podminka cerstve session SPLNENA → kampan spustena.
+
+## H1. Smoke test (rozhodovaci strom) — sedavka NUTNA, reclaim OVEREN
+
+(a) Vlastnictvi po usednuti: pred-seat (Client `seat:Sit`, postava dosud
+nesedela) → Server `GetNetworkOwner` na 167 dilech: **167/167 drzi klient**
+(Sit-event transfer potvrzen). Reclaim pres MCP
+(`ScenarioRunner.ReclaimServerOwnership`): **0/167, `reclaim=true`**, overeno
+ctenim. Hold overen: 0/167 drzi 8 s+ pri trvalem sezeni (Occupant=Humanoid).
+
+(b) Je usednuti vubec potreba: bez pasazera se vstupni rychlost neudrzi
+(zkouska coast bez pasazera: 100→0.08 za 1 s; konfouned postavou ve spawn-volumu,
+ale dizajn `TestClient` + `A-Chassis` audit: "Drive bezi jen u ridice-klienta").
+Realne brzdeni (F5-final V3-r1, E-final-II S3) prokazano VZDY jen se sedicim
+ridicem. Zaver: **usednuti JE potreba** → kampan BEZI S pasazerem;
+pouzit postupu: pre-seat pred briefem (TestClient pak `Sit` nevola —
+`seat.Occupant == humanoid` — zadny novy Sit-event v prubehu briefu),
+reclaim po usednuti + overeni nil pred kazdym merenim (FX3 `SpawnT03Verified`
+reclaimuje + `reclaim=true` overeno pred submit kazdeho briefu).
+Zabraneni usednuti (postava mimo dosah) NEZVOLENO — bez ridice fyzika
+nedodava.
+
+## H2. Prubeh kampane (1 brief b06, 3 behy, 0 platnych)
+
+Spolecne: MCP pre-build `AE_VehicleSlot` (CloneVehicle→WriteTune 0.6→Deploy→
+rename; Tune ctenim overen 0.6, 167 dilu), pre-seat, reclaim 0/167,
+`accepted:true` (cfg `cfg_f55_b06`, T03-only). Prikaz behu throttle 0,
+brake rampa `t/0.15→1`, steer 0; ABS `enabled=false` default (harness
+nezapisuje, neni mutable); `roll_deg` v KAZDEM kept-vzorku ✓ (F5-C zive);
+vlastnictvi cely brief 0/167 (drzi), postava sedela cely brief.
+
+Brief b06 (3/3 `first_sample_mimo_toleranci`, `failed`, `nezastaveno_do_timeout`):
+- r1: gate 100±1 pass → prvni vzorek **32.77** (void). Kept 3 vzorky
+  (step 1, full 3): `vel.x=100.00,100.00,80.53`, pos x 1.46→2.74 (fresh
+  telemetrie, zadne stale repliky — ownership-fix FUNGUJE).
+- r2: prvni vzorek **86.60** (void). Kept 1 vzorek `vel.x=100.00`.
+- r3: prvni vzorek **91.60** (void). Kept 1 vzorek `vel.x=100.00`.
+- SUMMARY: mean=0.427 delta=300.0 `repeatability_ok=false` (pocitano z voidu,
+  NEPLATNE — kampan BLOCKED, statistika se k datum nevztahuje).
+- Zaver: VOID 3× (systematicky: gate projde, prvni kontrolni vzorek kolabuje;
+  completed-with-garbage → `f55/` nezapsano).
+
+b09: 0 briefu — stejna deterministicka vada pred jakymkoli brzdenim (viz H3),
+nezavisla na BrakeBias; neprovedeno (uspora behu + budget).
+
+Pozn. k novemu podpisu: straznikov `mereno` (32–91) ≠ ulozene kept `vel.x`
+(100.00) — `SampleOnce` vraci cerstvy read pro straznika, ale `collector.samples`
+plni Heartbeat-spojka v jinem okamziku; gate→sample oknem projde fyzikalni
+kolaps (viz H3), ne artefakt cteni.
+
+## H3. Pricina (deterministicka, reprodukovana mimo brief)
+
+Manualni diagnostika (stejny slot, sedici ridic, nil 0/167, StartLine+3y,
+settle 1.2 s, `ApplyT03StartSpeed` 100, ZADNY brzdny prikaz, jen cteni):
+`100.0,80.0,57.3,15.6,2.1,3.5` po 16 ms krocich — vuz zastavi sam za ~80 ms.
+Opakovani (50 ms kroky, `Values.Brake=0` pred i po): `100,92,83,77,66,53`.
+Vstupni rychlost se bez brzdeni neudrzi → `first_sample` (100±1) voiduje
+kazdy rep deterministicky. FX3 omega-fix (`ApplyT03StartSpeed` + uhlova
+rychlost kol, `WaitForBrakeDecay`) bleed NEODSTRANIL — artefakt je horsi nez
+FX2 (2–4 studs/s): okamzity scrub po speed-setu (podezreni: kolo-vs-solver /
+klientsky Drive vs nucena omega; vlastnik H1/D, mimo mandat).
+Konzole: spam `DriveSeat is not a valid member of Model "AE_VehicleSlot"`
+(z `PlayerGui.A-Chassis Interface.Drive:359`/`Aerodynamics:16`) — klientsky
+Drive v session vinen (stale/dangling reference po smazani prvniho slotu;
+`Car.Value` nyni ukazuje na aktualni slot a `DriveSeat` je primo pod nim,
+takze se Drive mohl castecne vzpamatovat — coast-test uz jede, ale se
+ztratou ~8/50 ms). Doklad: gate cte 100.00 (hned po setu), fyzika pres
+ramec zhrouti — merici retezec drzi (guard voiduje spravne s duvodem),
+fyzikalni aparat nedodava.
+Dusledek: zadny pocet briefu nemuze dat 6 nenulovych drah — retry by byl
+plytvani + prekroceni void-budgetu. BLOCKED (aparatura), nikoli FAIL fyziky.
+
+## H4. Statistika — N/A → BLOCKED (aparatura)
+
+0 platnych drah (6 vyzadovano). Δ means > 3σ ani 5% repeatabilita
+nevyhodnoceny — pipeline k nim nedojde. Void-budget (max 2/varianta):
+b06 3 voidy jedne systematicke rodiny (prekrocen — proto STOP, zadne nahradni
+briefy); b09 0 voidu (nebezeno).
+
+## H5. Suite + regrese
+
+- `tests/run_all.py`: **159 behu, PASS 155, FAIL 0, ERROR 0, PENDING 4 →
+  VYSLEDEK: PASS (s 4 PENDING)** (4 legitimni: Studio-pending, schema
+  Faze 5, 2× VariantStore baseline).
+- `tests/test_f44_regression.py`: **11 testu OK** (f44 legacy zelena vc.
+  `test_summary_aggregate` v toleranci + pin `roll_deg`-absence).
+  f55-striktni cast **PENDING** (kohorta f55 neexistuje; exact-kept shoda
+  a `roll_deg`-present netestovany, ne PASS).
+
+## H6. Cleanup — PASS (overeno zive + disk)
+
+Live: `AE_VehicleSlot` znicen (`DestroyVehicle=true`), `Jeep_*` 0, bridge
+inbox/outbox 0/0 (void outbox verbatim precten pred cistenim, plne JSON nize
+v §H8). Postava po ejectu na (49.2,4.7,1.3) — primy presun neproveden
+(pouze side-effect niceni vozu); DOPORUCENI operatorovi preparkovat mimo
+drahu pred dalsi kampani (stala drive ve spawn-volumu a konfoun dovala
+behy). Disk: `git status` cisty krome tohoto reportu; `f55/` zamerne
+nevytvoren; sablona `.rbxm` nedotcena.
+(Stale `SeatPart=DriveSeat` po destroy je dangling reference klienta —
+neškodne, zmizi respawnem/smazem.)
+
+## H7. Mapovani F5 bodu 1–10 (E2-final)
+
+1. arbitrace → PASS (prikazy server→klient prokazany: S3-charakteristiky
+   v E-final-II; v teto kampani brzda neotestovana — behy voidovany pred
+   rampou; atributovy zapis/cteni overen pulsem 100→stop v smoke).
+2. init/slot auto-fill → ČÁSTEČNĚ (MCP pre-build overen 2× vc. Tune-readback
+   0.6; harness auto-fill v teto kampani nepotreban — slot pripraven;
+   FX3 `EnsureSlotName` zive pritomen).
+3. SUMMARY zdroj → PASS (z kept, exaktne — void-SUMMARY mean 0.427 sedel
+   z kept-run-docs (1.281+0+0)/3; C-1 zive potvrzen).
+4. rychlost 100±1 → PENDING + nalez H3 (gate bezi a prochazi; post-set
+   kolaps 100→2 za 80 ms — nova kriticka vada, horsi nez G4.2).
+5. ABS stav → PASS (read-only tvar ve vsech bezich; r2/r3 explicit
+   `chybi Values.ABSActive ve vozidle (Drive signal nezapsal)` — klientsky
+   Drive vinen, viz H3).
+6. roll kanal → PASS (`roll_deg` v kazdem kept-vzorku: 0.88/0.23/1.46°).
+7. cleanup → PASS.
+8. suite → PASS (155/0/4; f55-striktni PENDING bez dat).
+9. kampan 3+3 → BLOCKED (0/6; 3 voidy b06 > budget 2; b09 nebezeno).
+10. repeatabilita 5 % → PENDING (0 dat).
+
+## H8. Doporuceni (F5-CLOSURE se NEDOPORUCUJE)
+
+1. H1/D (kod, mimo muj mandat): post-set kolaps (H3) — overit osu/znamenko
+   omega v `ApplyT03StartSpeed` (`up×dir`), souboj klientsky Drive vs nucena
+   omega pri nil-ownership, default lock kol bez ridice; dale stale
+   `DriveSeat is not a valid member` (dangling Car-ref po destroy slotu —
+   rebind pri novem sezeni). Bez toho ma dalsi kampan predem dany BLOCKED.
+2. Operator: postava mimo drahu + spawn-vicinity audit pred kampani
+   (stala ve spawn-volumu; po ejectu na x=49.2 na trati).
+3. Pote znovu Agent E: nejdriv 1 smoke-beh (overit udrzeni 100 do prvniho
+   vzorku), pak 3+3 f55 + statistika + `test_summary_aggregate`
+   (ocekava PASS) → teprve pak F5-CLOSURE. `cfg_f55_b06/b09` = BrakeBias
+   0.6/0.9 (overeno, stvrdit).
+
+## H9. Priloha — void outbox verbatim (NEPLATNA data, proto mimo `f55/`)
+
+RUN-cfg_f55_b06-T03-r1 (2081 B):
+{"completion_status":"failed","errors":["first_sample_mimo_toleranci:cil=100.0_tol=1.0_mereno=32.77","first_sample_mimo_toleranci:cil=100.0_tol=1.0_mereno=32.77","nezastaveno_do_timeout"],"vehicle_id":"ae-test-vehicle","measurements":{"rate_hz":60,"summary":{"state":"failed","duration_s":0.016666666666666668,"t03":{"initial_speed_studs_s":100,"abs":{"active_samples":0,"active":false},"stopped":false,"brake_distance_studs":1.2810419913201612,"yaw_rate_max":1.9464170932769776,"peak_decel_studs_s2":588.6433695371421,"lat_deviation_studs":0.11279523372650147,"stopping_time_s":0.055265373550355437}},"outbox_decimation":{"full_samples":3,"step":1,"kept_samples":3},"sample_count":3,"samples":[{"rpm":0,"abs_active":false,"vel":{"y":0,"x":100,"z":0},"t":0.04019299894571304,"inputs":{"brake":0,"throttle":0,"steer":0},"roll_deg":0.8768453315768093,"abs_enabled":false,"yaw":0.14872749149799348,"gear":0,"yaw_rate":0,"pos":{"y":4.431347370147705,"x":1.4645273685455323,"z":-1.9774154424667359}},{"rpm":0,"abs_active":false,"vel":{"y":0,"x":100,"z":0},"t":0.04019299894571304,"inputs":{"brake":0,"throttle":0,"steer":0},"accel":{"y":0,"x":0,"z":0},"roll_deg":0.8768453315768093,"abs_enabled":false,"yaw":0.14872749149799348,"gear":0,"yaw_rate":0,"accel_raw":{"y":0,"x":0,"z":0},"pos":{"y":4.431347370147705,"x":1.4645273685455323,"z":-1.9774154424667359}},{"rpm":0,"abs_active":false,"vel":{"y":2.7454233169555666,"x":80.52700805664063,"z":-2.409090042114258},"t":0.055265373550355437,"inputs":{"brake":0,"throttle":0,"steer":0},"accel":{"y":82.3626937866211,"x":-584.1897583007813,"z":-72.27269744873047},"roll_deg":-1.3434941543166886,"abs_enabled":false,"yaw":0.172693133354187,"yaw_rate":1.9464170932769776,"accel_raw":{"y":164.7253875732422,"x":-1168.3795166015626,"z":-144.54539489746095},"pos":{"y":4.51284122467041,"x":2.740593910217285,"z":-2.0902106761932375}}]},"environment":{"code_version":"ae-harness-0.2.1","seed":103,"mode":"roblox-runtime"},"run_id":"RUN-cfg_f55_b06-T03-r1","config_id":"cfg_f55_b06","timestamp":"2026-11-18T11:05:47Z","scenario_id":"T03"}
+
+RUN-cfg_f55_b06-T03-r2 (1122 B):
+{"completion_status":"failed","errors":["first_sample_mimo_toleranci:cil=100.0_tol=1.0_mereno=86.60","first_sample_mimo_toleranci:cil=100.0_tol=1.0_mereno=86.60","nezastaveno_do_timeout"],"vehicle_id":"ae-test-vehicle","measurements":{"rate_hz":60,"summary":{"state":"failed","duration_s":0.016666666666666668,"t03":{"initial_speed_studs_s":100,"abs":{"reason":"chybi Values.ABSActive ve vozidle (Drive signal nezapsal)"},"stopped":false,"brake_distance_studs":0,"lat_deviation_studs":0,"stopping_time_s":0.02211875654757023}},"outbox_decimation":{"full_samples":1,"step":1,"kept_samples":1},"sample_count":1,"samples":[{"rpm":0,"abs_active":false,"vel":{"y":0,"x":100,"z":0},"t":0.02211875654757023,"inputs":{"brake":0,"throttle":0,"steer":0},"roll_deg":0.22622760469845827,"abs_enabled":false,"yaw":0.9195805788040161,"gear":0,"yaw_rate":0,"pos":{"y":4.399792671203613,"x":-3.685741662979126,"z":-2.9078469276428224}}]},"environment":{"code_version":"ae-harness-0.2.1","seed":103,"mode":"roblox-runtime"},"run_id":"RUN-cfg_f55_b06-T03-r2","config_id":"cfg_f55_b06","timestamp":"2026-11-18T11:05:47Z","scenario_id":"T03"}
+
+RUN-cfg_f55_b06-T03-r3 (1122 B silhouette):
+{"completion_status":"failed","errors":["first_sample_mimo_toleranci:cil=100.0_tol=1.0_mereno=91.60","first_sample_mimo_toleranci:cil=100.0_tol=1.0_mereno=91.60","nezastaveno_do_timeout"],"summary.t03":{"stopped":false,"brake_distance_studs":0,"stopping_time_s":0.01704719290137291,"abs":{"reason":"chybi Values.ABSActive ve vozidle (Drive signal nezapsal)"}},"sample_count":1,"samples":[{"vel":{"y":0,"x":100,"z":0},"pos":{"y":4.439549922943115,"x":0.39550310373306277,"z":-1.9514491558074952},"roll_deg":1.4570568281604344}]}
+
+SUMMARY-cfg_f55_b06-T03 (736 B):
+{"completion_status":"failed","type":"t03_summary","errors":["nektere_behy_nezastavily","rozptyl_drahy_nad_5_pct"],"vehicle_id":"ae-test-vehicle","measurements":{"samples":[],"rate_hz":60,"summary":{"brake_distance_max_studs":1.2810419913201612,"repeatability_ok":false,"run_ids":["RUN-cfg_f55_b06-T03-r1","RUN-cfg_f55_b06-T03-r2","RUN-cfg_f55_b06-T03-r3"],"brake_distance_delta_pct":300,"brake_distance_mean_studs":0.4270139971067204,"brake_distance_std_studs":0.6038889860314696,"brake_distance_min_studs":0,"n":3},"sample_count":0},"environment":{"mode":"roblox-runtime","code_version":"ae-harness-0.2.1","seed":103},"run_id":"SUMMARY-cfg_f55_b06-T03","config_id":"cfg_f55_b06","timestamp":"2026-11-18T11:05:48Z","scenario_id":"T03"}
+
+---
+# Beh E3 — izolace priciny post-set kolapsu (cista diagnostika, zadne opravy kodu)
+
+**Verdikt: PRICINA NALEZENA — kola se v teto session nemohou otacet (zablokovana
+rotacni DOF kol). Post-set kolaps 100→0 za ~0.7 s je mechanicky scrub
+zablokovanych kuli-cek (custom Friction 0.7, Elasticity 0.5) po asfaltu —
+nezavisly na brzde, jezdci, omega-presetu i kolizi. Zadny pocet briefu nemuze
+dat 6 platnych drah, dokud kola nebudou rotovat.**
+
+Session: `17ce64ee-a452-4e5c-b95d-45e66be3b314` (Play Solo, zivy kod FX3 `f2a3eaf`).
+Mandat: pouze docasne poznamky zde + manualni deploy/spawn pres MCP execute +
+cteni klienta + manualni nulovy brzda test. ZADNY kod, ZADNA telemetrie, ZADNY
+harness, ZADNY start_stop. Prace: vlastni rucni slot (`CloneVehicle→WriteTune
+0.6→Deploy→AE_VehicleSlot`), po mereni znicen (`DestroyVehicle=true`,
+`AE_VehicleSlot`/`Jeep_*` 0). Postava: pre-seat → eject mimo trat (20,10,30).
+Sablona `.rbxm` nedotcena, `git status` cisty krome tohoto reportu.
+
+## I1. Q1 — Chybi klientskemu Drive DriveSeat? POTVRZENO (dangling Car)
+
+- Klientsky `Drive` (LocalScript, `PlayerGui.A-Chassis Interface.Drive) cte
+  `local car = script.Parent.Car.Value` JEDNOU pri startu a dale pracuje
+  s `car.DriveSeat` (l.359 Steering, Aerodynamics l.16).
+- Zmereno na klientovi: `Car.Value.Parent = nil` (zniceny model),
+  `Car.Value ~= Workspace.AE_VehicleSlot` (neni stejna instance), zatimco zivy
+  slot `DriveSeat` primo obsahuje (server i klient).
+- Konzole: `DriveSeat is not a valid member of Model "AE_VehicleSlot"` kazdy
+  frame z `Drive:359` (function Steering, volano z l.1143) +
+  `Aerodynamics:16`. Drive je MRTEV — nikdy se nezotavi (stale `car` local).
+- Dusledek: `_IBrake/_GBrake` rampy, `#BV` torque, `Values.Brake/ABSActive`,
+  Drag/Downforce — NIC z toho klient neaktualizuje. `#BV` zustava na
+  defaultu 5000/target 0 (= zabrzdeno/parkovaci default). `Client execute`
+  funguje; chyba neni v pristupu, ale ve STALE referenci (po `DestroyVehicle`
+  zadny rebind `Car` na novy slot, zadne preklonovani Interface pri sezeni).
+
+## I2. Q2 — Znaminko/osy FX3 omega: SPRAVNE (vyvraceno jako pricina)
+
+- Vzorec `ApplyT03StartSpeed`: `axle = up×dir`, `omega = axle·(v/R)`, R=Size.X/2.
+  Overeni: smer +X, up +Y → axle = −Z; kontakt r=−R·up;
+  `V + omega×r = 100x̂ + (0,0,−74.07)×(0,−1.35,0) = (0.1,0,0) ≈ 0` — ciste
+  valeni bez prokluzu. Kola jsou koule R=1.35 (Size 2.7³, `PartType.Ball`),
+  takze R sedi pro libovolnou osu.
+- Zmereno: readback hned po setu `tireAV=(0,0,−74.07)` (drzi), `dsAV=0.
+- Zaver: znamenko i velikost SPRAVNE; kolaps je identicky s i bez omega
+  (§I3) → **omega-protismer VYVRACEN**.
+
+## I3. Q3 — Manualni coast test mimo harness (sedici ridic, nil 0/167, Brake=0)
+
+- S vlastni (ne FX3) omega, jen kola FL/FR/RL/RR, zbytek uhlove nula:
+  `100→80.8,52.6,34.0,27.0,20.3,10.2,2.6,1.2,…` za 0.1 s kroky (2 s okno).
+- Bez omega: `89,73,54,37,21,5,0,…` — IDENTICKA krivka (rozdil < 3).
+- Neobsazeno (eject, postava 30 studu mimo): `88,72,56,39,24,4,0,…` — stejne.
+- Cista draha x=20 (mimo StartLine): stejne. Settle pred setem rovina
+  (−2.5°, stabilni). Pozice POTVRZENA (20.2→57.6, dx=37.4, v_end≈0) — je to
+  realny pohyb + realne zastaveni, ne artefakt cteni.
+- Zaver: rychlost se bez brzdeni NEUDRZI; omega, obsazeni ani misto nemeni nic.
+
+## I4. Q4 — Tri hypotezy merenim
+
+(a) **Kolize (StartLine overlap / postava ve spawnu): VYVRACENA.**
+    StartLine je 0.1-studs lip (2×1.1×12, top y=0.1) — settle na x=2 i x=20
+    rovina (−2°/−3°). Cista draha x=20 kolabuje stejne. Rozhodujici: ve vzduchu
+    (Y 34→15) drzi V=100.0 presne 4/4 vzorku, rovina; az touchdown (Y≈5)
+    `V62/W44 → V60/W2`. Kontakt je NUTNY → bezkontaktni sila neni.
+(b) **Omega-protismer: VYVRACEN** (§I2).
+(c) **Drive-failsafe (mrtvy Drive + zamkove brzdy): POTVRZEN jako ramec,
+    ale #BV-lock SAM o sobe nestaci.**
+    - Mrtvy Drive (§I1) + `#BV` 4× `Motor,5000,0` (default) je realne
+      namereno. Drive zdroj (cteno z klienta): `#BV = brakeTerm + PBrake·V`
+      — bez ziveho Drive zustava parkovaci default.
+    - ALE: rucni `#BV=0` (readback 0/0 vsech 8 motoru) + volne klouby
+      (LimitsEnabled=false, osy srovnane +Z) → kolaps IDENTICKY; spin kol
+      `W74→2` do 0.1 s. Primy prikaz motorum `#AV=2000/30 rad/s`:
+      `dx=0.03` za 2 s — kola se VUBEC netoci ani prikazem.
+    - Precin: rotacni DOF kol je v teto session ZABLOKOVANA (preset i prikaz
+      zniceny v ms, bez prenosu sily na sasi — spin-only test: `vx=0.0`).
+      Podezreli pro H1: dual-hinge `#AV`+`#BV` na stejne naprave se zrcadlenymi
+      attachment-framy (overconstraint-bind), pripadne build-chyba
+      `Initialize`; mrtvy Drive to jen peceti (uvolneni nemozne).
+
+## I5. Presna pricina + minimalni fix-spec (kod nemenen, vlastnik H1/D)
+
+**Pricina:** kola sestavy se nemohou otacet (spin zabit v ms po kontaktu i pri
+nulovych motorech a volnych limitech) + mrtvy klientsky Drive (dangling `Car`
+→ `#BV` na parkovacim defaultu 5000 + `Values` zamrzle). Kazdy vnuceny
+100-preset se tak smykne na zamcenych koulich (custom Friction 0.7,
+Elasticity 0.5) za ~0.7 s / ~37 studu. FYZIKA, ne harness: gate i guardy
+pracuji spravne (voiduji s duvodem).
+
+**Fix-spec (poradi):**
+1. `JeepTemplate → A-Chassis Tune → A-Chassis Interface → Drive` (+
+   `Aerodynamics`): rebind `car` pri novem vozidle/sezeni + `nil`-guard
+   `car:FindFirstChild("DriveSeat")` misto primeho `car.DriveSeat` (l.359,
+   Aero l.16). Bez ziveho Drive nema smysl nic dal.
+2. `VehicleManager`/`Initialize` (H1): proc se kolo nemuze otocit —
+   overit dual `#AV`/`#BV` hinge-pair na jedne naprave (zrcadlene attachment
+   CFrame) + default `#BV=5000` (parkovaci) pri mrtvem Drive.
+3. `ScenarioRunner.SpawnT03Verified`/`VerifyT03Start`: pridat spin-hold gate
+   (kola W-preset → po 100 ms vyzadovat W > 50 % presetu), jinak void
+   `kola_se_netoci` — aparatura, ne fyzika.
+4. Az kola rotuji: re-run 1 smoke-coast (drzi 100 ≥ 1 s?) → pak teprve 3+3.
+
+Pozn. pro audit: `#Weight` (balast 95 hmoty, dno −0.2 pod drahou) je
+`CanCollide=false` (overeno ve zdroji `Initialize`: `weightB.CanCollide =
+false`) → NEskodi. `Drag/DownforceF/R` = 0. `MaxSpeed/Throttle` sedadla = 0.
+Vsech 18 overlapu s trati krome 4 kouli je nekolizni. Konzole po uklidu bez
+noveho spamu (slot znicen; postava mimo trat).
