@@ -18,7 +18,11 @@
       }
     },
     "ServerStorage": {
-      "$className": "ServerStorage"
+      "$className": "ServerStorage",
+      "VehicleTemplates": {
+        "$className": "Folder",
+        "$path": "src/ServerStorage/VehicleTemplates"
+      }
     },
     "StarterPlayer": {
       "$className": "StarterPlayer",
