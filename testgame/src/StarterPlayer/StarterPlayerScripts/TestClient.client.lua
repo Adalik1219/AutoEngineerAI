@@ -294,7 +294,8 @@ local function StartScenario(scenarioId: string, params: { [string]: any }?)
 		if driveCmd ~= nil then
 			driveSeq += 1
 			pcall(function()
-				;(driveCmd :: RemoteEvent):FireServer({
+				local dc = driveCmd :: RemoteEvent
+				dc:FireServer({
 					throttle = out.throttle,
 					brake = out.brake,
 					steer = out.steer,

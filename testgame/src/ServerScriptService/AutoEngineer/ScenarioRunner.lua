@@ -125,11 +125,12 @@ function ServerDrive.Reset(vehicle: Instance?)
 	ServerDrive._states[vehicle] = nil
 	ServerDrive._guardWarned[vehicle] = nil
 	pcall(function()
-		;(vehicle :: Instance):SetAttribute("AE_RPM", nil)
-		;(vehicle :: Instance):SetAttribute("AE_Gear", nil)
-		;(vehicle :: Instance):SetAttribute("AE_ThrotAct", nil)
-		;(vehicle :: Instance):SetAttribute("AE_BrakeAct", nil)
-		;(vehicle :: Instance):SetAttribute("AE_ABSActive", nil)
+		local veh = vehicle :: Instance
+		veh:SetAttribute("AE_RPM", nil)
+		veh:SetAttribute("AE_Gear", nil)
+		veh:SetAttribute("AE_ThrotAct", nil)
+		veh:SetAttribute("AE_BrakeAct", nil)
+		veh:SetAttribute("AE_ABSActive", nil)
 	end)
 end
 
@@ -559,11 +560,12 @@ function ServerDrive.Step(vehicle: Instance?, inThrottle: number, inBrake: numbe
 
 	-- Publikace stavu pro telemetrii (atributy; nil=manual mimo beh).
 	pcall(function()
-		;(vehicle :: Instance):SetAttribute("AE_RPM", math.floor(st.rpm + 0.5))
-		;(vehicle :: Instance):SetAttribute("AE_Gear", st.gear)
-		;(vehicle :: Instance):SetAttribute("AE_ThrotAct", throt)
-		;(vehicle :: Instance):SetAttribute("AE_BrakeAct", brake)
-		;(vehicle :: Instance):SetAttribute("AE_ABSActive", st.absActive)
+		local veh = vehicle :: Instance
+		veh:SetAttribute("AE_RPM", math.floor(st.rpm + 0.5))
+		veh:SetAttribute("AE_Gear", st.gear)
+		veh:SetAttribute("AE_ThrotAct", throt)
+		veh:SetAttribute("AE_BrakeAct", brake)
+		veh:SetAttribute("AE_ABSActive", st.absActive)
 	end)
 	return true, {
 		rpm = st.rpm,
