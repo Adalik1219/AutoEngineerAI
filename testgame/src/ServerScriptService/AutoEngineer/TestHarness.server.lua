@@ -705,13 +705,62 @@ local function main(): ()
 	-- dokud neprijde novejsi (stale >1.0 s = dead-man stop 0,0,0).
 	local lastManual: { [Instance]: any } = {}
 	local manualLoopOn = false
+	-- AC6 Occupant-only: prikaz patri hraci sedicimu v ridizenem vozidle.
+	-- Vraci (vehicle, humanoid) nebo (nil, nil). Vcetne overeni, ze sedadlo
+	-- patri prave tomuto slotu (Humanoid.SeatPart -> seat -> AE slot).
+	local function resolveOccupantVehicle(player: any): (Instance?, any)
+		local hum: any = nil
+		pcall(function()
+			local ch = (player :: Player).Character
+			if ch ~= nil then
+				hum = ch:FindFirstChildOfClass("Humanoid")
+			end
+		end)
+		if hum == nil then
+			return nil, nil
+		end
+		local seatPart: Instance? = nil
+		pcall(function()
+			seatPart = (hum :: Humanoid).SeatPart
+		end)
+		if seatPart == nil then
+			return nil, nil
+		end
+		local vehicle = findVehicleSlot()
+		if vehicle == nil then
+			return nil, nil
+		end
+		local seat: Instance? = nil
+		pcall(function()
+			seat = (vehicle :: Instance):FindFirstChild("DriveSeat", true)
+		end)
+		if seat == nil or seat ~= seatPart then
+			return nil, nil
+		end
+		if (seat :: VehicleSeat).Occupant ~= hum then
+			return nil, nil
+		end
+		return vehicle, hum
+	end
+	local function rejectDriveCmd(): ()
+		pcall(function()
+			local v = findVehicleSlot()
+			if v ~= nil then
+				local n = (v :: Instance):GetAttribute("AE_DriveCmdRejected")
+				if typeof(n) ~= "number" then
+					n = 0
+				end
+				(v :: Instance):SetAttribute("AE_DriveCmdRejected", (n :: number) + 1)
+			end
+		end)
+	end
 	local function ensureManualLoop(): ()
 		if manualLoopOn then
 			return
 		end
 		manualLoopOn = true
 		local hb = game:GetService("RunService").Heartbeat
-		hb:Connect(function()
+		hb:Connect(function(dt: number)
 			local targets: { Instance } = {}
 			for vehicle, _ in lastManual do
 				table.insert(targets, vehicle)
@@ -721,36 +770,84 @@ local function main(): ()
 				local ok = pcall(function()
 					if (vehicle :: Instance).Parent == nil then
 						lastManual[vehicle] = nil
+						if ScenarioRunner.ServerSteer ~= nil then
+							ScenarioRunner.ServerSteer.Forget(vehicle)
+						end
 						return
 					end
 					if activeVehicles[vehicle] == true then
 						return
 					end
+					-- AC6 prubezna autorizace: Occupant porad TEN humanoid.
+					-- Nesoulad (vystoupeni/vymena) = okamzite zruseni VSTUPNIHO
+					-- entry (plyn/brzda 0 pres ClearDriveInputs); steering stav
+					-- preziva a dorovna pres Settle (Step bezi dal).
+					local seat: Instance? = nil
+					pcall(function()
+						seat = (vehicle :: Instance):FindFirstChild("DriveSeat", true)
+					end)
+					if seat == nil or (seat :: VehicleSeat).Occupant ~= entry.humanoid then
+						ScenarioRunner.ClearDriveInputs(vehicle)
+						lastManual[vehicle] = nil
+						return
+					end
 					if os.clock() - (entry.t :: number) > 1.0 then
 						-- Dead-man: stejny klidovy stav jako konec repliky
-						-- (ClearDriveInputs 0,0,0 + Reset server-pohonu).
+						-- (ClearDriveInputs 0,0,0 + Reset server-pohonu + Settle).
 						ScenarioRunner.ClearDriveInputs(vehicle)
 						lastManual[vehicle] = nil
 						return
 					end
 					local c = entry.cmd
 					ScenarioRunner.WriteDriveAttributes(vehicle, c.throttle, c.brake, c.steer, "manual")
+					if ScenarioRunner.ServerSteer ~= nil then
+						local okS, errS = ScenarioRunner.ServerSteer.Step(vehicle, c.steer, dt)
+						if not okS then
+							warn(string.format("[AE_SERVER_STEER] %s", tostring(errS)))
+						end
+					end
 				end)
 				if not ok then
 					lastManual[vehicle] = nil
 				end
 			end
+			-- Dopad navratu kol po zrusenem entry: steerT=0, Step bezi dal,
+			-- dokud IsCentered; replay-beh ma prednost (preskocit).
+			if ScenarioRunner.ServerSteer ~= nil then
+				for _, vehicle in ScenarioRunner.ServerSteer.SettlingList() do
+					pcall(function()
+						if (vehicle :: Instance).Parent == nil then
+							ScenarioRunner.ServerSteer.Forget(vehicle)
+							return
+						end
+						if activeVehicles[vehicle] == true then
+							return
+						end
+						local okS, errS = ScenarioRunner.ServerSteer.Step(vehicle, 0, dt)
+						if not okS then
+							warn(string.format("[AE_SERVER_STEER settle] %s", tostring(errS)))
+							ScenarioRunner.ServerSteer.Forget(vehicle)
+							return
+						end
+						if ScenarioRunner.ServerSteer.IsCentered(vehicle) then
+							ScenarioRunner.ServerSteer.Forget(vehicle)
+						end
+					end)
+				end
+			end
 		end)
 	end
-	RuntimeController.BindDriveCmd(remotes, function(_player: any, cmd: any)
-		local vehicle = findVehicleSlot()
+	RuntimeController.BindDriveCmd(remotes, function(player: any, cmd: any)
+		-- AC6 Occupant-only (F7.2): bez sediciho ridice se povel ignoruje.
+		local vehicle, hum = resolveOccupantVehicle(player)
 		if vehicle == nil then
+			rejectDriveCmd()
 			return
 		end
 		if activeVehicles[vehicle] == true then
 			return
 		end
-		lastManual[vehicle] = { cmd = cmd, t = os.clock() }
+		lastManual[vehicle] = { cmd = cmd, t = os.clock(), player = player, humanoid = hum }
 		ensureManualLoop()
 		ScenarioRunner.WriteDriveAttributes(vehicle, cmd.throttle, cmd.brake, cmd.steer, "manual")
 	end)

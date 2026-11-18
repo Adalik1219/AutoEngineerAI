@@ -1286,6 +1286,434 @@ function ScenarioRunner:DriverInputs(t: number, x: number?): (number, number, nu
 	end
 end
 
+-- =====================================================================
+-- F7.2 ServerSteer: server-side kinematicky steering (port A-Chassis 'New').
+-- Zdroj: Drive LocalScript blok [[Steering]] r. 322-380 + Tune [[Steering]].
+-- Princip: absolutni CFrame zapis cepu Arm.Steer relativne k Base, kazdy tick,
+-- doslovny vzorec Drive (F-set {F,FL,FR}; R-set vynechan, FWSteer='None').
+-- Zivotni cyklus (AC6): vstupni entry (manual loop) je NEZAVISLA na internim
+-- stavu steerC — zruseni entry nuluje prikaz (steerT=0), Step se vola dal pres
+-- ServerSteer.Settle(vehicle), dokud se kola nenarovnaji (ReturnSpeed).
+-- Fail-closed: chybi-li Arm/Steer/Base u pritomne sady -> ZADNY zapis.
+-- =====================================================================
+local ServerSteer = {}
+ServerSteer._states = {} -- [vehicle] = { steerC:number, tune:any }
+ServerSteer._settling = {} -- [vehicle] = true (dopad navratu po zruseni entry)
+ServerSteer._warnedValues = {} -- [vehicle] = true (Values.SteerC chybi, warn 1x)
+ServerSteer.MAXTICKS = 3 -- dt-strop (D1): ticks=min(dt*60,0,3)
+ServerSteer.CENTER_STEERC = 0.005 -- |steerC| pod prahem = narovnano
+ScenarioRunner.ServerSteer = ServerSteer
+
+local STEER_SETS = { "F", "FL", "FR" }
+
+-- Unikatni identita dilu v ramci slotu (S0/B): plna cesta + trida + velikost.
+-- Zachyti i vymenu dilu za jiny stejho jmena/tridy/rodice (velikost se lisi).
+-- Zbytkove riziko (identicky dvojnik) je mimo scope a je zapsano v planu.
+local function ssPartIdentity(slot: Instance, d: Instance): string
+	local rel = d:GetFullName()
+	local prefix = slot:GetFullName() .. "."
+	if string.sub(rel, 1, #prefix) == prefix then
+		rel = string.sub(rel, #prefix + 1)
+	end
+	local extra = "-"
+	if d:IsA("BasePart") then
+		local s = (d :: BasePart).Size
+		extra = string.format("%.3f,%.3f,%.3f", s.X, s.Y, s.Z)
+	end
+	return rel .. "|" .. d.ClassName .. "|" .. extra
+end
+
+-- S0: vychozi snapshot struktury vozidla (pred kazdou jizdou).
+-- { count, parts={[id]=true}, roots={[rootId]={path,anchored,owner}},
+--   av, bv, heights={[kolo]={baseY,centerY}} }
+function ScenarioRunner.SnapshotVehicle(vehicle: Instance?): (any?, string?)
+	if vehicle == nil then
+		return nil, "chybi_vozidlo"
+	end
+	local snap: any = { parts = {}, roots = {}, heights = {}, count = 0, av = 0, bv = 0 }
+	local ok, err = pcall(function()
+		local veh = vehicle :: Instance
+		for _, d in veh:GetDescendants() do
+			snap.count += 1
+			snap.parts[ssPartIdentity(veh, d)] = true
+			if d:IsA("HingeConstraint") then
+				if d.Name == "#AV" then
+					snap.av += 1
+				elseif d.Name == "#BV" then
+					snap.bv += 1
+				end
+			end
+		end
+		-- unikatni assembly roots pres BaseParty
+		local seen: { [Instance]: boolean } = {}
+		for _, d in veh:GetDescendants() do
+			if d:IsA("BasePart") then
+				local rok, root = pcall(function()
+					return (d :: BasePart):GetAssemblyRootPart()
+				end)
+				if rok and root ~= nil and seen[root] ~= true then
+					seen[root] = true
+					local own: string? = nil
+					pcall(function()
+						local o = (root :: BasePart):GetNetworkOwner()
+						if o ~= nil then
+							own = o.Name
+						end
+					end)
+					snap.roots[ssPartIdentity(veh, root)] = {
+						path = (root :: Instance):GetFullName(),
+						anchored = (root :: BasePart).Anchored,
+						owner = own,
+					}
+				end
+			end
+		end
+		-- staticke vysky: kola (prima BasePart deti Wheels) + Base prednich sad
+		local wheels: Instance? = nil
+		pcall(function()
+			wheels = veh:FindFirstChild("Wheels", true)
+		end)
+		if wheels ~= nil then
+			for _, w in (wheels :: Instance):GetChildren() do
+				if w:IsA("BasePart") then
+					snap.heights[w.Name .. ".tire"] = (w :: BasePart).Position.Y
+				else
+					local base: Instance? = nil
+					pcall(function()
+						base = (w :: Instance):FindFirstChild("Base")
+					end)
+					if base ~= nil and (base :: Instance):IsA("BasePart") then
+						snap.heights[w.Name .. ".base"] = (base :: BasePart).Position.Y
+					end
+				end
+			end
+		end
+	end)
+	if not ok then
+		return nil, "snapshot_selhal:" .. tostring(err)
+	end
+	return snap, nil
+end
+
+-- S0: porovnani aktualniho stavu se snapshotem. (true,{}) nebo (false, diffs).
+function ScenarioRunner.DiffSnapshot(vehicle: Instance?, snap: any): (boolean, { string })
+	local diffs: { string } = {}
+	if vehicle == nil then
+		return false, { "chybi_vozidlo" }
+	end
+	if snap == nil then
+		return false, { "chybi_snapshot" }
+	end
+	pcall(function()
+		local veh = vehicle :: Instance
+		local count = 0
+		local cur: { [string]: boolean } = {}
+		for _, d in veh:GetDescendants() do
+			count += 1
+			cur[ssPartIdentity(veh, d)] = true
+		end
+		if count ~= (snap.count :: number) then
+			table.insert(diffs, string.format("pocet_dilu:%s->%s", tostring(snap.count), tostring(count)))
+		end
+		for id, _ in snap.parts do
+			if cur[id] ~= true then
+				table.insert(diffs, "chybi_dil:" .. tostring(id))
+			end
+		end
+		for id, _ in cur do
+			if (snap.parts :: any)[id] ~= true then
+				table.insert(diffs, "novy_dil:" .. tostring(id))
+			end
+		end
+		-- roots: znovu sestavit a porovnat (AC7 re-enumerace)
+		local seen: { [Instance]: boolean } = {}
+		local curRoots: { [string]: any } = {}
+		for _, d in veh:GetDescendants() do
+			if d:IsA("BasePart") then
+				local rok, root = pcall(function()
+					return (d :: BasePart):GetAssemblyRootPart()
+				end)
+				if rok and root ~= nil and seen[root] ~= true then
+					seen[root] = true
+					local own: string? = nil
+					pcall(function()
+						local o = (root :: BasePart):GetNetworkOwner()
+						if o ~= nil then
+							own = o.Name
+						end
+					end)
+					curRoots[ssPartIdentity(veh, root)] = {
+						anchored = (root :: BasePart).Anchored,
+						owner = own,
+					}
+				end
+			end
+		end
+		for id, r in snap.roots do
+			local c = curRoots[id]
+			if c == nil then
+				table.insert(diffs, "chybi_root:" .. tostring(id))
+			else
+				if (c :: any).anchored ~= (r :: any).anchored then
+					table.insert(diffs, "zmena_anchored:" .. tostring(id))
+				end
+				if (c :: any).owner ~= (r :: any).owner then
+					table.insert(
+						diffs,
+						string.format("zmena_owneru:%s:%s->%s", tostring(id), tostring((r :: any).owner), tostring((c :: any).owner))
+					)
+				end
+			end
+		end
+		for id, _ in curRoots do
+			if (snap.roots :: any)[id] == nil then
+				table.insert(diffs, "novy_root:" .. tostring(id))
+			end
+		end
+		-- #AV/#BV pocty
+		local av, bv = 0, 0
+		for _, d in veh:GetDescendants() do
+			if d:IsA("HingeConstraint") then
+				if d.Name == "#AV" then
+					av += 1
+				elseif d.Name == "#BV" then
+					bv += 1
+				end
+			end
+		end
+		if av ~= (snap.av :: number) then
+			table.insert(diffs, string.format("pocet_AV:%s->%s", tostring(snap.av), tostring(av)))
+		end
+		if bv ~= (snap.bv :: number) then
+			table.insert(diffs, string.format("pocet_BV:%s->%s", tostring(snap.bv), tostring(bv)))
+		end
+	end)
+	return #diffs == 0, diffs
+end
+
+-- Relativni natoceni ridiciho cepu vuci zakladne (D3/AC4): {sada=stupne}.
+function ServerSteer.MeasureAngles(vehicle: Instance?): ({ [string]: number }?, string?)
+	if vehicle == nil then
+		return nil, "chybi_vozidlo"
+	end
+	local out: { [string]: number } = {}
+	local fail: string? = nil
+	pcall(function()
+		local veh = vehicle :: Instance
+		local wheels = veh:FindFirstChild("Wheels", true)
+		if wheels == nil then
+			fail = "chybi_Wheels"
+			return
+		end
+		for _, setName in STEER_SETS do
+			local folder = (wheels :: Instance):FindFirstChild(setName)
+			if folder == nil then
+				continue
+			end
+			local arm = folder:FindFirstChild("Arm")
+			local steerP = arm and arm:FindFirstChild("Steer")
+			local base = folder:FindFirstChild("Base")
+			if arm == nil or steerP == nil or base == nil then
+				fail = "nekompletni_sada:" .. setName
+				return
+			end
+			local rel: CFrame = ((base :: BasePart).CFrame:ToObjectSpace((steerP :: BasePart).CFrame))
+			local _rx, ry, _rz = rel:ToOrientation()
+			out[setName] = math.deg(ry)
+		end
+	end)
+	if fail ~= nil then
+		return nil, fail
+	end
+	return out, nil
+end
+
+-- Hlavni krok rizeni: steerT (-1..1, uz validovane/clampnute), dt ze Heartbeat.
+-- Vraci (true) nebo (false, duvod). Fail-closed: zadny castecny zapis na kola.
+function ServerSteer.Step(vehicle: Instance?, steerT: number?, dtRaw: number?): (boolean, string?)
+	if vehicle == nil then
+		return false, "chybi_vozidlo"
+	end
+	local veh = vehicle :: Instance
+	local tune = sdReadTune(veh)
+	if tune == nil then
+		return false, "chybi_Tune"
+	end
+	if tune.SteeringType ~= "New" then
+		return false, "steering_type_ne_new:" .. tostring(tune.SteeringType)
+	end
+	for _, k in { "SteerSpeed", "ReturnSpeed", "SteerDecay", "MinSteer", "SteerRatio", "LockToLock", "Ackerman", "SteerInner" } do
+		if typeof(tune[k]) ~= "number" then
+			return false, "chybi_Tune_klic:" .. k
+		end
+	end
+	local seat = sdReadSeat(veh)
+	if seat == nil then
+		return false, "chybi_DriveSeat"
+	end
+	local st = ServerSteer._states[veh]
+	if st == nil or st.tune ~= tune then
+		st = { steerC = 0, tune = tune }
+		ServerSteer._states[veh] = st
+	end
+	local cmd = 0
+	if typeof(steerT) == "number" then
+		cmd = math.max(-1, math.min(1, steerT :: number))
+	end
+	-- D1: dt-strop (ticks=min(dt*60,0,3)); bezny provoz = matematicka ekvivalence.
+	local ticks = 1
+	if typeof(dtRaw) == "number" and (dtRaw :: number) > 0 then
+		ticks = math.min((dtRaw :: number) * 60, ServerSteer.MAXTICKS)
+	end
+	-- Rampa (doslovny Drive 344-356).
+	local sc: number = st.steerC
+	if sc < cmd then
+		sc = if sc < 0 then math.min(cmd, sc + (tune.ReturnSpeed :: number) * ticks) else math.min(cmd, sc + (tune.SteerSpeed :: number) * ticks)
+	else
+		sc = if sc > 0 then math.max(cmd, sc - (tune.ReturnSpeed :: number) * ticks) else math.max(cmd, sc - (tune.SteerSpeed :: number) * ticks)
+	end
+	st.steerC = sc
+	-- Konstanty (Drive 325-326) + sDecay (Drive 359).
+	local outer: number = (tune.LockToLock * 180) / tune.SteerRatio
+	local inner: number = math.min(outer - (outer * (1 - tune.Ackerman)), outer * 1.2)
+	local vmag = 0
+	pcall(function()
+		vmag = (seat :: VehicleSeat).AssemblyLinearVelocity.Magnitude
+	end)
+	local sDecay: number = 1 - math.min(vmag / (tune.SteerDecay :: number), 1 - ((tune.MinSteer :: number) / 100))
+	-- Dvoufasove: validuj vsechny pritomne sady, pak zapis (zadny castecny).
+	local wheels: Instance? = nil
+	pcall(function()
+		wheels = veh:FindFirstChild("Wheels", true)
+	end)
+	if wheels == nil then
+		return false, "chybi_Wheels"
+	end
+	type SteerJob = { steer: BasePart, base: BasePart, deg: number }
+	local jobs: { SteerJob } = {}
+	local found = 0
+	for _, setName in STEER_SETS do
+		local folder: Instance? = nil
+		pcall(function()
+			folder = (wheels :: Instance):FindFirstChild(setName)
+		end)
+		if folder == nil then
+			continue
+		end
+		found += 1
+		local arm: Instance? = nil
+		local steerP: Instance? = nil
+		local base: Instance? = nil
+		pcall(function()
+			arm = (folder :: Instance):FindFirstChild("Arm")
+			if arm ~= nil then
+				steerP = (arm :: Instance):FindFirstChild("Steer")
+			end
+			base = (folder :: Instance):FindFirstChild("Base")
+		end)
+		if arm == nil or steerP == nil or base == nil then
+			return false, "nekompletni_sada:" .. setName
+		end
+		if not (steerP :: Instance):IsA("BasePart") or not (base :: Instance):IsA("BasePart") then
+			return false, "steer_base_nejenom_part:" .. setName
+		end
+		local deg: number
+		if setName == "F" then
+			deg = -math.deg(sc * (tune.SteerInner :: number) * sDecay) -- doslovne Drive 365
+		elseif setName == "FL" then
+			deg = if sc >= 0 then -math.deg(sc * outer * sDecay) else -math.deg(sc * inner * sDecay)
+		else -- FR
+			deg = if sc >= 0 then -math.deg(sc * inner * sDecay) else -math.deg(sc * outer * sDecay)
+		end
+		table.insert(jobs, { steer = steerP :: BasePart, base = base :: BasePart, deg = deg })
+	end
+	if found == 0 then
+		return false, "zadna_predni_sada"
+	end
+	for _, j in jobs do
+		local okW = pcall(function()
+			(j.steer :: BasePart).CFrame = (j.base :: BasePart).CFrame * CFrame.Angles(0, math.rad(j.deg :: number), 0)
+		end)
+		if not okW then
+			return false, "zapis_CFrame_selhal"
+		end
+	end
+	-- Publikace: AE_SteerC (telemetrie/D3/AC4) + Values.SteerC (SS6 kanal).
+	pcall(function()
+		veh:SetAttribute("AE_SteerC", sc)
+	end)
+	local vals: Instance? = nil
+	pcall(function()
+		vals = veh:FindFirstChild("Values", true)
+	end)
+	local sv: Instance? = nil
+	if vals ~= nil then
+		pcall(function()
+			sv = (vals :: Instance):FindFirstChild("SteerC")
+		end)
+	end
+	if sv ~= nil and (sv :: Instance):IsA("NumberValue") then
+		pcall(function()
+			(sv :: NumberValue).Value = sc
+		end)
+	elseif ServerSteer._warnedValues[veh] ~= true then
+		ServerSteer._warnedValues[veh] = true
+		warn("[AE_SERVER_STEER] chybi Values.SteerC (SS6 friction neuvidi rejd)")
+	end
+	return true, nil
+end
+
+-- Settle: po zruseni entry pokracovat Step(steerT=0) az do narovnani.
+function ServerSteer.Settle(vehicle: Instance?): ()
+	if vehicle == nil then
+		return
+	end
+	ServerSteer._settling[vehicle :: Instance] = true
+end
+
+-- Forget: vozidlo pryc / plny uklid po narovnani.
+function ServerSteer.Forget(vehicle: Instance?): ()
+	if vehicle == nil then
+		return
+	end
+	ServerSteer._settling[vehicle :: Instance] = nil
+	ServerSteer._states[vehicle :: Instance] = nil
+	ServerSteer._warnedValues[vehicle :: Instance] = nil
+end
+
+-- Seznam vozidel cekajicich na dorovnani (snapshot pro smycku).
+function ServerSteer.SettlingList(): { Instance }
+	local out: { Instance } = {}
+	for vehicle, _ in ServerSteer._settling do
+		table.insert(out, vehicle)
+	end
+	return out
+end
+
+-- Narovnano: stav chybi nebo |steerC| pod prahem (kolo nasleduje automaticky,
+-- protoze Step pise absolutni CFrame kazdy tick).
+function ServerSteer.IsCentered(vehicle: Instance?): boolean
+	if vehicle == nil then
+		return true
+	end
+	local st = ServerSteer._states[vehicle :: Instance]
+	if st == nil then
+		return true
+	end
+	return math.abs(st.steerC) <= ServerSteer.CENTER_STEERC
+end
+
+function ServerSteer.GetSteerC(vehicle: Instance?): number?
+	if vehicle == nil then
+		return nil
+	end
+	local st = ServerSteer._states[vehicle :: Instance]
+	if st == nil then
+		return nil
+	end
+	return st.steerC
+end
+
 -- F4.4 F3 / F5-A arbitrace: zapis ridiciho vystupu do atributu vozu (server->klient replikace).
 -- Drive mustek (VehicleManager.ApplyDriveInputBridge) v Heartbeat smycce PREBIRA pritomne
 -- atributy do _IBrake/_IThrot/_GSteerT: server je JEDINY urcujici zapisovac (autonomni rezim).
@@ -1346,8 +1774,10 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 		ScenarioRunner.CheckBrakeDiag(vehicle, brake)
 	end
 	-- Konec behu (nil,nil,nil = navrat do manualu): reset server-pohonu.
+	-- F7.2: steering stav preziva (Settle dorovna pres ReturnSpeed), viz AC6.
 	if throttle == nil and brake == nil and steer == nil then
 		ServerDrive.Reset(vehicle)
+		ServerSteer.Settle(vehicle)
 	end
 	-- F7.1: plyn>0 v straight_accel -> server-autoritativni pohon (ServerDrive,
 	-- verny port Drive: #AV moment + #BV plna formule vcetne EBrake/tqABS).
@@ -1526,6 +1956,8 @@ function ScenarioRunner.ClearDriveInputs(vehicle: Instance?): (boolean, string?)
 	ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0)
 	-- F7.1: s nulovanim vstupu reset server-pohonu (gear/RPM/rampa/stav + AE_* atributy).
 	ServerDrive.Reset(vehicle)
+	-- F7.2: steering entry zruseno, stav preziva a dorovna pres Settle (AC6).
+	ServerSteer.Settle(vehicle)
 	local ok, b, t, s = pcall(function()
 		return (vehicle :: Instance):GetAttribute("AE_Brake"),
 			(vehicle :: Instance):GetAttribute("AE_Throttle"),
