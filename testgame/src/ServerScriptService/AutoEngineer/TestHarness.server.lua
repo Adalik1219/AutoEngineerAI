@@ -17,6 +17,7 @@
 
 local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
 
 local NS = ReplicatedStorage:WaitForChild("AutoEngineer")
 local Shared = NS:WaitForChild("Shared")
@@ -194,6 +195,47 @@ local function buildOutboxDoc(output: any, fullSamples: any, recomputeT03: boole
 	}
 end
 
+-- F7.1-RAW: plna telemetrie (collector.samples) do outboxu po strankach.
+-- Outbox StringValue limit ~200 kB: chunk 150 kB, manifest + p1..pN.
+-- Ctenar spoji p1..pN v poradi, overi delku/vzorky/hranice proti kept.
+local function writeRawChunks(bridge: Folder, runId: string, fullSamples: any): number
+	local outbox = bridge:FindFirstChild("outbox")
+	if outbox == nil or typeof(fullSamples) ~= "table" or #fullSamples == 0 then
+		return 0
+	end
+	local ok, encoded = pcall(function()
+		return HttpService:JSONEncode(fullSamples)
+	end)
+	if not ok or typeof(encoded) ~= "string" or #encoded == 0 then
+		return 0
+	end
+	local chunkSize = 150000
+	local total = #encoded
+	local pages = math.ceil(total / chunkSize)
+	for i = 1, pages do
+		local part = string.sub(encoded, (i - 1) * chunkSize + 1, i * chunkSize)
+		local sv = Instance.new("StringValue")
+		sv.Name = string.format("RAW-%s-p%d", runId, i)
+		sv.Value = part
+		sv.Parent = outbox
+	end
+	local mok, manifest = pcall(function()
+		return HttpService:JSONEncode({
+			run_id = runId,
+			pages = pages,
+			full_samples = #fullSamples,
+			bytes_total = total,
+		})
+	end)
+	if mok and typeof(manifest) == "string" then
+		local mv = Instance.new("StringValue")
+		mv.Name = string.format("RAW-%s-manifest", runId)
+		mv.Value = manifest
+		mv.Parent = outbox
+	end
+	return pages
+end
+
 local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Folder, rep: number): (any, any)
 	local runId = string.format("RUN-%s-%s-r%d", tostring(config.config_id or "nocfg"), def.scenario_id, rep)
 	local runner = ScenarioRunner.new({})
@@ -263,6 +305,9 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	end
 	collector:Start()
 	local t = 0
+	-- F7.1-T01B: posledni znama souradnice x pro pozicni faze DriverInputs
+	-- (1 tick zpozdeni; pri 200 studs/s ≈ 3.5 studs, v rezerve brzdy).
+	local lastX: number? = nil
 	local step = 1 / ScenarioDefinitions.SAMPLE_RATE_HZ
 	local status = "running"
 	-- F5-FX2 first-sample entry check (post-gate bleed, D-2, pouze T03):
@@ -275,10 +320,13 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	while status == "running" do
 		task.wait(step)
 		t += step
-		local throttle, brake, steer = runner:DriverInputs(t)
+		local throttle, brake, steer = runner:DriverInputs(t, lastX)
 		ScenarioRunner.WriteDriveAttributes(vehicle, throttle, brake, steer, def.kind)
 		collector:SetInputs(throttle, brake, steer)
 		local sample = collector:SampleOnce(t)
+		if sample ~= nil and typeof((sample :: any).pos) == "table" and typeof((((sample :: any).pos) :: any).x) == "number" then
+			lastX = ((((sample :: any).pos) :: any).x :: number)
+		end
 		if sample == nil then
 			table.insert(errors, "chybi_merici_part")
 		end
@@ -310,6 +358,16 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 
 	runner:Finish(status, runner.failReason, vehicle)
 	collector:Stop()
+	-- F7.1-RAW: plne vzorky do outboxu po strankach (manifest + p1..pN),
+	-- PRED sestavenim outputu, aby pripadna chyba byla ve vypisu.
+	-- Jen T01B (T01/T03 by zbytecne zahlcovaly outbox ~19 chunky na repliku).
+	local rawPages = 0
+	if def.kind == "straight_accel_brake" then
+		rawPages = writeRawChunks(bridge, runId, collector.samples)
+	end
+	if def.kind == "straight_accel_brake" and rawPages == 0 then
+		table.insert(errors, "raw_telemetrie_nezapsana")
+	end
 	-- F5-FX2 stuck-brake: na konci behu EXPLICITNE 0,0,0 + overeni, pak teprve
 	-- nil (navrat do manualniho rezimu; _IBrake zustane na 0, ne zaseknuta 1.0).
 	if vehicle ~= nil then
@@ -337,6 +395,16 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 			table.insert(errors, "t03_metriky_selhaly:" .. tostring(merr))
 		end
 	end
+	-- F7.1-T01B: metriky gate + dobrzdeni z plnych vzorku do summary behu.
+	local t01bmetrics: any? = nil
+	if def.kind == "straight_accel_brake" then
+		local m, merr = ScenarioRunner.ComputeT01BMetrics(collector.samples, def)
+		if m ~= nil then
+			t01bmetrics = m
+		else
+			table.insert(errors, "t01b_metriky_selhaly:" .. tostring(merr))
+		end
+	end
 	local output = collector:GetRunOutput({
 		run_id = runId,
 		scenario_id = def.scenario_id,
@@ -346,7 +414,13 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 		code_version = CODE_VERSION,
 		completion_status = completion,
 		errors = errors,
-		summary = { duration_s = t, state = runner:GetState(), t03 = t03metrics },
+		summary = {
+			duration_s = t,
+			state = runner:GetState(),
+			t03 = t03metrics,
+			t01b = t01bmetrics,
+			completion_reason = runner.completionReason,
+		},
 	})
 	local ok, _ = TelemetrySchema.ValidateRun(output)
 	if not ok then

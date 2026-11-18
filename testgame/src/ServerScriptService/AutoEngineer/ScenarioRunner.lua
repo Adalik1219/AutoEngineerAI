@@ -640,6 +640,9 @@ function ScenarioRunner.new(opts: any): any
 	self.failReason = nil
 	self.inputHashParts = {}
 	self.stopT = nil -- T03: cas prvniho poklesu XZ-rychlosti pod stopSpeed
+	self.gateT = nil -- T01B: cas prekonani gate
+	self.gateV = nil -- T01B: rychlost pri prekonani gate
+	self.completionReason = nil -- T01B: 'finish_gate_crossed' pri cistem dokonceni
 	self.startInfo = nil -- F5 Agent D: vysledek overeni startu T03 (info z VerifyT03Start)
 	self.absPending = nil -- F5 Agent D: "pending:<duvod>" ABS, nelze-li overit z Tune
 	return self
@@ -1072,6 +1075,9 @@ function ScenarioRunner:Reset(): ()
 	self.failReason = nil
 	self.inputHashParts = {}
 	self.stopT = nil
+	self.gateT = nil
+	self.gateV = nil
+	self.completionReason = nil
 	self.startInfo = nil
 	self.absPending = nil
 end
@@ -1090,6 +1096,9 @@ function ScenarioRunner:Spawn(def: any, runId: string, vehicle: Instance?, spawn
 	self.state = ScenarioRunner.State.SPAWN
 	self.t = 0
 	self.stopT = nil
+	self.gateT = nil
+	self.gateV = nil
+	self.completionReason = nil
 	self.startInfo = nil
 	self.absPending = nil
 	-- FX3 (G4.3/G4.1): jeden slot + server-ownership pred nulovanim (best-effort;
@@ -1232,10 +1241,21 @@ function ScenarioRunner:SpawnT03Verified(vehicle: Instance?, spawnCFrame: CFrame
 end
 
 -- Deterministicky ridic: vraci (throttle, brake, steer) pro dany cas.
-function ScenarioRunner:DriverInputs(t: number): (number, number, number)
+function ScenarioRunner:DriverInputs(t: number, x: number?): (number, number, number)
 	local kind = if self.def ~= nil then self.def.kind else "straight_accel"
 	if kind == "straight_brake_100_0" then
 		return 0, math.clamp(t / 0.15, 0, 1), 0
+	elseif kind == "straight_accel_brake" then
+		-- F7.1-T01B: faze rizena pozici (x = posledni znama PrimaryPart.x).
+		-- Plyn do brake_start_x, pak plna server-brzda do vyhodnoceni.
+		local cut = 2500
+		if self.def ~= nil and typeof((self.def :: any).brake_start_x) == "number" then
+			cut = (self.def :: any).brake_start_x
+		end
+		if typeof(x) == "number" and (x :: number) >= cut then
+			return 0, 1, 0
+		end
+		return math.clamp(t / 0.2, 0, 1), 0, 0
 	elseif kind == "lane_change" then
 		-- Replay: jedna perioda sinu od t=5 s (identicke vstupy pro kazdou variantu).
 		local steer = 0
@@ -1268,8 +1288,8 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 	end
 	local kind = if typeof(scenarioKind) == "string" then scenarioKind else "unknown"
 	-- F7.1-T03-guard: v T03 je plyn vzdy 0 (baseline nesmi uhnout; assert).
-	-- Plyn je povolen jen straight_accel (replay T01/T02) a manual (zive rizeni
-	-- pres AEDriveCmd); jinde se ignoruje. Steer server do F7.2 nepouziva.
+	-- Plyn je povolen jen straight_accel (replay T01/T02), straight_accel_brake
+	-- (T01B collision-free) a manual (zive rizeni pres AEDriveCmd); jinde se ignoruje. Steer server do F7.2 nepouziva.
 	if typeof(throttle) == "number" and (throttle :: number) > 0 then
 		if kind == "straight_brake_100_0" then
 			if ServerDrive._guardWarned[vehicle] ~= true then
@@ -1277,10 +1297,10 @@ function ScenarioRunner.WriteDriveAttributes(vehicle: Instance?, throttle: numbe
 				warn("[AE_THROTTLE_GUARD] plyn v T03 ignorovan (baseline ochrana)")
 			end
 			throttle = 0
-		elseif kind ~= "straight_accel" and kind ~= "manual" then
+		elseif kind ~= "straight_accel" and kind ~= "straight_accel_brake" and kind ~= "manual" then
 			if ServerDrive._guardWarned[vehicle] ~= true then
 				ServerDrive._guardWarned[vehicle] = true
-				warn(string.format("[AE_THROTTLE_GUARD] plyn ignorovan:kind=%s (povolen jen straight_accel/manual)", kind))
+				warn(string.format("[AE_THROTTLE_GUARD] plyn ignorovan:kind=%s (povolen jen straight_accel/straight_accel_brake/manual)", kind))
 			end
 			throttle = 0
 		end
@@ -1560,7 +1580,52 @@ function ScenarioRunner:Evaluate(sample: any, def: any, t: number): string
 			end
 		end
 	end
+	-- F7.1-T01B (straight_accel_brake): gate + dobrzdeni pred zdi.
+	-- Prekonani gate (pos.x >= gate_x) + rychlost < 0.1 + 1 s ustaleni
+	-- => completed s completionReason 'finish_gate_crossed'.
+	-- x >= wall_fail_x => failed (pojistka pred kontaktem se zdi).
+	if (if def ~= nil then def.kind else nil) == "straight_accel_brake" then
+		local gateX = 2510
+		local wallX = 3600
+		if def ~= nil then
+			if typeof((def :: any).gate_x) == "number" then
+				gateX = (def :: any).gate_x
+			end
+			if typeof((def :: any).wall_fail_x) == "number" then
+				wallX = (def :: any).wall_fail_x
+			end
+		end
+		local px: number? = nil
+		if sample.pos ~= nil and typeof((sample.pos :: any).x) == "number" then
+			px = (sample.pos :: any).x
+		end
+		local v = ScenarioRunner.XzSpeed(if sample.vel ~= nil then sample.vel else nil)
+		if px ~= nil and (px :: number) >= wallX then
+			self.failReason = "wall_fail:blizkost_zdi"
+			return "failed"
+		end
+		if self.gateT == nil and px ~= nil and (px :: number) >= gateX then
+			self.gateT = t
+			self.gateV = v
+		end
+		if self.gateT ~= nil and v ~= nil and (v :: number) < 0.1 then
+			if self.stopT == nil then
+				self.stopT = t
+			end
+			if t - (self.stopT :: number) >= 1.0 then
+				self.completionReason = "finish_gate_crossed"
+				return "completed"
+			end
+		else
+			self.stopT = nil
+		end
+	end
 	if t >= (def.duration_s or 30) then
+		if (if def ~= nil then def.kind else nil) == "straight_accel_brake" then
+			-- F7.1-T01B: timeout bez gate NENI dokonceni (zadny falesny PASS).
+			self.failReason = "timeout_bez_gate"
+			return "failed"
+		end
 		return "completed"
 	end
 	return "running"
@@ -1702,6 +1767,75 @@ function ScenarioRunner.ComputeT03Metrics(samples: any): (any?, string?)
 		yaw_rate_max = if yawKnown then yawMax else nil,
 		initial_speed_studs_s = v0,
 		abs = abs,
+	},
+		nil
+end
+
+-- F7.1-T01B: metriky gate + dobrzdeni (pocitano z plnych vzorku, ne decimace).
+-- Vraci { gate_crossed, t_gate_s, v_cut_studs_s, x_stop_studs,
+-- brake_start_x_studs, brake_distance_studs, lat_deviation_studs, vmax_studs_s }.
+function ScenarioRunner.ComputeT01BMetrics(samples: any, def: any): (any?, string?)
+	if typeof(samples) ~= "table" or #samples == 0 then
+		return nil, "prazdne_vzorky"
+	end
+	local gateX = 2510
+	if def ~= nil and typeof((def :: any).gate_x) == "number" then
+		gateX = (def :: any).gate_x
+	end
+	local gateT: number? = nil
+	local gateV: number? = nil
+	local vmax = 0
+	local xStop = 0
+	local xStopKnown = false
+	local brakeStartX: number? = nil
+	local latDev = 0
+	local z0: number? = nil
+	local first = samples[1]
+	if typeof(first) == "table" and typeof(first.pos) == "table" and typeof((first.pos :: any).z) == "number" then
+		z0 = (first.pos :: any).z
+	end
+	for _, s in samples do
+		if typeof(s) ~= "table" then
+			continue
+		end
+		local v = ScenarioRunner.XzSpeed((s :: any).vel)
+		if v ~= nil then
+			vmax = math.max(vmax, v)
+		end
+		if typeof((s :: any).pos) == "table" and typeof((((s :: any).pos) :: any).x) == "number" then
+			local px = ((((s :: any).pos) :: any).x :: number)
+			xStop = math.max(xStop, px)
+			xStopKnown = true
+			if gateT == nil and px >= gateX then
+				gateT = if typeof((s :: any).t) == "number" then ((s :: any).t :: number) else nil
+				gateV = v
+			end
+		end
+		if brakeStartX == nil and typeof((s :: any).inputs) == "table" then
+			local b = (((s :: any).inputs) :: any).brake
+			if typeof(b) == "number" and (b :: number) > 0 then
+				if typeof((s :: any).pos) == "table" and typeof((((s :: any).pos) :: any).x) == "number" then
+					brakeStartX = ((((s :: any).pos) :: any).x :: number)
+				end
+			end
+		end
+		if z0 ~= nil and typeof((s :: any).pos) == "table" and typeof((((s :: any).pos) :: any).z) == "number" then
+			latDev = math.max(latDev, math.abs(((((s :: any).pos) :: any).z :: number) - (z0 :: number)))
+		end
+	end
+	local brakeDist: number? = nil
+	if brakeStartX ~= nil and xStopKnown then
+		brakeDist = xStop - (brakeStartX :: number)
+	end
+	return {
+		gate_crossed = gateT ~= nil,
+		t_gate_s = gateT,
+		v_cut_studs_s = gateV,
+		x_stop_studs = if xStopKnown then xStop else nil,
+		brake_start_x_studs = brakeStartX,
+		brake_distance_studs = brakeDist,
+		lat_deviation_studs = latDev,
+		vmax_studs_s = vmax,
 	},
 		nil
 end
