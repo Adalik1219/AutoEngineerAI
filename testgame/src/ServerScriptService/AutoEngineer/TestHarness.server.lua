@@ -338,9 +338,10 @@ local function runOneScenario(def: any, config: any, bridge: Folder, remotes: Fo
 	local runner = ScenarioRunner.new({})
 	local collector = TelemetryCollector.new({ rateHz = ScenarioDefinitions.SAMPLE_RATE_HZ })
 	local errors: { string } = {}
-	-- F7.1-T01B: pristine vehicle kazdou repliku (S4 lifecycle; eliminace
-	-- prenaseneho stavu). Ostatni scenare (T03 baseline) beze zmeny reuse.
-	local vehicle = ensureVehicle(config, errors, def.kind == "straight_accel_brake")
+	-- F7.1-T01B: pristine vehicle KAZDOU repliku se NEOSVEDCIL (A-Chassis
+	-- Initialize na runtime klonech nedobehne vcas; forceFresh vypnuto,
+	-- reuse overene F6 cestou + RAW-DEFER zkracuje mezery (sleep hypoteza).
+	local vehicle = ensureVehicle(config, errors, false)
 	collector:SetVehicle(vehicle :: Instance?)
 	if vehicle ~= nil then
 		-- Idempotentni: predesly beh mohl skoncit vyjimkou (leak pojistka).
