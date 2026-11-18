@@ -1,0 +1,8 @@
+[Play Solo session 17ce64ee, cumulative]
+[AE_SPAWN] zacinam (buffer=1)  + [AE_SPAWN] hotovo (x2: rep2, rep3 prespawn reclaim)
+[AE_DRIVER] drzim 1.0 (rep1/2/3), [AE_DRIVER] rampa: start 0 cil 1 T 0.2
+[AE_DRIVER] konec smycky t=39.99, [AE_DRIVER] povrchy:...
+[AE_TELEMETRY] OK: RUN-cfg_f71_t01-T01-r1/r2/r3 (samples_full 4171/4029/4041, kept 200/193/194)
+[AE_SERVER_DRIVE] moment_nezapsan:zadne_#AV_nenalezeno (~30x, zacatek rep1: Initialize LoadDelay 3s, #AV jeste neexistovalo; po dostavbe 0)
+[RepairStructure] Jeep_cfg_f71_s4 (manualni S4 redeploy, vse OK)
+(zvukove asset-warningy 188608071/203785492 nesouviseji s testem)

@@ -1,0 +1,1 @@
+{"code_version":"ae-harness-0.2.1","fps_median_measured":60,"mode":"roblox-runtime","physics_note":"GetRealPhysicsFPS ~60 po celou dobu; harness smycka ~28ms/iter (server load) => 40 logical s = ~67-69 real s","seed":101,"track":"StartLine x=2 -> EndWall celo x=3802 (Rovinka StraightLane, sire 12)"}
