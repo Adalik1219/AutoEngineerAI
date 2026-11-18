@@ -59,6 +59,10 @@ ScenarioRunner.T03_DEFAULT_ENTRY_TOL = 1.0
 ScenarioRunner.T03_START_RETRIES = 3
 ScenarioRunner.T03_ROLL_TOL_DEG = 5
 ScenarioRunner.T03_FACING_MIN_X = 0.9
+-- F6: smer trate je dan geometrii (+X: StartLine x=2 -> EndWall x=3804).
+-- Po yaw180-fixu nese spawnCFrame RightVector -X, proto rychlost i facing
+-- vychazeji z TRACK_DIR / cumaku vozu, nikdy z RightVector spawnCFrame.
+ScenarioRunner.T03_TRACK_DIR = Vector3.xAxis
 -- F5-FX2 spawn-settle-go: po Deploy + nulovani rychlosti cekej, dokud
 -- |vertikalni rychlost| < 2 studs/s AND |roll| < 5 deg (max 3 s), pak teprve
 -- armuj mereni (vstupni rychlost + gate).
@@ -154,6 +158,9 @@ function ScenarioRunner.ReadStartRollDeg(vehicle: Instance?): number?
 end
 
 -- Facing +X ze spawnCFrame: X slozka RightVector (trat vede podel +X, H1).
+-- F6: POZOR -- po yaw180-fixu nese spawnCFrame RightVector -X (cumak vozu je
+-- -RightVector). Tato funkce zustava pro kompatibilitu; gate pouziva primarne
+-- ReadVehicleFacingX (cumak skutecneho vozu).
 function ScenarioRunner.ReadSpawnFacingX(spawnCFrame: CFrame?): number?
 	if spawnCFrame == nil then
 		return nil
@@ -345,13 +352,39 @@ function ScenarioRunner.ReadABSConfig(vehicle: Instance?): (any?, string)
 	return cfg, "ok"
 end
 
--- Nastaveni startovni rychlosti T03: RightVector spawnCFrame * speed na vsechny
+-- F6: facing +X z CUMAKU skutecneho vozu (Collision_Front vs. pivot).
+-- Duvod: spawnCFrame-facing gate (ReadSpawnFacingX) vzdy prosel, prestoze vuz
+-- stal celem k -X (F6-run-001). Meri skutecne vozidlo, ne pozadavek.
+function ScenarioRunner.ReadVehicleFacingX(vehicle: Instance?): number?
+	if vehicle == nil or not (vehicle :: Instance):IsA("Model") then
+		return nil
+	end
+	local ok, fx = pcall(function()
+		local m = vehicle :: Model
+		local front = m:FindFirstChild("Collision_Front", true)
+		if front == nil or not (front :: Instance):IsA("BasePart") then
+			return nil
+		end
+		local pivot = m:GetPivot()
+		local d = ((front :: BasePart).Position - pivot.Position)
+		if d.Magnitude < 0.01 then
+			return nil
+		end
+		return d.Unit:Dot(ScenarioRunner.T03_TRACK_DIR)
+	end)
+	if not ok then
+		return nil
+	end
+	return fx
+end
+
+-- Nastaveni startovni rychlosti T03: TRACK_DIR (+X) * speed na vsechny
 -- BaseParty (DriveSeat explicitne; stejna semantika jako TestHarness, H1).
 -- FX3 (G4.2, post-gate bleed 2-4 studs/s): krome linearni rychlosti se kolum
 -- nastavuje i UHLOVA rychlost omega = v / R kolem lateralni osy. Fyzika:
 -- valeni bez prokluzu vyzaduje nulovou rychlost kontaktniho bodu kola,
 -- V_cm + omega x (-R*up) = 0, coz pri dir kolmem na up dava
--- omega = (up x dir) * (v/R), kde dir je smer jizdy (RightVector spawnCFrame).
+-- omega = (up x dir) * (v/R), kde dir je smer jizdy (TRACK_DIR +X, F6).
 -- Drive pocita povrchovou rychlost kola jako |RotVelocity * (size.x/2)|
 -- (ABS prokluzovy prah, hlavicka) -- proto se R bere stejne: R = Size.X / 2
 -- konkretniho dilu kola. Kolo s nulovym uhlovym momentem pri v = 100
@@ -387,7 +420,8 @@ function ScenarioRunner.ApplyT03StartSpeed(vehicle: Instance?, spawnCFrame: CFra
 	end
 	local ok = pcall(function()
 		local cf: CFrame = spawnCFrame :: CFrame
-		local dir = cf.RightVector
+		-- F6: smer trate +X (TRACK_DIR); cf se pouziva jen pro UpVector (omega).
+		local dir = ScenarioRunner.T03_TRACK_DIR
 		local up = cf.UpVector
 		local axle = up:Cross(dir)
 		local axleLen = axle.Magnitude
@@ -449,11 +483,19 @@ function ScenarioRunner.VerifyT03Start(vehicle: Instance?, def: any, spawnCFrame
 			)
 		)
 	end
-	local facingX = ScenarioRunner.ReadSpawnFacingX(spawnCFrame)
+	-- F6: facing z CUMAKU vozu (primarne), fallback -RightVector spawnCFrame
+	-- (cumak = -RightVector po yaw180-fixu; stary prime test byl vzdy PASS).
+	local facingX = ScenarioRunner.ReadVehicleFacingX(vehicle)
 	if facingX == nil then
-		table.insert(reasons, "facing_neoveren:chybi_spawnCFrame")
+		local srv = ScenarioRunner.ReadSpawnFacingX(spawnCFrame)
+		if srv ~= nil then
+			facingX = -srv
+		end
+	end
+	if facingX == nil then
+		table.insert(reasons, "facing_neoveren:chybi_vuz_i_spawnCFrame")
 	elseif (facingX :: number) < ScenarioRunner.T03_FACING_MIN_X then
-		table.insert(reasons, string.format("facing_neni_+X:RightVector.X=%.3f", facingX :: number))
+		table.insert(reasons, string.format("facing_neni_+X:cumak.X=%.3f", facingX :: number))
 	end
 	local rollDeg = ScenarioRunner.ReadStartRollDeg(vehicle)
 	if rollDeg == nil then

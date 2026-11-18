@@ -340,12 +340,72 @@ end
 
 -- Explicitni nasazeni opravene pracovni kopie do Workspace (spusti build
 -- podvozku pres Initialize). Prijima pouze vystup CloneVehicle.
+-- F6-A: po parentu prebinduje serverovy Car.Value na novy klon (Initialize ho
+-- nastavi take pri buildu, toto je idempotentni pojistka) a maze stale
+-- PlayerGui Interface (mrtvy Drive by jinak psal na zniceny model).
 function VehicleManager.DeployVehicle(vehicle)
 	if typeof(vehicle) ~= "Instance" then
 		return nil, "ocekavan Instance vozidla"
 	end
 	vehicle.Parent = Workspace
+	pcall(function()
+		local tune = vehicle:FindFirstChild("A-Chassis Tune", true)
+		local iface = tune and tune:FindFirstChild("A-Chassis Interface")
+		local carVal = iface and iface:FindFirstChild("Car")
+		if carVal and carVal:IsA("ObjectValue") then
+			carVal.Value = vehicle
+		end
+	end)
+	VehicleManager.CleanupStaleClientInterfaces(vehicle)
 	return vehicle
+end
+
+-- F6-A: smaze stale klientské A-Chassis Interface v PlayerGui.
+-- `keepVehicle` (je-li dan) se nikdy nemaze: jeho Car.Value je aktualni.
+-- Stale = Car.Value chybi, ma Parent=nil (zniceny model), nebo neni ve Workspace
+-- (dukaz: po DestroyVehicle zustava kopie v PlayerGui a jeji Drive pak kazdy
+-- frame hlasi `DriveSeat is not a valid member` a prepisuje motory, F6-run-001).
+-- Idempotentni, best-effort (pcall na hrace i instanci); sablona nedotcena.
+function VehicleManager.CleanupStaleClientInterfaces(keepVehicle: Instance?): number
+	local removed = 0
+	pcall(function()
+		local players = game:GetService("Players"):GetPlayers()
+		for _, p in players do
+			pcall(function()
+				local gui = p:FindFirstChildOfClass("PlayerGui")
+				if gui == nil then
+					return
+				end
+				for _, iface in gui:GetChildren() do
+					pcall(function()
+						if iface.Name ~= "A-Chassis Interface" then
+							return
+						end
+						local carVal = iface:FindFirstChild("Car")
+						local target: Instance? = nil
+						if carVal and carVal:IsA("ObjectValue") then
+							target = carVal.Value
+						end
+						if keepVehicle ~= nil and target == keepVehicle then
+							return
+						end
+						local stale = target == nil
+						if not stale then
+							local okAnc, inWs = pcall(function()
+								return (target :: Instance):IsDescendantOf(Workspace)
+							end)
+							stale = (not okAnc) or (inWs ~= true)
+						end
+						if stale then
+							iface:Destroy()
+							removed += 1
+						end
+					end)
+				end
+			end)
+		end
+	end)
+	return removed
 end
 
 -- Bezpecne odstrani POUZE pracovni kopii z Workspace.
@@ -367,6 +427,8 @@ function VehicleManager.DestroyVehicle(vehicle)
 	end
 	Originals[vehicle] = nil
 	vehicle:Destroy()
+	-- F6-A: az PO zniceni (Car.Value pak ukazuje na Parent=nil -> stale).
+	VehicleManager.CleanupStaleClientInterfaces(nil)
 	return true
 end
 

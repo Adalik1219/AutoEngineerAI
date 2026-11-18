@@ -100,13 +100,15 @@ end
 -- Startovni CFrame T03: dil StartLine v TestTracku (x=2, identita, overeno
 -- z TestTrack.rbxmx) + clearance +3 y nad desku (slab y=-0.45, sila 1.1 --
 -- bez odsazeni konci kola pod povrchem a solver rychlost sezere, F44-T03-RUNS
--- H1). Orientace se NEMENI: smer jizdy +X dava applyStartSpeed pres
--- RightVector (trat vede podel X, BrakeLine x=3000).
+-- H1). Orientace: yaw 180° kolem Y, aby CELO vozu mirilo +X po trati (F6-run-001:
+-- celo = lokalni -X dle Collision_Front; bez natoceni stal vuz celem k -X
+-- a rychlost +X ho tlacila bokem). Rychlost dava TRACK_DIR (+X), ne
+-- RightVector spawnCFrame (ten je po yaw180 = -X).
 -- Fallback: atribut workspace AE_Spawn; pak nil (bez presunu).
 local function findT03StartCFrame(): CFrame?
 	local found = workspace:FindFirstChild("StartLine", true)
 	if found ~= nil and found:IsA("BasePart") then
-		return (found :: BasePart).CFrame + Vector3.new(0, 3, 0)
+		return ((found :: BasePart).CFrame * CFrame.Angles(0, math.pi, 0)) + Vector3.new(0, 3, 0)
 	end
 	local attr = workspace:GetAttribute("AE_Spawn")
 	if typeof(attr) == "CFrame" then
@@ -116,14 +118,15 @@ local function findT03StartCFrame(): CFrame?
 end
 
 -- Startovni rychlost T03: vsechny BaseParty (DriveSeat explicitne -- Drive cte
--- DriveSeat.Velocity) dostanou AssemblyLinearVelocity = RightVector * speed.
--- Trat vede podel +X (BrakeLine x=3000); LookVector StartLine (0,0,-1) miril
--- napric trati do svodidla (F44-T03-RUNS H1).
-local function applyStartSpeed(vehicle: Instance?, cf: CFrame, speed: number): ()
+-- DriveSeat.Velocity) dostanou AssemblyLinearVelocity = TRACK_DIR * speed.
+-- Trat vede podel +X (BrakeLine x=3000); F6: smer je dan geometrii trate,
+-- ne orientaci spawnCFrame (ta po yaw180 nese RightVector -X).
+-- LookVector StartLine (0,0,-1) miril napric trati do svodidla (F44-T03-RUNS H1).
+local function applyStartSpeed(vehicle: Instance?, _cf: CFrame, speed: number): ()
 	if vehicle == nil then
 		return
 	end
-	local v = cf.RightVector * speed
+	local v = Vector3.xAxis * speed
 	for _, d in vehicle:GetDescendants() do
 		if d:IsA("BasePart") then
 			(d :: BasePart).AssemblyLinearVelocity = v
