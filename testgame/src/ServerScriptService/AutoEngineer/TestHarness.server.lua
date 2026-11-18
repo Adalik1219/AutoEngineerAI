@@ -727,7 +727,9 @@ local function main(): ()
 						return
 					end
 					if os.clock() - (entry.t :: number) > 1.0 then
-						ScenarioRunner.WriteDriveAttributes(vehicle, 0, 0, 0, "manual")
+						-- Dead-man: stejny klidovy stav jako konec repliky
+						-- (ClearDriveInputs 0,0,0 + Reset server-pohonu).
+						ScenarioRunner.ClearDriveInputs(vehicle)
 						lastManual[vehicle] = nil
 						return
 					end
