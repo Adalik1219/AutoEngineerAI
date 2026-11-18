@@ -361,9 +361,9 @@ function VehicleManager.DeployVehicle(vehicle)
 end
 
 -- F6-A operator-step (pouze MCP, ma capability PluginOrOpenCloud): doplni V2
--- (_PBrake release) do ZIVE sablony v session. Idempotentni (marker V2):
--- obsahuje-li Drive V2, jen doplni atribut; obsahuje-li V1, pripoji V2 za
--- blok V1; jinak vlozi V1+V2 ke kotve. Nikdy nesaha na .rbxm na disku.
+-- (_PBrake release) do ZIVE sablony v session. Idempotentni: existujici V2
+-- (vcetne prvni rozbite verze bez scope) se nejdrive vyrizne, pak vlozi
+-- aktualni V2 za blok V1; chybi-li V1, vlozi V1+V2 ke kotve.
 -- Klony po tomto kroku dedi V2 a nepotrebuji eject/resit tanec (F6-run-002).
 function VehicleManager.EnsureTemplateBridgeV2()
 	local template, terr = VehicleManager.ResolveTemplate()
@@ -380,9 +380,52 @@ function VehicleManager.EnsureTemplateBridgeV2()
 	if not okRead or typeof(src) ~= "string" then
 		return false, "Drive.Source sablony nelze cist ani s operator capability: " .. tostring(src)
 	end
-	if string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_V2_MARKER, 1, true) then
-		template:SetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR, true)
-		return true, "sablona jiz obsahuje V2, atribut AE_BridgeApplied doplnen"
+	-- Legacy: prvni (rozbita) V2 bez BEGIN/END markeru -> vyrizni po svuj zaverecny radek.
+	local legacyMark = "-- AE_DRIVE_INPUT_BRIDGE_V2 (F6-A)"
+	local lb = string.find(src, legacyMark, 1, true)
+	if lb ~= nil then
+		local le = string.find(src, "\n		end", lb, true)
+		if le == nil then
+			return false, "legacy V2 blok v sablone je useknuty"
+		end
+		local lineStart = lb
+		while lineStart > 1 and string.sub(src, lineStart - 1, lineStart - 1) ~= "\n" do
+			lineStart -= 1
+		end
+		local lineEnd = le + #"\n		end"
+		if string.sub(src, lineEnd + 1, lineEnd + 1) == "\n" then
+			lineEnd += 1
+		end
+		src = string.sub(src, 1, lineStart - 1) .. string.sub(src, lineEnd + 1)
+	end
+	if string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_V2_BEGIN, 1, true) then
+		-- Stara (rozbita) i nova V2 se nejdrive vyrizne, pak vlozi aktualni.
+		local cleaned = src
+		while true do
+			local b = string.find(cleaned, VehicleManager.DRIVE_INPUT_BRIDGE_V2_BEGIN, 1, true)
+			if b == nil then
+				break
+			end
+			local e = string.find(cleaned, VehicleManager.DRIVE_INPUT_BRIDGE_V2_END, b, true)
+			if e == nil then
+				return false, "V2 blok v sablone je useknuty (chybi END marker)"
+			end
+			-- Vyrizni od zacatku radku s BEGIN po konec radku s END vcetne \n.
+			local lineStart = b
+			while lineStart > 1 and string.sub(cleaned, lineStart - 1, lineStart - 1) ~= "\n" do
+				lineStart -= 1
+			end
+			local lineEnd = e + #VehicleManager.DRIVE_INPUT_BRIDGE_V2_END
+			-- Konec radku: preskoc zbytek radku + jeden \n.
+			while lineEnd < #cleaned and string.sub(cleaned, lineEnd + 1, lineEnd + 1) ~= "\n" do
+				lineEnd += 1
+			end
+			if string.sub(cleaned, lineEnd + 1, lineEnd + 1) == "\n" then
+				lineEnd += 1
+			end
+			cleaned = string.sub(cleaned, 1, lineStart - 1) .. string.sub(cleaned, lineEnd + 1)
+		end
+		src = cleaned
 	end
 	local v1 = VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK
 	local v2 = VehicleManager.DRIVE_INPUT_BRIDGE_V2_BLOCK
@@ -635,14 +678,20 @@ VehicleManager.TEMPLATE_BRIDGE_ATTR = "AE_BridgeApplied"
 -- ktery stavi Initialize; se zadnim biasem staci zadni kola, PBrakeBias=0).
 -- Bez fyzicke klavesy P (End + rychlost>5) by kola zustala zamcena navzdy;
 -- atributovy mustek saha jen na _IBrake/_IThrot/_GSteerT.
--- V2 se vklada ZA blok V1 (cti _aeBrake/_aeThrot/_aeSteer, ktere deklaruje V1).
-VehicleManager.DRIVE_INPUT_BRIDGE_V2_MARKER = "AE_DRIVE_INPUT_BRIDGE_V2"
-VehicleManager.DRIVE_INPUT_BRIDGE_V2_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE_V2 (F6-A): pri autonomnim rizeni drzet rucni brzdu vyrazenou.\n"
-	.. "\t\t-- Drive ji pri startu latchuje z #BV=PBrakeForce defaultu (Initialize); bez klavesy P\n"
-	.. "\t\t-- by zustala zaseknuta a kola zamcena (F6-run-002). Manualni rezim (bez atributu) nedotcen.\n"
-	.. "\t\tif typeof(_aeBrake) == \"number\" or typeof(_aeThrot) == \"number\" or typeof(_aeSteer) == \"number\" then\n"
-	.. "\t\t\t_PBrake = false\n"
-	.. "\t\tend"
+-- V2 je samostatny do-blok ZA blokem V1 (vlastni cteni atributu z car).
+VehicleManager.DRIVE_INPUT_BRIDGE_V2_BEGIN = "AE_DRIVE_INPUT_BRIDGE_V2_BEGIN"
+VehicleManager.DRIVE_INPUT_BRIDGE_V2_END = "AE_DRIVE_INPUT_BRIDGE_V2_END"
+-- Samostatny do-blok: cte atributy primo z car (nezavisi na localech V1).
+VehicleManager.DRIVE_INPUT_BRIDGE_V2_BLOCK = "		-- AE_DRIVE_INPUT_BRIDGE_V2_BEGIN (F6-A): pri autonomnim rizeni drzet rucni brzdu vyrazenou.\n"
+	.. "		-- Drive ji pri startu latchuje z #BV=PBrakeForce defaultu (Initialize); bez klavesy P\n"
+	.. "		-- by zustala zaseknuta a kola zamcena (F6-run-002). Manualni rezim (bez atributu) nedotcen.\n"
+	.. "		do\n"
+	.. '			local _aeV2auto = car:GetAttribute("AE_Brake") ~= nil or car:GetAttribute("AE_Throttle") ~= nil or car:GetAttribute("AE_Steer") ~= nil\n'
+	.. "			if _aeV2auto then\n"
+	.. "				_PBrake = false\n"
+	.. "			end\n"
+	.. "		end\n"
+	.. "		-- AE_DRIVE_INPUT_BRIDGE_V2_END"
 
 -- Aplikuje mustek do Drive LocalScriptu vozidla (sablona i pracovni kopie).
 -- Idempotentni: obsahuje-li Drive marker, vrati true + "jiz aplikovano".
