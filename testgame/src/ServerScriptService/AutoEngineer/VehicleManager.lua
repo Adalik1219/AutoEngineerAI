@@ -360,7 +360,55 @@ function VehicleManager.DeployVehicle(vehicle)
 	return vehicle
 end
 
--- F6-A: smaze stale klientské A-Chassis Interface v PlayerGui.
+-- F6-A operator-step (pouze MCP, ma capability PluginOrOpenCloud): doplni V2
+-- (_PBrake release) do ZIVE sablony v session. Idempotentni (marker V2):
+-- obsahuje-li Drive V2, jen doplni atribut; obsahuje-li V1, pripoji V2 za
+-- blok V1; jinak vlozi V1+V2 ke kotve. Nikdy nesaha na .rbxm na disku.
+-- Klony po tomto kroku dedi V2 a nepotrebuji eject/resit tanec (F6-run-002).
+function VehicleManager.EnsureTemplateBridgeV2()
+	local template, terr = VehicleManager.ResolveTemplate()
+	if not template then
+		return false, terr
+	end
+	local drive = template:FindFirstChild("Drive", true)
+	if drive == nil or not drive:IsA("LocalScript") then
+		return false, "Drive LocalScript v sablone nenalezen"
+	end
+	local okRead, src = pcall(function()
+		return drive.Source
+	end)
+	if not okRead or typeof(src) ~= "string" then
+		return false, "Drive.Source sablony nelze cist ani s operator capability: " .. tostring(src)
+	end
+	if string.find(src, VehicleManager.DRIVE_INPUT_BRIDGE_V2_MARKER, 1, true) then
+		template:SetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR, true)
+		return true, "sablona jiz obsahuje V2, atribut AE_BridgeApplied doplnen"
+	end
+	local v1 = VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK
+	local v2 = VehicleManager.DRIVE_INPUT_BRIDGE_V2_BLOCK
+	local patched = nil
+	local i = string.find(src, v1, 1, true)
+	if i ~= nil then
+		patched = string.sub(src, 1, i + #v1 - 1) .. "\n" .. v2 .. string.sub(src, i + #v1)
+	else
+		local anchor = VehicleManager.DRIVE_INPUT_BRIDGE_ANCHOR
+		local a = string.find(src, anchor, 1, true)
+		if a == nil then
+			return false, "kotva Heartbeat/Inputs v Drive sablony nenalezena"
+		end
+		patched = string.sub(src, 1, a - 1) .. v1 .. "\n" .. v2 .. "\n" .. string.sub(src, a)
+	end
+	local okWrite, werr = pcall(function()
+		drive.Source = patched
+	end)
+	if not okWrite then
+		return false, "Drive.Source sablony nelze zapsat: " .. tostring(werr)
+	end
+	template:SetAttribute(VehicleManager.TEMPLATE_BRIDGE_ATTR, true)
+	return true, "sablona doplnena o V2 (_PBrake release), AE_BridgeApplied=true"
+end
+
+-- F6-A: smaze stale klientske A-Chassis Interface v PlayerGui.
 -- `keepVehicle` (je-li dan) se nikdy nemaze: jeho Car.Value je aktualni.
 -- Stale = Car.Value chybi, ma Parent=nil (zniceny model), nebo neni ve Workspace
 -- (dukaz: po DestroyVehicle zustava kopie v PlayerGui a jeji Drive pak kazdy
@@ -581,6 +629,20 @@ VehicleManager.DRIVE_INPUT_BRIDGE_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE (F4.4 M2
 	.. "\t\tend"
 
 VehicleManager.TEMPLATE_BRIDGE_ATTR = "AE_BridgeApplied"
+
+-- F6-A bridge V2: V1 + release rucni brzdy pri autonomnim rizeni.
+-- Drive pri startu latchuje _PBrake=true, najde-li #BV=PBrakeForce (default,
+-- ktery stavi Initialize; se zadnim biasem staci zadni kola, PBrakeBias=0).
+-- Bez fyzicke klavesy P (End + rychlost>5) by kola zustala zamcena navzdy;
+-- atributovy mustek saha jen na _IBrake/_IThrot/_GSteerT.
+-- V2 se vklada ZA blok V1 (cti _aeBrake/_aeThrot/_aeSteer, ktere deklaruje V1).
+VehicleManager.DRIVE_INPUT_BRIDGE_V2_MARKER = "AE_DRIVE_INPUT_BRIDGE_V2"
+VehicleManager.DRIVE_INPUT_BRIDGE_V2_BLOCK = "\t\t-- AE_DRIVE_INPUT_BRIDGE_V2 (F6-A): pri autonomnim rizeni drzet rucni brzdu vyrazenou.\n"
+	.. "\t\t-- Drive ji pri startu latchuje z #BV=PBrakeForce defaultu (Initialize); bez klavesy P\n"
+	.. "\t\t-- by zustala zaseknuta a kola zamcena (F6-run-002). Manualni rezim (bez atributu) nedotcen.\n"
+	.. "\t\tif typeof(_aeBrake) == \"number\" or typeof(_aeThrot) == \"number\" or typeof(_aeSteer) == \"number\" then\n"
+	.. "\t\t\t_PBrake = false\n"
+	.. "\t\tend"
 
 -- Aplikuje mustek do Drive LocalScriptu vozidla (sablona i pracovni kopie).
 -- Idempotentni: obsahuje-li Drive marker, vrati true + "jiz aplikovano".

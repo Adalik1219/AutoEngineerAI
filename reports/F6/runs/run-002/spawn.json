@@ -1,0 +1,1 @@
+{"coast_v":"99.8,99.9,99.8,99.8,99.7,99.6,99.6,99.5,99.4,99.4 (0.15 s kroky, 1.5 s)","coast_verdict":"DRZI (decay ~0.3/s engine-braking, zadny scrub; F5: 100->0 za 0.7 s)","facingX":0.99334,"front_offset":[8.49,-0.33,0.93],"roll_deg":5.3e-07,"seatLook":[1.0,0.0,0.0],"spawn":"StartLine.CFrame * yaw(-90) + 3 y; pivot x=2"}
