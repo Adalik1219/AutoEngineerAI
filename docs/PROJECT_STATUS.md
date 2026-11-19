@@ -1,0 +1,89 @@
+# Project Status – stav k 2026-11-19 (audit pro hybridní plán)
+
+**Stav:** audit v1 na branchi `docs/hybrid-workflow-spec-m1-m9` (ke schválení).
+**Metoda:** čtení repozitáře (file listing, klíčové dokumenty, katalog, testy), běh `python tests/run_all.py`.
+**HEAD mainu při auditu:** `dd9efdf`. Testy: **162 PASS, 0 FAIL, 4 PENDING** (PENDING není PASS).
+
+---
+
+## 1. Stav modulů M1–M9
+
+| Modul | Stav | Důkaz |
+|---|---|---|
+| M1 Vehicle Specs | PARTIAL | `_schema.json` + `loader/validate/compare` + vozy civic, gr86; **mustang profil chybí** |
+| M2 RBXM Inspector | NOT IMPLEMENTED | žádný RBXM parser v `src/` ani `tools/` (pouze zmínky v docs) |
+| M3 Geometry Engine | NOT IMPLEMENTED | žádný modul; `src/common/units.py` existuje (rozšířit) |
+| M4 Physics v2 | PARTIAL | `src/Physics/` 10 modulů + selftesty; chybí torque_curve s UNKNOWN, cíle Mustangu, nejistoty |
+| M5 A-Chassis Mapping | PARTIAL | katalog **138** parametrů (82 MUTABLE_TUNE / 37 UNKNOWN / 14 SCRIPT / 3 READ_ONLY / 2 STRUCTURE) + `mapping_engine.py` + `dependencies.py`; chybí vazba cíl→Tune a change planner |
+| M6 Config & Rollback | PARTIAL | `Optimizer/{change_plan,store}.py` + manifest kontrakt; chybí generátor balíčků, diff, rollback |
+| M7 Test Protocol | PARTIAL | scénáře (`Sim/scenarios.py`, Lua, 11 scénářů v TESTING-OPTIMIZATION); chybí generátor lidských protokolů + formulář |
+| M8 Evaluator | PARTIAL | `Telemetry/{evaluate,metrics}` + `Optimizer/{statistics,acceptance}`; chybí loader měření, opakovatelnost, advisor |
+| M9 Workflow | PARTIAL | `autoengineer.py` CLI + optimizer cyklus; chybí orchestrace M1→M8, stav iterací, reporty |
+
+## 2. Duplicity a kolize (ověřeno čtením)
+
+1. `vehicle-data/references/_schema.json` (bohatý DB záznam) vs. `contracts/reference_profile.schema.json` (úzký pipeline profil) — **vyřešeno**: propojení `source_vehicle_id` (`CONTRACTS.md` §1.5). Neměnit.
+2. `src/Physics/gearbox.py` vs. navržený `transmission_model.py`; `src/Physics/brakes.py` vs. `braking_model.py` — **rozšířit existující, nezakládat nové** (povinnost v ROADMAP M4/M6).
+3. `src/Telemetry/statistics` vs. `src/Optimizer/statistics.py` — před M8 sjednotit, ne duplikovat.
+4. `docs/STATUS.md` (fázový log F0–F7) vs. tento `PROJECT_STATUS.md` (maticový audit M1–M9) — koexistují, každý jiný účel.
+5. `AGENTS.md` (root, nový) vs. `docs/AGENT-RULES.md` — AGENTS odkazuje na AGENT-RULES, nenahrazuje ho.
+
+## 3. Chybějící části (must-have před implementací)
+
+RBXM parser (M2 — největší riziko plánu) · mustang profil (M1.5) · torque_curve s UNKNOWN (M4.4) ·
+vazba cíl→Tune + change planner (M5.3/M5.8) · generátor balíčků + rollback (M6) · protokol generátor +
+formulář (M7) · loader měření + advisor (M8) · orchestrace M9.
+
+## 4. Historie F4–F7 (experimentální a validační, nepřepisovat)
+
+- **F4** ověřoval dílčí fyzikální chování v Roblox Physics Engine (parametrická inteligence, integrace, kalibrace).
+- **F5** odhalil problémy životního cyklu vozidla a kol (kola zamčená, Drive stale; `F5-CLOSURE.md`).
+- **F6** ověřil část brzdného chování (BrakeBias 0,6→56,53 / 0,9→40,44 studs), ne celý produkt.
+- **F7.1** ověřoval vlastní ServerDrive harness (Q4 dead-man, RAW-DEFER, T01B), nikoli plný původní A-Chassis runtime.
+- **F7.2** (HEAD `dd9efdf`): ServerSteer.Step + S0 snapshot + AC6 Occupant-only + review-fix (radiány, monErr, settle bez Forget, S0 identita, SitTestDriver, self-testy). **Runtime ověření AC1–AC7 je samostatný úkol** — tento dokument ho neprohlašuje za hotové.
+- `reports/F7/ROJO-INCIDENT.md`, `reports/F6/`, `reports/F7/runs/` (telemetrie run-001…003) se zachovávají.
+
+## 5. Neověřené údaje Mustangu (z `VEHICLE-SPECIFICATIONS.md`)
+
+Převodové poměry 1–6 + stálý převod · momentová křivka · rozložení hmotnosti a těžiště ·
+brzdy standardního GT · 0–100 km/h a V-max pro EU manuál · aerodynamika. Vše UNKNOWN do M1.
+
+## 6. Konzistence dokumentace (kontrola této branche)
+
+- Cíle/ID úkolů (M1.1–M9.12, M1-T01–M4-T10, AE-001–AE-021 níže) shodné v ROADMAP, ACCEPTANCE a HYBRID_WORKFLOW. ✓
+- Odkazy na soubory ověřeny proti file listingu; neexistující moduly označeny jako navržené. ✓
+- Žádný modul nemá duplicitní odpovědnost (§2). ✓
+- Závislosti M1–M9 dávají smysl (M2 je kritická cesta). ✓
+
+## 7. Pořadí GitHub issues (návrh ID, nejsou založené)
+
+| Issue | Název | Priorita | Závislost |
+|---|---|---|---|
+| AE-001 | Vehicle Specification Schema | P0 | — |
+| AE-002 | Mustang GT EU Profile | P0 | AE-001 |
+| AE-003 | Source & Confidence Validation | P0 | AE-001 |
+| AE-004 | RBXM Geometry Inspection | P0 | — |
+| AE-005 | Unit Conversion System | P0 | — |
+| AE-006 | Scale Calibration | P0 | AE-004, AE-005 |
+| AE-007 | Geometry Target Calculator | P0 | AE-002, AE-006 |
+| AE-008 | Geometry Validation | P0 | AE-007 |
+| AE-009 | Physics Model Refactor | P0 | AE-002 |
+| AE-010 | Engine & Transmission Models | P0 | AE-009 |
+| AE-011 | Tire & Braking Models | P0 | AE-009 |
+| AE-012 | A-Chassis Parameter Registry | P0 | existující katalog |
+| AE-013 | Target-to-Tune Mapping | P0 | AE-007, AE-010, AE-012 |
+| AE-014 | Dependency & Conflict Validation | P0 | AE-013 |
+| AE-015 | Configuration Generator | P1 | AE-014 |
+| AE-016 | Configuration Rollback | P1 | AE-015 |
+| AE-017 | Manual Test Protocol Generator | P1 | AE-015 |
+| AE-018 | Measurement Import & Validation | P1 | AE-017 |
+| AE-019 | Statistical Evaluator | P1 | AE-018 |
+| AE-020 | Iteration Advisor | P1 | AE-019 |
+| AE-021 | End-to-End Hybrid Workflow | P1 | AE-001…AE-020 |
+
+## 8. Pořadí commitů (návrh C01–C16)
+
+C01 schema · C02 mustang profil · C03 validace zdrojů · C04 jednotky · C05 RBXM inspekce ·
+C06 kalibrace měřítka · C07 geometry engine · C08 fyzikální modely · C09 A-Chassis registry integrace ·
+C10 mapování a validace · C11 generátor konfigurací · C12 rollback a manifesty · C13 testovací protokol ·
+C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commit = kód + testy + výsledek.
