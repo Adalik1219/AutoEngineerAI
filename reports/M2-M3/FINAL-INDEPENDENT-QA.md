@@ -350,3 +350,27 @@ NEOVĚŘENO (mimo dosah, beze změny z §6/§8/§9): Studio side, reálný Musta
 - **Brána M3: NEOTEVÍRAT** (Q-06).
 - **Closeout jako CLOSED: NE — CONDITIONAL.** Nesplněno pravidlo „CLOSED jen když vše sedí“: Q-14 FAIL (minor), Q-10 NOT VERIFIED. Funkčně je vlna CLOSED (Q-01–Q-09, Q-11–Q-13, Q-15 PASS); dokumentačně zbývá 1-commit sync dluh (pin `626c258` + CI dodatek `44623140872`). Doporučení Agentu D: sjednotit v příští vlně jedním docs-committem s větou „docs-only delta beze změny výroků“.
 - NEOVĚŘENO (beze změny z §6/§8/§9/§10): Studio side, reálný Mustang, Play/Runtime nároky.
+
+
+---
+
+## 12. Závěrečná synchronizace — QA dokumentace na `f60ec9b` (2026-11-19)
+
+**Účel:** uzavřít pouze dokumentační nesoulad zaznamenaný v historické §11 (Q-10/Q-14); historické verdikty zůstávají zachovány.
+**Větev:** `feat/m2-m3-geometry` · **Technický verifikační SHA:** `626c25859cbd143662013930123611c82be4c00f` · **Dokumentační finální SHA:** `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43`.
+**Rozsah delta:** docs-only. Soubory kódu, testů, nástrojů, kontraktů, RBXM a `main` nebyly změněny.
+**CI:** run `44627333247` má `head_sha=f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43`, event `push`, conclusion `success`; jobs `tests (3.11)`, `tests (3.12)`, `tests (3.13)`, `tests (3.14)` všechny `success`.
+
+### Rozsah ověření a poctivost běhů
+
+Koordinátorovy sériové běhy (`tests/run_all.py`: 372/368/0/0/4; cílená M2 pětice: 168 OK; `validate_contracts.py`: 24/0) byly spuštěny na `626c258`, nikoli na `f60ec9b`. Agent D tyto běhy neprovedl ani na `626c258`, ani na `f60ec9b`. V rozsahu `626c258..f60ec9b` se kód a testy nezměnily, což podporuje přenositelnost předchozích výsledků, ale není to nezávislé opakování Agentem D na výsledném SHA. CI run na `f60ec9b` je samostatný GitHub CI důkaz a nenahrazuje chybějící nezávislý sériový běh.
+
+### Oprava nesouladu CLOSED vs. CONDITIONAL
+
+Historická §11 zůstává pravdivým záznamem QA stavu při `626c258`: Agent D vydal **M2 CONDITIONAL PASS**, označil vlastní běh za **NOT VERIFIED** a dokumentační closeout jako **CONDITIONAL**, nikoli CLOSED. Koordinátorova formulace “DOCUMENTATION WAVE: CLOSED” se proto zužuje na **dokumentační synchronizace dokončena**; nejde o změnu Agent-D verdictu ani o nepodmíněné uzavření M2. Stav zůstává **M2 CONDITIONAL PASS · kalibrace BLOCKED · M3 NEOTEVŘENA · runtime NOT VERIFIED · PR #2 OPEN / NOT MERGED**.
+
+### Uzavření původního dokumentačního dluhu
+
+- **Q-14 (piny a CI dodatek):** opraveno — closeout uvádí `f60ec9b` jako docs SHA, `626c258` jako technický verifikační SHA a run `44627333247`.
+- **Q-10 (Agent-D běh):** zůstává **NOT VERIFIED** jako vlastní exekuce Agentem D; CI success a nezměněný kód/testy tuto skutečnost nemažou.
+- **Celkový závěr:** dokumentační synchronizace dokončena; nezávislý verdikt zůstává **CONDITIONAL**. M2 ani M3 stav není tímto commitem povýšen.
