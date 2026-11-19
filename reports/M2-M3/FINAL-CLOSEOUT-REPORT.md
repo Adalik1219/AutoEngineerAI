@@ -8,9 +8,10 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 - Auditní základ: `a7e89e5c6a35245f72b5bb3e141dd33da41f09d5`
 - Sync: `dfb2e55a032e863a784ea9ddaaaa44926d9212af`
 - Předchozí finální: `66c27e963dd62deb2b07967b820a96644ff71dcd`
-- TATO vlna (Agent A, docs-only): výchozí
-  `626c25859cbd143662013930123611c82be4c00f`; finální = nový
-  docs-only commit (hash doplní koordinátor při commitu).
+- TATO vlna: technický verifikační SHA `626c25859cbd143662013930123611c82be4c00f`;
+  finální dokumentační SHA `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43` (docs-only).
+  Sériové testy koordinátora byly spuštěny na `626c258`, nikoli `f60ec9b`;
+  kód i testy se mezi těmito SHA nezměnily.
 - Větev `feat/m2-m3-geometry`, PR #2 OPEN, NEMERGOVAT. Kód ani testy
   neměněny, žádné git operace agentem, `main` netknut.
 
@@ -23,7 +24,7 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 - D (finální QA): M2 CONDITIONAL PASS, M3 NEOTEVŘENA; float_decode ponechán
   záměrně; Play/runtime NEOVĚŘENO.
 
-## 3. Testy (Agent A, živé běhy na `626c258`, sériově, exit 0)
+## 3. Testy (koordinátor, živé běhy na technickém SHA `626c258`, sériově, exit 0)
 
 | # | Příkaz | Výsledek |
 |---|---|---|
@@ -37,8 +38,9 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 - Run `44618988364` → přesně `66c27e9` (předchozí finální),
   větev `feat/m2-m3-geometry`, event push, 4/4 success (3.11–3.14) —
   ověřeno koordinátorem přes GitHub API (head_sha, branch, joby).
-- Nový run k finálnímu commitu této vlny (docs-only, na `626c258`):
-  doplní koordinátor po pushi (run ID + head_sha + joby).
+- Run `44627333247` → přesně `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43`,
+  větev `feat/m2-m3-geometry`, event `push`, conclusion `success`; 4/4 joby
+  success (Python 3.11, 3.12, 3.13, 3.14). Ověřeny head_sha a všechny job conclusions.
 
 ## 4b. Soubory této vlny (Agent A, docs-only)
 
@@ -46,15 +48,16 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 |---|---|
 | `reports/M2-M3/FINAL-CLOSEOUT-REPORT.md` | ZMĚNĚN (tato oprava: §1, §3, §4, §4b) |
 | `reports/M2-M3/AGENT-A-DOCUMENTATION-REPORT.md` | ZMĚNĚN (nová sekce vlny, formát 1–10) |
-| `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_ROADMAP.md` | NE (opravy z předchozích synců drží) |
+| `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_ROADMAP.md` | ZMĚNĚNY (pouze explicitní oddělení technického SHA `626c258` a docs SHA `f60ec9b`) |
 | Kód (`src/`), testy (`tests/`), `contracts/` | NE (beze změny) |
 
 ## 5. Dokumentační konzistence
 
-PROJECT_STATUS, ROADMAP, WHEEL/SCALE/INTEGRATION reporty, QA verze —
-konzistentní (docs obsah beze změny od `66c27e9`; tato vlna na `626c258`
-je docs-only, delta beze změny významu), počty 372/368, M2 CONDITIONAL
-PASS, kalibrace BLOCKED, M3 NEOTEVŘENA.
+PROJECT_STATUS a ROADMAP rozlišují technický verifikační SHA `626c258`
+a dokumentační finální SHA `f60ec9b`; kód/testy se mezi nimi nezměnily.
+Ostatní WHEEL/SCALE/INTEGRATION reporty a historické QA sekce zachovávají
+své tehdejší piny. M2 zůstává CONDITIONAL PASS; kalibrace BLOCKED; M3
+NEOTEVŘENA. Agent D neprovedl nové testy na `f60ec9b`.
 Historie append-only, nic nemazáno. Rámec: x=lateral/y=up/z=long (WHEEL §3);
 proposal §4/§9 opraveny (VERIFIED-only brána, engine existuje, stub odlišen).
 
@@ -74,6 +77,10 @@ proposal §4/§9 opraveny (VERIFIED-only brána, engine existuje, stub odlišen)
 | G-10 reprodukovatelnost | PASS | determinismus, dvojí běh shodný |
 
 ## 7. Konečný stav
+
+**Dokumentační synchronizace:** dokončena na `f60ec9b` po ověření runu
+`44627333247`. Koordinátorovy sériové testy zůstávají připnuté k `626c258`;
+Agent D neprovedl nové sériové běhy na `f60ec9b`.
 
 - M2: CONDITIONAL PASS · kalibrace: BLOCKED (rozptyl 7,44 % > 5 %;
   JeepTemplate = jiné vozidlo; stub trvale NOT IMPLEMENTED, engine
