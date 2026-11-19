@@ -178,6 +178,126 @@ class TestM3Gate(unittest.TestCase):
             with self.assertRaises(CalibrationBlockedError):
                 require_verified_for_m3(res)
 
+    def test_estimated_does_not_pass_gate(self):
+        # Plná sada (VERIFIED rozvor/rozchody + ESTIMATED pneu) je
+        # konzistentní, ale ESTIMATED — do M3 nesmí (pouze VERIFIED).
+        res = calibrate(measurements_studs=_meas(3.0))
+        self.assertEqual(res["overall_status"], "ESTIMATED")
+        self.assertFalse(usable_for_m3(res))
+        with self.assertRaises(CalibrationBlockedError):
+            require_verified_for_m3(res)
+
+    def test_gate_rejects_non_dict(self):
+        self.assertFalse(usable_for_m3(None))  # type: ignore[arg-type]
+        self.assertFalse(usable_for_m3("VERIFIED"))  # type: ignore[arg-type]
+        with self.assertRaises(CalibrationBlockedError):
+            require_verified_for_m3(None)  # type: ignore[arg-type]
+
+
+class TestJeepTemplateGroundTruth(unittest.TestCase):
+    """Reálná měření JeepTemplate (Studio ground-truth, Agent B/D):
+    rozvor 10.5228 / rozchody 5.9907 / pneu 2.7 (Ball) proti
+    mustangovským referencím M1 -> rozptyl 7.44 % -> BLOCKED."""
+
+    JEEP_MEAS = {
+        "wheelbase": 10.522796630859375,
+        "track_f": 5.99066162109375,
+        "track_r": 5.99072265625,
+        "tire_d_f": 2.7,
+        "tire_d_r": 2.7,
+    }
+
+    def test_jeep_template_is_blocked(self):
+        res = calibrate(measurements_studs=dict(self.JEEP_MEAS))
+        self.assertEqual(res["overall_status"], "BLOCKED")
+        self.assertTrue(res["blocked_reason"])
+        self.assertIn("7.44", res["blocked_reason"])
+        self.assertEqual(res["estimates"], [])
+        self.assertIsNone(res["uncertainty"]["combined_studs_per_meter"])
+        self.assertIsNone(res["uncertainty"]["rel_pct"])
+
+    def test_jeep_template_blocked_from_m3(self):
+        res = calibrate(measurements_studs=dict(self.JEEP_MEAS))
+        self.assertFalse(usable_for_m3(res))
+        with self.assertRaises(CalibrationBlockedError):
+            require_verified_for_m3(res)
+
+
+class TestEdgeCases(unittest.TestCase):
+    def test_nan_inf_measurement_rejected(self):
+        for bad in (float("nan"), float("inf"), float("-inf")):
+            with self.assertRaises(CalibrationError):
+                calibrate(measurements_studs={**_meas(3.0),
+                                              "wheelbase": bad})
+
+    def test_nan_inf_reference_rejected(self):
+        for bad in (float("nan"), float("inf")):
+            refs = default_references()
+            refs[0] = dict(refs[0], value_si=bad)
+            with self.assertRaises(CalibrationError):
+                calibrate(references=refs, measurements_studs=_meas(3.0))
+
+    def test_nan_inf_uncertainty_rejected(self):
+        refs = default_references()
+        refs[0] = dict(refs[0], uncertainty_si=float("nan"))
+        with self.assertRaises(CalibrationError):
+            calibrate(references=refs, measurements_studs=_meas(3.0))
+        with self.assertRaises(CalibrationError):
+            calibrate(measurements_studs=_meas(3.0),
+                      u_studs=float("inf"))
+
+    def test_negative_uncertainty_rejected(self):
+        refs = default_references()
+        refs[0] = dict(refs[0], uncertainty_si=-0.001)
+        with self.assertRaises(CalibrationError):
+            calibrate(references=refs, measurements_studs=_meas(3.0))
+        with self.assertRaises(CalibrationError):
+            calibrate(measurements_studs=_meas(3.0), u_studs=-0.1)
+
+    def test_null_value_requires_unknown_status(self):
+        refs = default_references()
+        refs[0] = dict(refs[0], value_si=None)  # status VERIFIED -> chyba
+        with self.assertRaises(CalibrationError):
+            calibrate(references=refs, measurements_studs=_meas(3.0))
+
+    def test_missing_unit_rejected(self):
+        refs = default_references()
+        refs[0] = dict(refs[0], unit=None)
+        with self.assertRaises(CalibrationError):
+            calibrate(references=refs, measurements_studs=_meas(3.0))
+
+    def test_unknown_and_duplicate_param_rejected(self):
+        refs = default_references()
+        bad = dict(refs[0], param="wheelbase2")
+        with self.assertRaises(CalibrationError):
+            calibrate(references=[bad] + refs[1:],
+                      measurements_studs=_meas(3.0))
+        with self.assertRaises(CalibrationError):
+            calibrate(references=refs + [dict(refs[0])],
+                      measurements_studs=_meas(3.0))
+        with self.assertRaises(CalibrationError):
+            calibrate(measurements_studs={**_meas(3.0), "rozvor": 8.0})
+
+    def test_wheelbase_only_blocked(self):
+        # Jen 1 nezávislá rodina (rozvor) -> BLOCKED.
+        refs = [r for r in default_references()
+                if r["param"] == "wheelbase"]
+        res = calibrate(references=refs,
+                        measurements_studs=_meas(3.0, refs))
+        self.assertEqual(res["overall_status"], "BLOCKED")
+
+    def test_uncertainty_present_on_success(self):
+        refs = [r for r in default_references() if r["status"] == "VERIFIED"]
+        res = calibrate(references=refs,
+                        measurements_studs=_meas(3.0, refs))
+        self.assertEqual(res["overall_status"], "VERIFIED")
+        u = res["uncertainty"]
+        self.assertIsNotNone(u["combined_studs_per_meter"])
+        self.assertIsNotNone(u["rel_pct"])
+        self.assertTrue(u["combined_studs_per_meter"] > 0)
+        self.assertTrue(u["rel_pct"] >= 0)
+        self.assertTrue(u["method"])
+
 
 if __name__ == "__main__":
     unittest.main()

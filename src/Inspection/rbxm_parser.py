@@ -1070,7 +1070,7 @@ def _is_rotation_matrix(matrix, tol=1e-3):
     return abs(det - 1.0) <= tol
 
 
-def assess_wheel_geometry(instances):
+def assess_wheel_geometry(instances, known_non_wheels=None):
     """Posouzeni kol skutecnou geometrii (stredy, rozmery).
 
     Zrcadli identitni pravidlo wheel_detect.py (a) v Model:Wheels +
@@ -1078,14 +1078,43 @@ def assess_wheel_geometry(instances):
     funkce pridava geometrickou vrstvu: sphericitu, shodu rozmeru,
     obdelnikove rozmisteni stredu a evidenci floatu.
 
-    Vraci dict: {wheels, unidentified, blocked, blocked_reasons,
-    status, calibration}. V M2 je vysledek vzdy BLOCKED: bud pro
-    geometrickou nejednoznacnost (chybejici/neplatna data, asymetrie),
-    nebo — i pri plne konzistentni geometrii — pro neoverenou
-    kalibraci (floaty bez Studio ground-truth, NOT IMPLEMENTED).
-    OK vyzaduje M3 (Studio ground-truth + overena kalibrace).
+    Legitimni dily podvozku ve Wheels (allowlist wheel_detect.py,
+    4-tier KNOWN_NON_WHEEL; volitelne predane pres known_non_wheels
+    jako vystup detect_wheels) se EVIDUJI v result["known_non_wheels"]
+    a NEPREPOCITAVAJI jako unidentified — stejne jako v detect_wheels
+    neblokuji. Neznami kandidati (mimo allowlist) blokuji dal.
+
+    Vraci dict: {wheels, known_non_wheels, unidentified, blocked,
+    blocked_reasons, status, calibration}. V M2 je vysledek vzdy
+    BLOCKED: bud pro geometrickou nejednoznacnost
+    (chybejici/neplatna data, asymetrie), nebo — i pri plne
+    konzistentni geometrii — pro neoverenou kalibraci (floaty bez
+    Studio ground-truth, NOT IMPLEMENTED). OK vyzaduje M3 (Studio
+    ground-truth + overena kalibrace).
     """
-    result = {"wheels": {}, "unidentified": [],
+    try:
+        from src.Inspection.wheel_detect import CHASSIS_PART_ALLOWLIST
+    except ImportError:  # nouzovy fallback: doslovna kopie allowlistu
+        try:
+            from .wheel_detect import (  # relativni import v balicku
+                CHASSIS_PART_ALLOWLIST)
+        except ImportError:
+            CHASSIS_PART_ALLOWLIST = frozenset({
+                "SpringBottom", "CLower", "CUpper", "SpringTop",
+                "LowerArmB", "LowerArmF", "Hub", "LowerArm",
+                "UpperArmF", "UpperArmB", "UpperArm",
+            })
+    known_ids = set()
+    if known_non_wheels:
+        for entry in known_non_wheels:
+            if isinstance(entry, dict):
+                iid = entry.get("instance_id", entry.get("id"))
+            else:
+                iid = entry
+            if iid is not None:
+                known_ids.add(iid)
+
+    result = {"wheels": {}, "known_non_wheels": [], "unidentified": [],
               "blocked": False, "blocked_reasons": [], "status": "OK",
               "calibration": {
                   "studs_per_meter": None,
@@ -1280,6 +1309,15 @@ def assess_wheel_geometry(instances):
 
     for inst in parts_in_wheels:
         if inst.get("name") not in WHEEL_DESIGNATIONS:
+            if (inst.get("name") in CHASSIS_PART_ALLOWLIST
+                    or inst.get("id") in known_ids):
+                # Legitimni dil podvozku (KNOWN_NON_WHEEL v detect_wheels):
+                # evidovat, NEBLOKOVAT, nepocitat jako unidentified.
+                result["known_non_wheels"].append({
+                    "instance_id": inst.get("id"),
+                    "name": inst.get("name"),
+                })
+                continue
             result["unidentified"].append({
                 "instance_id": inst.get("id"),
                 "name": inst.get("name"),
@@ -1331,9 +1369,9 @@ def assess_wheel_geometry(instances):
     elif not result["blocked"]:
         block("identified wheels != 4 (got %d)" % len(good))
 
-    block("float_decode_unverified: rozmery a stredy jsou precteny, "
-          "ale bez Studio ground-truth nedurveryhodne ke kalibraci "
-          "(kalibrace studs/m NOT IMPLEMENTED)")
+    block("float_decode_unverified: velikosti a stredy kol potvrzeny Studiem, "
+          "ale tvary dilu, rotace a kalibrace studs/m nejsou overeny "
+          "(kalibrace NOT IMPLEMENTED)")
     return result
 
 

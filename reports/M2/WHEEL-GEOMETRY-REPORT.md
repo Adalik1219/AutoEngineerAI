@@ -51,16 +51,24 @@ writeru (`F=větší Z, L=větší X`) je na tomto rámci; záměny stran/nápra
 detekuje jako `side_or_axle_swap` → BLOCKED. Záměna je kryta testem
 `test_coordinate_frame_is_actual_not_command_convention`.
 
-## 4. 44 dílů podvozku ve Wheels — BLOCKED drží
+## 4. 44 dílů podvozku ve Wheels — KNOWN_NON_WHEEL (4-tier, NEBLOKUJE)
 
 `Model:Wheels` (id 2) obsahuje **48** Partů: 4 kola (Ball FL/FR/RL/RR) +
 **44 dílů podvozku** (`SpringBottom/CLower/CUpper/SpringTop/LowerArmB/
-LowerArmF/Hub/LowerArm/UpperArmF/UpperArmB/UpperArm` × 4, shape None).
-Pravidlo identity (a)+(b)+(c) je legitimně neklasifikuje jako kola →
-UNKNOWN uvnitř Wheels → **BLOCKED drží** (ověřeno end-to-end:
-`assess` 4× GEOMETRY_OK, ale `blocked = [UNKNOWN…44,
-float_decode_unverified]`; `report_from_assess` → `overall BLOCKED`,
-geometrie 4 kol přitom číselně souhlasí s §2).
+LowerArmF/Hub/LowerArm/UpperArmF/UpperArmB/UpperArm` × 4, shape Block,
+ověřeno parserem na pracovní kopii — 11 názvů × 4 instance).
+Pravidlo identity (a)+(b)+(c) je legitimně neklasifikuje jako kola;
+nově spadají do tieru **KNOWN_NON_WHEEL** (`CHASSIS_PART_ALLOWLIST`):
+neblokují, zůstávají evidovány v `known_non_wheels` (detect i writer).
+Ověřeno end-to-end na reálné kopii (`dc8747e0…fefdf`, read-only,
+hash před/po shodný):
+`detect_wheels` → 4× VALID_WHEEL + 44× KNOWN_NON_WHEEL, 0 unidentified,
+`blocked = false`; `assess` (cizí modul, beze změny) 4× GEOMETRY_OK,
+ale `blocked` (44 unidentified + `float_decode_unverified`);
+`report_from_assess` překlápí allowlistové záznamy na known_non_wheels →
+`overall_status = GEOMETRY_OK`, číselně `wheelbase 10.52278`, rozchod
+5.99066/5.99072, Y-spread 0.0 — vše souhlasí s §2.
+Neznámý kandidát vedle allowlistu (např. Spare) blokuje jako dosud.
 
 Poznámka pro M3: důvod `float_decode_unverified` v assess je zastaralý —
 Studio ground-truth od jeho napsání existuje (tento report §2). Vymazání
@@ -81,24 +89,45 @@ swap / asymetrie → BLOCKED; chybějící geometrie nebo
 Deterministické (`report_id = vehicle_id@sha256[:12]`, žádné časy),
 žádný odhad — chybějící hodnota je `None` + reason.
 
-## 6. Testy — 34/34 OK
+## 6. Testy — 53/53 OK (18 povinných 4-tier v `TestWheelFourTier`)
 
-`python3 -m unittest tests.test_m2_wheel_detect` → **34 testů, OK**
-(21 původních pravidel identity beze změny + 13 nových):
-4 kola se Studio čísly, chybějící kolo, pátý Ball (Spare),
-duplicitní designace, záměna stran, záměna náprav, asymetrie průměru,
-asymetrie výšek, neověřený rámec → UNKNOWN, chybějící geometrie →
-UNKNOWN, determinismus + JSON round-trip, `report_from_assess` s 44 díly
-podvozku → BLOCKED.
+`python3 -m unittest tests.test_m2_wheel_detect tests.test_m2_rbxm_parser`
+→ **109 testů, OK** (z toho `test_m2_wheel_detect`: 53 — 35 původních
+pravidel identity/writeru beze změny chování + 18 nových 4-tier):
+4 kola VALID_WHEEL (Studio id 3/52/101/150); 44 dílů allowlistu neblokuje
++ evidováno 44× KNOWN_NON_WHEEL; allowlist mimo Wheels neplatí; chybějící
+kolo (`missing_wheel`); duplicitní designace (`duplicate_designation`,
+tier INVALID_WHEEL); špatný tvar kola (`bad_shape` → INVALID_WHEEL);
+pátý Ball Spare (`bad_designation` → UNKNOWN_CANDIDATE); hierarchie
+(`parent_cycle` → BLOCKED); determinismus detect+writer; writer GEOMETRY_OK
+se Studio čísly; prohození stran/náprav (`side_or_axle_swap`); asymetrie
+průměru (`diameter_asymmetry`) a výšek (`height_asymmetry`); neověřený
+rámec → UNKNOWN; chybějící geometrie → UNKNOWN (`missing_position`);
+`report_from_assess` s 44 díly → GEOMETRY_OK + 44 evidováno, Spare vedle
+allowlistu stále BLOCKED.
 
 ## 7. Shrnutí (§16)
 
-- **Hotovo:** identifikace 4 kol (Ball 2.7³, id 3/52/101/150) potvrzena
-  parser↔Studio; writer kontraktu implementován; 13 testů přidáno, 34/34 OK.
+- **Hotovo:** 4-tier klasifikace (VALID_WHEEL / KNOWN_NON_WHEEL +
+  allowlist 11 názvů / UNKNOWN_CANDIDATE / INVALID_WHEEL); identifikace
+  4 kol (Ball 2.7³, id 3/52/101/150) potvrzena parser↔Studio; 44 dílů
+  podvozku ověřeno na reálné kopii (`dc8747e0…fefdf`, hash před/po
+  shodný, read-only) → NEBLOKUJE, evidováno; writer kontraktu +
+  `known_non_wheels` nadstavba; 53/53 testů v modulu, 109/109 s parserem.
 - **Rozpor zdokumentován:** konvence X=vpřed/Y=vlevo/Z=vzhůru neplatí;
   platí x=lateral / y=up / z=longitudinal (důkaz v §2–3, test v §6).
-- **BLOCKED drží:** 44 dílů podvozku ve Wheels = legitimní podvozek,
-  ne kola; plná data → report BLOCKED s číselně správnou geometrií.
-- **Nevyřízeno (mimo vlastnictví):** vymazání `float_decode_unverified`
-  po M3 kalibraci (vlastník `rbxm_parser.py`); `scale_calibration.json`
-  (Agent C); práh M3 brány.
+- **BLOCKED drží kde má:** UNKNOWN_CANDIDATE / INVALID_WHEEL ve Wheels,
+  hierarchie, swapy, asymetrie; KNOWN_NON_WHEEL je jediná neblokující
+  výjimka (model-specificky, jen uvnitř Wheels).
+- **Nevyřízeno (mimo vlastnictví):** `float_decode_unverified` v assess
+  (vlastník `rbxm_parser.py`); `scale_calibration.json` (Agent C);
+  práh M3 brány. Cizí test `test_four_wheels_honest_partial`
+  (`test_m2_rbxm_parser.py`) aktualizován na novou sémantiku (nutná
+  změna: starý assertoval BLOCKED na reálné kopii) — ke kontrole
+  vlastníkem.
+- **Neznámé:** nic nového; všechny numerické výroky kryty během (§2).
+- **Rizika:** allowlist je model-specifický (A-Chassis 6C) — na jiném
+  vozidle by 44 dílů padlo do UNKNOWN_CANDIDATE → BLOCKED (bezpečný
+  směr); rozšíření allowlistu je věc M3 s vlastníkem parseru.
+- **Další krok:** M3 kalibrace (Agent C) → vymazání
+  `float_decode_unverified`; práh brány ponechán.

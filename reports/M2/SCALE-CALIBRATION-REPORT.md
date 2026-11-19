@@ -1,8 +1,18 @@
-# M2.9/M2.10 — Scale Calibration Report (Agent C)
+# M2.9/M2.10 — Scale Calibration Report (Agent B: kalibrace + M3 brána)
 
-Větev `feat/m2-m3-geometry`, HEAD `ab8409a`. Tvar `scale_calibration.json`
+Větev `feat/m2-m3-geometry`, HEAD `4cad304` (PR #2 NEMERGOVAT, žádné git
+operace). Tvar `scale_calibration.json`
 dle `reports/M2-M3-CONTRACTS-FREEZE-v1.md` (závazný, dodržen přesně).
 Cíl: `ford-mustang-gt-2024-eu-manual-standard` (EUROPEAN FACTORY STANDARD).
+
+## 0. Sjednocené statusy
+
+| Položka | Status | Význam |
+|---|---|---|
+| Kalibrační engine (`scale_calibration.py`) | IMPLEMENTED | kód napsán, kontrakt dodržen |
+| Testy (`test_m2_scale_calibration.py`, 31 testů) | CODE-VERIFIED | 31/31 PASS; není RUNTIME-VERIFIED (AGENTS.md pravidlo 6) |
+| JeepTemplate (reálná měření, Studio ground-truth) | BLOCKED (rozptyl 7,44 %) | nekonzistentní vůči mustangovským referencím M1 — očekáváno (jiné vozidlo), kalibrace se nesmí použít |
+| M3 Geometry Engine | NOT READY | brána propouští pouze VERIFIED; žádný reálný vstup dosud VERIFIED není |
 
 ## 1. Metoda
 
@@ -33,51 +43,87 @@ Dva údaje ze stejné rodiny = 1 nezávislá reference.
 
 1. Měření zcela chybí (vše `None`) → `UNKNOWN` (není co kalibrovat).
 2. < 2 nezávislé použitelné rodiny → `BLOCKED` (i track_f+track_r samotné,
-   i oba průměry samotné).
+   i oba průměry samotné, i samotný rozvor).
 3. Relativní rozptyl odhadů > 5 % → `BLOCKED` (nekonzistence, M2.10).
 4. Jinak: vše použité VERIFIED a max |odchylka| ≤ 2 % → `VERIFIED`,
    jinak `ESTIMATED`.
 
-Neplatný vstup (nula/zápor/nonn-finite u `value_si` či měření, jiná jednotka
+Neplatný vstup (nula/zápor/NaN/Inf u `value_si` či měření, záporná
+`uncertainty_si` či `u_studs`, jiná jednotka
 než `m`, chybějící zdroj, `value_si: null` bez statusu UNKNOWN, neznámý nebo
 duplicitní parametr) → `CalibrationError` (výjimka, ne tichý odhad).
 `value_si: null` + `UNKNOWN` je poctivé "nevím" a z kalibrace vypadává.
 
-## 4. Brána do M3
+## 4. Brána do M3 — POUZE VERIFIED
 
 Neověřené měřítko se nesmí dostat do M3: `usable_for_m3()` je `True` jen pro
 `VERIFIED`; `require_verified_for_m3()` jinak zvedne `CalibrationBlockedError`.
-ESTIMATED / UNKNOWN / BLOCKED do M3 neprojdou (testováno).
+ESTIMATED / UNKNOWN / BLOCKED do M3 neprojdou (testováno — včetně
+explicitního testu, že konzistentní ESTIMATED z plné sady referencí bránou
+neprojde).
 
-## 5. Verifikace
+### NÁLEZ pro koordinátora (kód NEMĚNĚN — dokumentační rozpor, vlastník Agent E)
 
-- Nový `tests/test_m2_scale_calibration.py`: **18/18 OK** (převody, determinismus
-  včetně přehozeného pořadí klíčů, nula/zápor, nekonzistence, UNKNOWN,
-  <2 reference, M3 brána, tvar kontraktu).
-- Plná sada `python tests/run_all.py`: PASS 312, 4 PENDING (očekávané),
-  **1 FAIL v `test_m2_wheel_detect.py` (Agent B, mnou nedotčeno) — předexistující
-  a nestabilní mezi běhy** (střídá `test_schema_has_required_top_level_keys` /
-  `test_missing_wheel_blocked`; selhává na `INSPECTION_REPORT_SCHEMA`, nikoli na
-  kalibraci). K tomu kolísá celkový počet běhů (297–317) — flaky F4 část sady,
-  mimo můj rozsah.
-- Změna `src/common/units.py` je čistě aditivní (`mm_to_m`, `m_to_mm`,
-  `tire_diameter_mm`, konstanty `MM_PER_INCH`/`MM_PER_M`); žádný existující
-  podpis nesáhnut.
+Návrh `reports/M3/GEOMETRY-ENGINE-PROPOSAL.md` §4 (kontrakt vstupu) uvádí
+`scale_calibration.overall_status ∈ {VERIFIED, ESTIMATED}` jako podmínku
+průchodu do M3. To je v rozporu s pravidlem kalibrace (tento report §4,
+kontrakt FREEZE, `usable_for_m3`): **do M3 smí pouze VERIFIED**.
+ESTIMATED měřítko obsahuje nominální odhady pneu (conf 0,6) a nesmí škálovat
+cílovou geometrii. Doporučení: Agent E v návrhu zpřísní bránu na
+`overall_status == VERIFIED` (ESTIMATED → STOP/BLOCKED). Kód kalibrace se
+kvůli návrhu nemění — brána je záměrně přísnější strana.
 
-## 6. Soubory (vlastněné)
+## 5. JeepTemplate: BLOCKED 7,44 % (očekáváno)
 
-- `src/common/units.py` — jen rozšíření (viz §5).
-- `src/Inspection/scale_calibration.py` — nový (kalibrace + M3 brána).
-- `tests/test_m2_scale_calibration.py` — nový (18 testů).
-- `reports/M2/SCALE-CALIBRATION-REPORT.md` — tento report.
+Reálná měření `JeepTemplate` (Studio ground-truth, Agent B/D — jiné vozidlo
+než mustangovské reference M1, takže BLOCKED je správný výsledek, ne chyba):
 
-## 7. Shrnutí
+| param | měření (studs) | reference SI (m) | odhad studs/m |
+|---|---|---|---|
+| wheelbase | 10,5228 | 2,719 | 3,87 |
+| track_f | 5,9907 | 1,585 | 3,78 |
+| track_r | 5,9907 | 1,642 | 3,65 |
+| tire_d_f | 2,7 | 0,6866 | 3,93 |
+| tire_d_r | 2,7 | 0,7026 | 3,84 |
 
-- Hotovo: kalibrace `studs/m` s BLOCKED podmínkami, testy i report; kontrakt
-  `scale_calibration.json` dodržen bez odchylek.
-- Ověřeno: 18/18 nových testů PASS; determinismus a M3 brána prokázány.
-- Nevytvářen duplicitní modul: `units.py` pouze rozšířen.
-- Otevřené / mimo rozsah: skutečná kalibrační čísla čekají na měření z RBXM
-  (Agent B) a Studio ground-truth; do té doby je každý reálný výstup
-  UNKNOWN/BLOCKED a do M3 nic neprojde. Flaky FAIL v `test_m2_wheel_detect.py`
-  patří Agentu B — neopravován (cizí vlastnictví).
+Rozptyl odhadů **7,44 % > 5 %** → `BLOCKED` (`nekonzistentní měřítko …`),
+`estimates: []`, `uncertainty: null`, brána do M3 uzavřena. Kryto testy
+`TestJeepTemplateGroundTruth` (BLOCKED + `7.44` v `blocked_reason` + M3 stop).
+
+## 6. Verifikace
+
+- `tests/test_m2_scale_calibration.py`: **31/31 OK** (převody, determinismus
+  včetně přehozeného pořadí klíčů, nula/zápor/NaN/Inf, záporné nejistoty,
+  chybějící zdroj/jednotka, `null` bez UNKNOWN, neznámý/duplicitní parametr,
+  1 rodina BLOCKED (pneu / rozchody / rozvor), stejná rodina 2× neplatí,
+  nekonzistence 20 % i JeepTemplate 7,44 %, UNKNOWN, M3 brána
+  VERIFIED-projde / ESTIMATED-UNKNOWN-BLOCKED-neprojdou / non-dict odmítnut,
+  nejistota přítomna na úspěchu, tvar kontraktu).
+- Plná sada `python tests/run_all.py`: **PASS, 4 PENDING** (očekávané),
+  0 FAIL v tomto běhu. (Historicky flaky: `test_m2_wheel_detect.py`
+  Agent B — předexistující, nestabilní mezi běhy, mimo můj rozsah;
+  v tomto běhu nepadl.)
+
+## 7. Soubory (vlastněné)
+
+- `src/Inspection/scale_calibration.py` — beze změny (brána POUZE VERIFIED
+  již v kódu; potvrzena testy, neměněna kvůli návrhu M3).
+- `tests/test_m2_scale_calibration.py` — rozšířen 18 → 31 testů
+  (`TestM3Gate` +2, `TestJeepTemplateGroundTruth` +2, `TestEdgeCases` +9).
+- `reports/M2/SCALE-CALIBRATION-REPORT.md` — tento report (statusy §0,
+  NÁLEZ §4, JeepTemplate §5).
+
+NEMĚNĚNO: `docs/*.md` (sync dělá koordinátor), cizí moduly, návrh M3.
+
+## 8. Shrnutí
+
+- Hotovo: kalibrace `studs/m` s BLOCKED podmínkami, 31 testů CODE-VERIFIED,
+  report; kontrakt `scale_calibration.json` dodržen bez odchylek.
+- Ověřeno: 31/31 nových testů PASS; plná sada PASS + 4 PENDING;
+  determinismus a M3 brána (POUZE VERIFIED) prokázány; JeepTemplate
+  BLOCKED 7,44 % prokázán na reálných číslech.
+- Nález: rozpor VERIFIED-vs-ESTIMATED v návrhu M3 §4 — předáno koordinátorovi,
+  kód neměněn.
+- Otevřené / mimo rozsah: skutečná mustangovská kalibrační čísla čekají na
+  měření z RBXM (Agent B) a Studio ground-truth; do té doby je každý reálný
+  výstup UNKNOWN/BLOCKED a do M3 nic neprojde. M3 NOT READY trvá.

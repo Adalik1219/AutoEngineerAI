@@ -430,9 +430,9 @@ class TestRbxmParser(unittest.TestCase):
 
     def test_four_wheels_honest_partial(self):
         """10. Realna kopie: hierarchie kompletni, tvary Ball (kola),
-        size/CFrame strukturalne; wheel_detect 4x WHEEL, ale BLOCKED
-        (44 dilu podvozku ve strome Wheels); geometrie se nikdy
-        neodvozuje z nazvu (jen z PROP)."""
+        size/CFrame strukturalne; wheel_detect 4x VALID_WHEEL + 44 dilu
+        podvozku jako KNOWN_NON_WHEEL (4-tier, Agent A — neblokuje,
+        evidovano); geometrie se nikdy neodvozuje z nazvu (jen z PROP)."""
         model = parse_rbxm(_require_real_copy(self))
         by_id = {i["id"]: i for i in model["instances"]}
         self.assertEqual(by_id[2]["name"], "Wheels")
@@ -457,21 +457,35 @@ class TestRbxmParser(unittest.TestCase):
         self.assertTrue(max(p[1] for p in pos.values())
                         - min(p[1] for p in pos.values()) < 0.05)
         result = detect_wheels(model["instances"])
-        self.assertTrue(is_blocked(result))
+        self.assertFalse(is_blocked(result))
         self.assertTrue(all(w["status"] == "WHEEL"
                             for w in result["wheels"].values()))
-        self.assertTrue(any("UNKNOWN candidate(s) inside Model:Wheels" in r
-                            for r in result["blocked_reasons"]))
-        # Geometricke posouzeni: 4x GEOMETRY_OK se stredy/rozmery, ale
-        # BLOCKED (neoverena kalibrace + UNKNOWN dilci ve strome Wheels).
+        self.assertTrue(all(w["tier"] == "VALID_WHEEL"
+                            for w in result["wheels"].values()))
+        self.assertEqual(len(result["known_non_wheels"]), 44)
+        self.assertEqual(result["unidentified"], [])
+        # Geometricke posouzeni: 4x GEOMETRY_OK se stredy/rozmery;
+        # 44 dilu podvozku je KNOWN_NON_WHEEL (evidovano, ne unidentified
+        # — konzistentne s detect_wheels); celek BLOCKED jen z neoverene
+        # kalibrace (float_decode_unverified).
         geo = assess_wheel_geometry(model["instances"])
         self.assertEqual(geo["status"], "BLOCKED")
         for des in ("FL", "FR", "RL", "RR"):
             self.assertEqual(geo["wheels"][des]["status"], "GEOMETRY_OK")
+        self.assertEqual(geo["unidentified"], [])
+        self.assertEqual(len(geo["known_non_wheels"]), 44)
+        self.assertEqual(len(geo["blocked_reasons"]), 1)
         self.assertEqual(geo["calibration"]["status"], "NOT_IMPLEMENTED")
         self.assertTrue(
             any("float_decode_unverified" in r
                 for r in geo["blocked_reasons"]))
+        # Predani detect-vystupu (known_non_wheels) nemeni vysledek.
+        geo2 = assess_wheel_geometry(
+            model["instances"],
+            known_non_wheels=result["known_non_wheels"])
+        self.assertEqual(geo2["unidentified"], [])
+        self.assertEqual(len(geo2["known_non_wheels"]), 44)
+        self.assertEqual(len(geo2["blocked_reasons"]), 1)
 
     def test_shape_census_msb_first(self):
         """N1-uzaver (MSB-first): realna kopie ma 4x Ball (kola) + 104x
@@ -795,6 +809,65 @@ class TestRbxmParser(unittest.TestCase):
         self.assertEqual(len(geo["blocked_reasons"]), 1)
         self.assertIn("float_decode_unverified", geo["blocked_reasons"][0])
         self.assertEqual(geo["calibration"]["status"], "NOT_IMPLEMENTED")
+
+    def test_assess_allowlisted_chassis_parts_not_unidentified(self):
+        """E1b. Synteticka 4 kola + 2 dily podvozku z allowlistu ve Wheels:
+        allowlist se eviduje jako known_non_wheels (konzistentne
+        s detect_wheels), NE jako unidentified; celek BLOCKED jen
+        z neoverene kalibrace (float_decode_unverified). Neznamy dil
+        mimo allowlist blokuje dal (UNKNOWN candidate)."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR", "Hub", "LowerArm"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1),
+             (6, 1), (7, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0, 1, 1])),
+                ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4
+                                    + [(1.0, 1.0, 1.0)] * 2)),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0),
+                                        (0.0, 0.0, 5.0), (6.0, 0.0, 5.0)],
+                                       [0, 0, 0, 0, 2, 2],
+                                       [ident] * 4 + [None, None])),
+            ]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(by_id[6]["name"], "Hub")
+        self.assertEqual(by_id[7]["name"], "LowerArm")
+        det = detect_wheels(model["instances"])
+        self.assertEqual(len(det["known_non_wheels"]), 2)
+        self.assertEqual(det["unidentified"], [])
+        geo = assess_wheel_geometry(
+            model["instances"],
+            known_non_wheels=det["known_non_wheels"])
+        for des in ("FL", "FR", "RL", "RR"):
+            self.assertEqual(geo["wheels"][des]["status"], "GEOMETRY_OK")
+        self.assertEqual(geo["unidentified"], [])
+        self.assertEqual(len(geo["known_non_wheels"]), 2)
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertEqual(len(geo["blocked_reasons"]), 1)
+        self.assertIn("float_decode_unverified", geo["blocked_reasons"][0])
+        # Stejne bez predaneho detect-vystupu (allowlist staci).
+        geo_plain = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo_plain["unidentified"], [])
+        self.assertEqual(len(geo_plain["known_non_wheels"]), 2)
+        self.assertEqual(len(geo_plain["blocked_reasons"]), 1)
+        # Neznamy dil mimo allowlist = unidentified + BLOCKED z duvodu
+        # kandidata (navic ke kalibraci).
+        broken = [dict(i) for i in model["instances"]]
+        for inst in broken:
+            if inst["id"] == 7:
+                inst["name"] = "MysteryBracket"
+        geo_bad = assess_wheel_geometry(broken)
+        self.assertEqual(len(geo_bad["unidentified"]), 1)
+        self.assertEqual(len(geo_bad["known_non_wheels"]), 1)
+        self.assertEqual(geo_bad["status"], "BLOCKED")
+        self.assertTrue(any("UNKNOWN candidate" in r
+                            for r in geo_bad["blocked_reasons"]))
+        self.assertTrue(any("float_decode_unverified" in r
+                            for r in geo_bad["blocked_reasons"]))
 
     def test_assess_asymmetric_layout_blocked(self):
         """E2. Asymetricke rozmisteni stredu (ne-obdelnik) = BLOCKED

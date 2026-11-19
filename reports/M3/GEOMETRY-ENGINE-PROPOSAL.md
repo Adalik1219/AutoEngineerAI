@@ -103,7 +103,10 @@ profile M1 (mm hodnoty + statusy)
 
 Kontrakt vstupu (FREEZE, neměnit bez nové verze):
 - `inspection_report.overall_status == "GEOMETRY_OK"` **a** všechna 4 kola `status == GEOMETRY_OK`, jinak STOP.
-- `scale_calibration.overall_status ∈ {VERIFIED, ESTIMATED}` + `studs_per_meter` konečné kladné + `uncertainty` přítomna, jinak STOP.
+- `scale_calibration.overall_status == "VERIFIED"` (STRICT — brána `usable_for_m3()` /
+`require_verified_for_m3()` v `src/Inspection/scale_calibration.py` propouští do M3
+pouze VERIFIED; ESTIMATED STOP — odhadnuté měřítko `k` by vyrábělo falešně přesnou
+geometrii) + `studs_per_meter` konečné kladné + `uncertainty` přítomna, jinak STOP.
 - `coordinate_frame.verified_in_studio == true`, jinak STOP (rámec x-vpřed/y-vlevo/z-vzhůru z `units.py` by byl neověřený předpoklad).
 - Každé M2 měření bez statusu = odmítnuto (G-02/G-03).
 
@@ -174,7 +177,8 @@ Při BLOCKED: `overall_status: BLOCKED`, `blocked_reason` povinný, všechny `va
 
 `geometry_validator.precheck()` vrací BLOCKED (a zastavuje vše pod ním), pokud platí
 **koli** z: `inspection.overall_status != GEOMETRY_OK` · počet kol ≠ 4 / kterékoli kolo
-UNKNOWN · `scale.overall_status == BLOCKED|UNKNOWN` · `studs_per_meter` není konečné
+UNKNOWN · `scale.overall_status != VERIFIED` (tj. BLOCKED | UNKNOWN | ESTIMATED —
+ESTIMATED měřítko blokuje stejně jako chybějící, viz §4) · `studs_per_meter` není konečné
 kladné (`isfinite`, reakce na AUDIT P0) · < 2 nezávislé reference · `coordinate_frame`
 neověřen · `source_sha256` inspekce ≠ hash pracovní kopie RBXM (G-01).
 BLOCKED se propaguje: celý `geometry_target.json` + celý `geometry_diff.json` BLOCKED,

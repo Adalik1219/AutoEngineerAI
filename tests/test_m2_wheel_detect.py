@@ -16,6 +16,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.Inspection.wheel_detect import (
+    CHASSIS_PART_ALLOWLIST,
     COORDINATE_FRAME_ACTUAL,
     INSPECTION_REPORT_SCHEMA,
     WHEEL_DESIGNATIONS,
@@ -107,9 +108,10 @@ class TestWheelDecisionRule(unittest.TestCase):
 
     def test_ball_outside_wheels_never_wheel(self):
         insts = _ok_model() + [_part(999, "FR", parent_id=0)]
-        # Ochrana pred zamenou: Ball mimo Wheels se kolem nikdy nestane.
+        # Ochrana pred zamenou: Ball mimo Wheels se kolem nikdy nestane —
+        # narokuje oznaceni kola, ale lezi mimo: INVALID_WHEEL.
         status, failed = classify_candidate(insts[-1], False)
-        self.assertEqual(status, "UNKNOWN")
+        self.assertEqual(status, "INVALID_WHEEL")
         self.assertIn("not_in_wheels", failed)
         # A neotravi vysledek (duplicita FR mimo Wheels neblokuje).
         res = detect_wheels(insts)
@@ -165,8 +167,10 @@ class TestWheelDecisionRule(unittest.TestCase):
         self.assertTrue(is_blocked(res))
         self.assertTrue(any("UNKNOWN" in r for r in res["blocked_reasons"]))
 
-    def test_classify_conjunction_all_three_required(self):
-        # Kazda z 8 kombinaci: jen (True,True,True) je WHEEL.
+    def test_classify_four_tiers(self):
+        # Plna pravdivostni tabulka 4-tier klasifikace:
+        # (T,T,T) = VALID_WHEEL; narok na oznaceni kola pri poruseni
+        # (a)/(c) = INVALID_WHEEL; jinak UNKNOWN_CANDIDATE.
         for in_w in (False, True):
             for name_ok in (False, True):
                 for shape_ok in (False, True):
@@ -177,11 +181,30 @@ class TestWheelDecisionRule(unittest.TestCase):
                             "parent_id": 2}
                     status, failed = classify_candidate(inst, in_w)
                     if in_w and name_ok and shape_ok:
-                        self.assertEqual(status, "WHEEL")
+                        self.assertEqual(status, "VALID_WHEEL")
                         self.assertEqual(failed, [])
-                    else:
-                        self.assertEqual(status, "UNKNOWN")
+                    elif name_ok:
+                        self.assertEqual(status, "INVALID_WHEEL")
                         self.assertTrue(failed)
+                        if not in_w:
+                            self.assertIn("not_in_wheels", failed)
+                        if not shape_ok:
+                            self.assertIn("bad_shape", failed)
+                    else:
+                        self.assertEqual(status, "UNKNOWN_CANDIDATE")
+                        self.assertTrue(failed)
+
+    def test_classify_allowlist_is_known_non_wheel(self):
+        # Kazdy z 11 nazvu allowlistu ve Wheels = KNOWN_NON_WHEEL,
+        # bez ohledu na tvar (realita: Block).
+        for shape in ("Block", None, "Ball"):
+            for name in ("Hub", "LowerArm", "SpringTop"):
+                inst = {"id": 1, "name": name, "class_name": "Part",
+                        "shape": shape, "parent_id": 2}
+                status, failed = classify_candidate(inst, True)
+                self.assertEqual(status, "KNOWN_NON_WHEEL",
+                                msg="%r/%r" % (name, shape))
+                self.assertEqual(failed, [])
 
 
 class TestInspectionReportSchema(unittest.TestCase):
@@ -455,9 +478,13 @@ class TestBuildInspectionReport(unittest.TestCase):
         self.assertEqual(json.loads(json.dumps(rep1, sort_keys=True)), rep1)
         self.assertEqual(rep1["report_id"], "JeepTemplate@dc8747e016e1")
 
-    def test_report_from_assess_blocked_on_real_chassis_parts(self):
+    def test_report_from_assess_known_chassis_parts_not_blocking(self):
         # 44 dilu podvozku ve Wheels = legitimni podvozek, ne kola:
-        # assess je eviduje jako unidentified -> report drzi BLOCKED.
+        # assess je eviduje jako unidentified, report_from_assess je
+        # preklopi na known_non_wheels -> dily samotne NEBLOKUJI, zustavaji
+        # evidovany. Report je ale BLOCKED propagaci assess BLOCKED (I-1:
+        # float_decode_unverified), per-kolo GEOMETRY_OK detaily zustavaji.
+        chassis_names = sorted(CHASSIS_PART_ALLOWLIST)
         assess = {
             "wheels": {
                 des: {"status": "GEOMETRY_OK",
@@ -466,7 +493,10 @@ class TestBuildInspectionReport(unittest.TestCase):
                       "position": STUDIO_CENTERS[des],
                       "failed_checks": []}
                 for des in WHEEL_DESIGNATIONS},
-            "unidentified": [{"instance_id": 9 + i, "name": "Hub",
+            "blocked": True,
+            "status": "BLOCKED",
+            "unidentified": [{"instance_id": 1000 + i,
+                              "name": chassis_names[i % 11],
                               "failed_checks": ["not_a_wheel"]}
                              for i in range(44)],
             "blocked_reasons": ["UNKNOWN candidate(s) inside Model:Wheels: 44",
@@ -478,8 +508,231 @@ class TestBuildInspectionReport(unittest.TestCase):
             "dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf",
             assess, "rbxm_parser M2/C05", "test")
         self.assertEqual(rep["overall_status"], "BLOCKED")
-        self.assertEqual(rep["wheelbase_studs"] is not None, True)
+        self.assertTrue(any("float_decode_unverified" in w
+                            for w in rep["warnings"]))
+        # Per-kolo detaily zustavaji: kola jsou GEOMETRY_OK v tele reportu.
+        for entry in rep["wheels"]:
+            self.assertEqual(entry["status"], "GEOMETRY_OK")
+        self.assertEqual(len(rep["known_non_wheels"]), 44)
+        for entry in rep["known_non_wheels"]:
+            self.assertEqual(entry["tier"], "KNOWN_NON_WHEEL")
+        self.assertTrue(any("44 known chassis part(s)" in w
+                            for w in rep["warnings"]))
+        # Dily podvozku samotne neblokuji: zadne "unidentified inside Wheels".
+        self.assertFalse(any("unidentified inside Wheels" in w
+                             for w in rep["warnings"]))
+        # Skutecne nezname zustava BLOCKED i vedle allowlistu.
+        assess["unidentified"].append(
+            {"instance_id": 999, "name": "Spare",
+             "failed_checks": ["bad_designation"]})
+        rep2 = report_from_assess(
+            "JeepTemplate",
+            "assets/chassis-original/chasis-work-copy.rbxm",
+            "dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf",
+            assess, "rbxm_parser M2/C05", "test")
+        self.assertEqual(rep2["overall_status"], "BLOCKED")
         self.assertTrue(any("unidentified inside Wheels" in w
+                            for w in rep2["warnings"]))
+
+
+def _full_chassis_model():
+    """4 kola + 44 dilu podvozku (11 nazvu x 4), tvary dle realne kopie."""
+    insts = _ok_model()
+    names = sorted(CHASSIS_PART_ALLOWLIST)
+    iid = 1000
+    for rep in range(4):
+        for name in names:
+            insts.append(_part(iid, name, shape="Block", parent_id=2))
+            iid += 1
+    return insts
+
+
+class TestWheelFourTier(unittest.TestCase):
+    """18 povinnych testu 4-tier klasifikace (kazdy s konkretnim duvodem)."""
+
+    def test_01_four_wheels_are_valid_wheel(self):
+        res = detect_wheels(_ok_model())
+        self.assertFalse(is_blocked(res))
+        for des, iid in (("FL", 3), ("FR", 52), ("RL", 101), ("RR", 150)):
+            self.assertEqual(res["wheels"][des]["tier"], "VALID_WHEEL")
+            self.assertEqual(res["wheels"][des]["instance_id"], iid)
+            self.assertEqual(res["wheels"][des]["failed_checks"], [])
+
+    def test_02_chassis_44_known_not_blocking(self):
+        res = detect_wheels(_full_chassis_model())
+        self.assertFalse(is_blocked(res),
+                         msg="blocked: %r" % (res["blocked_reasons"],))
+        self.assertEqual(len(res["known_non_wheels"]), 44)
+        self.assertEqual(res["unidentified"], [])
+
+    def test_03_known_non_wheel_evidence_record(self):
+        res = detect_wheels(_full_chassis_model())
+        recs = [k for k in res["known_non_wheels"]
+                if k["name"] == "Hub"]
+        self.assertEqual(len(recs), 4)
+        for rec in recs:
+            self.assertEqual(rec["tier"], "KNOWN_NON_WHEEL")
+            self.assertEqual(rec["shape"], "Block")
+            self.assertIsNotNone(rec["instance_id"])
+
+    def test_04_allowlist_outside_wheels_not_known(self):
+        insts = _ok_model() + [_part(999, "Hub", shape="Block", parent_id=0)]
+        status, _ = classify_candidate(insts[-1], False)
+        self.assertNotEqual(status, "KNOWN_NON_WHEEL")
+        res = detect_wheels(insts)
+        self.assertFalse(is_blocked(res))
+        self.assertEqual(res["known_non_wheels"], [])
+
+    def test_05_missing_wheel_blocked(self):
+        insts = [i for i in _ok_model() if i["id"] != 150]
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["wheels"]["RR"]["tier"], "UNKNOWN_CANDIDATE")
+        self.assertIn("missing_wheel",
+                      res["wheels"]["RR"]["failed_checks"])
+        self.assertTrue(any("!= 4" in r for r in res["blocked_reasons"]))
+
+    def test_06_duplicate_designation_blocked(self):
+        insts = _ok_model() + [_part(151, "RR", parent_id=2)]
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["wheels"]["RR"]["tier"], "INVALID_WHEEL")
+        self.assertIn("duplicate_designation",
+                      res["wheels"]["RR"]["failed_checks"])
+        self.assertTrue(any("duplicate designation RR: 2" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_07_wheel_named_bad_shape_is_invalid_wheel(self):
+        insts = _ok_model()
+        insts[3] = _part(52, "FR", shape="Block")
+        status, failed = classify_candidate(insts[3], True)
+        self.assertEqual(status, "INVALID_WHEEL")
+        self.assertIn("bad_shape", failed)
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        recs = [u for u in res["unidentified"]
+                if u["instance_id"] == 52]
+        self.assertEqual(len(recs), 1)
+        self.assertEqual(recs[0]["tier"], "INVALID_WHEEL")
+
+    def test_08_spare_ball_is_unknown_candidate(self):
+        insts = _ok_model() + [_part(160, "Spare", parent_id=2)]
+        status, failed = classify_candidate(insts[-1], True)
+        self.assertEqual(status, "UNKNOWN_CANDIDATE")
+        self.assertIn("bad_designation", failed)
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertTrue(any("UNKNOWN candidate(s) inside Model:Wheels" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_09_hierarchy_cycle_blocked(self):
+        insts = _ok_model()
+        for inst in insts:
+            if inst["id"] == 3:
+                inst["parent_id"] = 3
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertTrue(any("parent_cycle" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_10_detect_determinism(self):
+        insts = _full_chassis_model()
+        self.assertEqual(detect_wheels(insts), detect_wheels(insts))
+
+    def test_11_report_geometry_ok_with_studio_numbers(self):
+        rep = _ok_report()
+        self.assertEqual(rep["overall_status"], "GEOMETRY_OK")
+        self.assertAlmostEqual(rep["axles"]["front"]["track_studs"],
+                               5.99066162109375, places=9)
+        self.assertAlmostEqual(rep["axles"]["rear"]["track_studs"],
+                               5.99072265625, places=9)
+        self.assertAlmostEqual(rep["wheelbase_studs"], 10.522781372070312,
+                               places=9)
+        self.assertEqual(rep["known_non_wheels"], [])
+
+    def test_12_report_side_swap_blocked(self):
+        centers = dict(STUDIO_CENTERS)
+        centers["FL"], centers["FR"] = centers["FR"], centers["FL"]
+        rep = _ok_report(wheels=_ok_wheels(center_override=centers))
+        self.assertEqual(rep["overall_status"], "BLOCKED")
+        self.assertTrue(any("side_or_axle_swap" in w
+                            for w in rep["warnings"]))
+
+    def test_13_report_axle_swap_blocked(self):
+        centers = dict(STUDIO_CENTERS)
+        centers["FL"], centers["RL"] = centers["RL"], centers["FL"]
+        rep = _ok_report(wheels=_ok_wheels(center_override=centers))
+        self.assertEqual(rep["overall_status"], "BLOCKED")
+        self.assertTrue(any("side_or_axle_swap" in w
+                            for w in rep["warnings"]))
+
+    def test_14_report_diameter_asymmetry_blocked(self):
+        sizes = {des: STUDIO_SIZE for des in WHEEL_DESIGNATIONS}
+        sizes["RR"] = (3.0, 3.0, 3.0)
+        rep = _ok_report(wheels=_ok_wheels(size_override=sizes))
+        self.assertEqual(rep["overall_status"], "BLOCKED")
+        rr = [w for w in rep["wheels"] if w["designation"] == "RR"][0]
+        self.assertEqual(rr["reason"], "diameter_asymmetry")
+
+    def test_15_report_height_asymmetry_blocked(self):
+        centers = dict(STUDIO_CENTERS)
+        fl = centers["FL"]
+        centers["FL"] = (fl[0], fl[1] + 0.5, fl[2])
+        rep = _ok_report(wheels=_ok_wheels(center_override=centers))
+        self.assertEqual(rep["overall_status"], "BLOCKED")
+        self.assertTrue(any("height_asymmetry" in w
+                            for w in rep["warnings"]))
+
+    def test_16_report_unverified_frame_caps_at_unknown(self):
+        frame = dict(COORDINATE_FRAME_ACTUAL)
+        frame["verified_in_studio"] = False
+        rep = _ok_report(coordinate_frame=frame)
+        self.assertEqual(rep["overall_status"], "UNKNOWN")
+
+    def test_17_report_missing_geometry_unknown(self):
+        wheels = _ok_wheels()
+        wheels["FL"]["center_studs"] = None
+        wheels["FL"]["status"] = "UNKNOWN"
+        wheels["FL"]["reason"] = "missing_position"
+        rep = _ok_report(wheels=wheels)
+        self.assertEqual(rep["overall_status"], "UNKNOWN")
+        self.assertIsNone(rep["axles"]["front"]["track_studs"])
+        fl = [w for w in rep["wheels"] if w["designation"] == "FL"][0]
+        self.assertIn("missing_position", fl["reason"])
+
+    def test_18_report_from_assess_44_known_ok(self):
+        # I-1: assess BLOCKED (float_decode_unverified) -> report BLOCKED,
+        # 44 dilu podvozku evidovano jako known_non_wheels, per-kolo
+        # GEOMETRY_OK detaily zustavaji v tele reportu.
+        chassis_names = sorted(CHASSIS_PART_ALLOWLIST)
+        assess = {
+            "wheels": {
+                des: {"status": "GEOMETRY_OK",
+                      "instance_id": STUDIO_IDS[des],
+                      "shape": "Ball", "size": STUDIO_SIZE,
+                      "position": STUDIO_CENTERS[des],
+                      "failed_checks": []}
+                for des in WHEEL_DESIGNATIONS},
+            "blocked": True,
+            "status": "BLOCKED",
+            "unidentified": [{"instance_id": 2000 + i,
+                              "name": chassis_names[i % 11],
+                              "failed_checks": ["not_a_wheel"]}
+                             for i in range(44)],
+            "blocked_reasons": ["float_decode_unverified:erne overena kalibrace"],
+        }
+        rep = report_from_assess(
+            "JeepTemplate",
+            "assets/chassis-original/chasis-work-copy.rbxm",
+            "dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf",
+            assess, "rbxm_parser M2/C05", "test")
+        self.assertEqual(rep["overall_status"], "BLOCKED")
+        self.assertTrue(any("float_decode_unverified" in w
+                            for w in rep["warnings"]))
+        for entry in rep["wheels"]:
+            self.assertEqual(entry["status"], "GEOMETRY_OK")
+        self.assertEqual(len(rep["known_non_wheels"]), 44)
+        self.assertTrue(any("44 known chassis part(s)" in w
                             for w in rep["warnings"]))
 
 

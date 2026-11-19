@@ -6,13 +6,17 @@
 #     (b) nese oznaceni FL/FR/RL/RR,
 #     (c) ma tvar Ball.
 #   Ball-tvar mimo Model:Wheels se kolem NIKDY nestane.
-#   Pri poruseni libovolne podminky: kandidat -> UNKNOWN se zaznamem,
-#   ktery bod selhal.
+#   4-tier klasifikace (classify_candidate):
+#     VALID_WHEEL = (a)+(b)+(c); KNOWN_NON_WHEEL = Part ve Wheels
+#       se jmenem z CHASSIS_PART_ALLOWLIST (legitimni podvozek:
+#       NEBLOKUJE, zustava evidovan); UNKNOWN_CANDIDATE = nezname
+#       ve Wheels -> BLOCKED; INVALID_WHEEL = narokuje oznaceni kola,
+#       ale porusuje (a)/(c) -> BLOCKED (uvnitr Wheels).
 #
 # BLOCKED (analyza se zastavi):
 #   - chybejici Model:Wheels,
 #   - pocet identifikovanych kol != 4 (vcetne duplicitniho oznaceni),
-#   - jakekoli UNKNOWN u kola,
+#   - jakykoli UNKNOWN_CANDIDATE / INVALID_WHEEL uvnitr Wheels,
 #   - poskozena parent hierarchie: cyklus (duvod parent_cycle) nebo
 #     odkaz na neexistujici parent ID — takovou hierarchii nelze
 #     klasifikovat jako validni, vysledek je vzdy BLOCKED,
@@ -26,7 +30,7 @@
 # JEDNOTKY: bezrozmerne identifikatory, zadne fyzikalni jednotky.
 # LIMITY: tento modul nemeri rozmery ani meritko, jen identitu kol.
 
-"""Identifikace kol v Model:Wheels konjunkci (a)+(b)+(c); jinak UNKNOWN/BLOCKED."""
+"""Identifikace kol v Model:Wheels konjunkci (a)+(b)+(c); 4-tier VALID_WHEEL / KNOWN_NON_WHEEL / UNKNOWN_CANDIDATE / INVALID_WHEEL, jinak BLOCKED."""
 
 from __future__ import annotations
 
@@ -38,6 +42,31 @@ WHEELS_MODEL_NAME = "Wheels"
 WHEEL_DESIGNATIONS = ("FL", "FR", "RL", "RR")
 # Ocekavany tvar dilu kola (audit §10: kola = koule, shape=Ball).
 WHEEL_SHAPE = "Ball"
+
+# Model-specificky allowlist: 11 nazvu dilu podvozku, kazdy 4x
+# (FL/FR/RL/RR instance) = 44 Partu uvnitr Model:Wheels.
+# Overeno na realne kopii chasis-work-copy.rbxm
+# (sha256 dc8747e0...fefdf, read-only, pred/po shodne):
+#   SpringBottom/CLower/CUpper/SpringTop/LowerArmB/LowerArmF/Hub/
+#   LowerArm/UpperArmF/UpperArmB/UpperArm x 4, vse Part/Block.
+# Plati JEN uvnitr Model:Wheels (kontext modelu je soucasti pravidla);
+# stejny nazev mimo Wheels neni KNOWN_NON_WHEEL.
+CHASSIS_PART_ALLOWLIST = frozenset({
+    "SpringBottom", "CLower", "CUpper", "SpringTop",
+    "LowerArmB", "LowerArmF", "Hub", "LowerArm",
+    "UpperArmF", "UpperArmB", "UpperArm",
+})
+
+# 4-tier klasifikace kandidata (vraci classify_candidate):
+#   VALID_WHEEL      — (a)+(b)+(c) splneno; jediny stav, ktery je kolem.
+#   KNOWN_NON_WHEEL — Part uvnitr Wheels se jmenem z allowlistu;
+#                     legitimni podvozek, NEBLOKUJE, zustava evidovan
+#                     v result["known_non_wheels"].
+#   UNKNOWN_CANDIDATE — uvnitr Wheels, neni kolo ani allowlist -> BLOCKED.
+#   INVALID_WHEEL    — kandidat si narokuje oznaceni kola (FL/FR/RL/RR),
+#                     ale porusuje (a) nebo (c) -> BLOCKED.
+# INVALID_WHEEL mimo Wheels se ignoruje (ochrana pred zamenou, viz
+# test_ball_outside_wheels_never_wheel); blokuje jen uvnitr Wheels.
 
 # Skutecny souradnicovy ramec podvozku (empiricky, Studio ground-truth
 # reports/STUDIO_GROUND_TRUTH.md §3 + parser na pracovni kopii
@@ -88,7 +117,17 @@ INSPECTION_REPORT_SCHEMA = {
                  "wheels", "axles", "wheelbase_studs",
                  "tire_diameters_studs", "coordinate_frame",
                  "method", "warnings", "overall_status"],
+    # "known_non_wheels" je NADSTAVBA tohoto modulu (evidovane legitimni
+    # dily podvozku, viz CHASSIS_PART_ALLOWLIST): volitelny klic, povinne
+    # klice kontraktu se NEMENI.
     "properties": {
+        "known_non_wheels": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": ["instance_id", "name", "shape", "tier"],
+            },
+        },
         "report_id": {"type": "string"},
         "vehicle_id": {"type": "string"},
         "source_file": {"type": "string"},
@@ -200,31 +239,47 @@ def is_in_wheels(instance, wheels_id, index):
 
 
 def classify_candidate(instance, in_wheels):
-    """Jedna kandidatni instance -> (status, failed_checks).
+    """Jedna kandidatni instance -> (tier, failed_checks).
 
-    Podminky (a)+(b)+(c) jako konjunkce; Ball mimo Wheels nikdy kolo.
+    4-tier: VALID_WHEEL | KNOWN_NON_WHEEL | UNKNOWN_CANDIDATE |
+    INVALID_WHEEL (vyznam viz komentar u CHASSIS_PART_ALLOWLIST).
+    failed_checks nese konkretni porusene podminky
+    (not_in_wheels / bad_designation / bad_shape).
     """
     failed = []
     if not in_wheels:
         failed.append("not_in_wheels")
-    if instance.get("name") not in WHEEL_DESIGNATIONS:
+    name = instance.get("name")
+    if name not in WHEEL_DESIGNATIONS:
         failed.append("bad_designation")
     if instance.get("shape") != WHEEL_SHAPE:
         failed.append("bad_shape")
-    if failed:
-        return "UNKNOWN", failed
-    return "WHEEL", []
+    if not failed:
+        return "VALID_WHEEL", []
+    if (in_wheels and instance.get("class_name") == "Part"
+            and name in CHASSIS_PART_ALLOWLIST):
+        # Legitimni dil podvozku ve Wheels: evidovat, neblokovat.
+        # failed_checks se zahazuji (dil je znamy cely, ne "skoro kolo").
+        return "KNOWN_NON_WHEEL", []
+    if name in WHEEL_DESIGNATIONS:
+        # Narokuje oznaceni kola, ale porusuje (a) nebo (c).
+        return "INVALID_WHEEL", failed
+    return "UNKNOWN_CANDIDATE", failed
 
 
 def detect_wheels(instances):
     """Identifikace kol ze seznamu instanci.
 
-    Vraci dict: {wheels, unidentified, blocked, blocked_reasons, status}.
+    Vraci dict: {wheels, known_non_wheels, unidentified, blocked,
+      blocked_reasons, status}.
+    known_non_wheels: evidovane legitimni dily podvozku (allowlist),
+      NEBLOKUJI. unidentified: UNKNOWN_CANDIDATE / INVALID_WHEEL
+      uvnitr Wheels (kazdy zaznam nese tier) -> vzdy BLOCKED.
     Deterministicke: stejny vstup = stejny vystup.
     Poskozena hierarchie (duplicitni id, cyklus, chybejici parent)
     vzdy BLOCKED — nikdy se neklasifikuje jako validni.
     """
-    result = {"wheels": {}, "unidentified": [],
+    result = {"wheels": {}, "known_non_wheels": [], "unidentified": [],
               "blocked": False, "blocked_reasons": [], "status": "OK"}
 
     def block(reason):
@@ -274,11 +329,12 @@ def detect_wheels(instances):
         try:
             in_w = is_in_wheels(inst, wheels_id, index)
         except ParentCycleError as exc:
-            # Poskozeny retez: kandidat je UNKNOWN, analyza BLOCKED.
+            # Poskozeny retez: kandidat je UNKNOWN_CANDIDATE, analyza BLOCKED.
             result["unidentified"].append({
                 "instance_id": inst.get("id"),
                 "name": inst.get("name"),
                 "shape": inst.get("shape"),
+                "tier": "UNKNOWN_CANDIDATE",
                 "failed_checks": ["parent_cycle"],
             })
             block(str(exc))
@@ -288,20 +344,31 @@ def detect_wheels(instances):
                 "instance_id": inst.get("id"),
                 "name": inst.get("name"),
                 "shape": inst.get("shape"),
+                "tier": "UNKNOWN_CANDIDATE",
                 "failed_checks": ["missing_parent"],
             })
             block(str(exc))
             continue
-        status, failed = classify_candidate(inst, in_w)
-        if status == "WHEEL":
+        tier, failed = classify_candidate(inst, in_w)
+        if tier == "VALID_WHEEL":
             hits[inst.get("name")].append(inst)
+        elif tier == "KNOWN_NON_WHEEL":
+            # Legitimni podvozek: evidovat, NEBLOKOVAT.
+            result["known_non_wheels"].append({
+                "instance_id": inst.get("id"),
+                "name": inst.get("name"),
+                "shape": inst.get("shape"),
+                "tier": tier,
+            })
         elif in_w:
-            # UNKNOWN uvnitr Wheels se eviduje; Ball mimo Wheels je
-            # ocekavana ne-kola (ochrana pred zamenou) -> bez zaznamu.
+            # UNKNOWN_CANDIDATE / INVALID_WHEEL uvnitr Wheels se eviduje
+            # a blokuje; Ball mimo Wheels je ocekavana ne-kola
+            # (ochrana pred zamenou) -> bez zaznamu, bez bloku.
             result["unidentified"].append({
                 "instance_id": inst.get("id"),
                 "name": inst.get("name"),
                 "shape": inst.get("shape"),
+                "tier": tier,
                 "failed_checks": failed,
             })
 
@@ -309,6 +376,7 @@ def detect_wheels(instances):
         if len(hits[des]) == 1:
             inst = hits[des][0]
             result["wheels"][des] = {
+                "tier": "VALID_WHEEL",
                 "status": "WHEEL",
                 "instance_id": inst.get("id"),
                 "shape": inst.get("shape"),
@@ -316,6 +384,7 @@ def detect_wheels(instances):
             }
         elif len(hits[des]) == 0:
             result["wheels"][des] = {
+                "tier": "UNKNOWN_CANDIDATE",
                 "status": "UNKNOWN",
                 "instance_id": None,
                 "shape": None,
@@ -324,6 +393,7 @@ def detect_wheels(instances):
             block("wheel %s not identified (count != 4)" % des)
         else:
             result["wheels"][des] = {
+                "tier": "INVALID_WHEEL",
                 "status": "UNKNOWN",
                 "instance_id": None,
                 "shape": None,
@@ -333,10 +403,11 @@ def detect_wheels(instances):
                   % (des, len(hits[des])))
 
     if result["unidentified"]:
-        block("UNKNOWN candidate(s) inside Model:Wheels: %d"
-              % len(result["unidentified"]))
+        tiers = sorted({u.get("tier", "?") for u in result["unidentified"]})
+        block("UNKNOWN candidate(s) inside Model:Wheels: %d [tiers: %s]"
+              % (len(result["unidentified"]), ",".join(tiers)))
     n_wheels = sum(1 for w in result["wheels"].values()
-                   if w["status"] == "WHEEL")
+                   if w["tier"] == "VALID_WHEEL")
     if n_wheels != 4:
         block("identified wheels != 4 (got %d)" % n_wheels)
     return result
@@ -404,20 +475,31 @@ def build_inspection_report(vehicle_id, source_file, source_sha256, wheels,
                                     "+ (c) Ball; geometrie stredu/rozmeru; "
                                     "ramec x=lateral, y=up, z=longitudinal"),
                             warnings=None, unidentified=None,
-                            coordinate_frame=None, report_id=None):
+                            known_non_wheels=None,
+                            coordinate_frame=None, report_id=None,
+                            assess_blocked_reasons=None):
     """Slozi inspection_report.json dle kontraktu M2-M3-CONTRACTS-FREEZE-v1.
 
     wheels: {FL,FR,RL,RR} -> {instance_id, class_name, center_studs,
       size_studs, shape, status, reason}; status kola GEOMETRY_OK |
       UNKNOWN | BLOCKED, reason retezec popisujici selhani (None = OK).
       center/size jako {x,y,z} nebo (x,y,z); chybejici = None.
-    unidentified: [{instance_id, name, reason}, ...] — UNKNOWN kandidati
-      uvnitr Model:Wheels (napr. 44 dilu podvozku, paty Ball). Kazdy
-      zaznam = BLOCKED (pravidlo identity: UNKNOWN uvnitr Wheels
-      blokuje; legitimni podvozek neni kolo, ale vysledek drzi BLOCKED).
+    unidentified: [{instance_id, name, reason}, ...] — UNKNOWN_CANDIDATE /
+      INVALID_WHEEL uvnitr Model:Wheels. Kazdy zaznam = BLOCKED
+      (pravidlo identity: neznamemu kandidatu ve Wheels nelze verit).
+    known_non_wheels: [{instance_id, name, shape}, ...] — evidovane
+      legitimni dily podvozku (CHASSIS_PART_ALLOWLIST). NEBLOKUJI,
+      zustavaji v reportu pod klicem "known_non_wheels" (nadstavba
+      nad kontrakt; povinne klice kontraktu nedotcena).
     coordinate_frame: default COORDINATE_FRAME_ACTUAL (Studio-overeno);
       pri verified_in_studio=False je strop UNKNOWN (bez overeni ramce
       nelze prohlasit GEOMETRY_OK).
+    assess_blocked_reasons: [(str)] — duvody BLOCKED z assess_vrstvy
+      (assess_wheel_geometry v rbxm_parser.py). Kazdy duvod se prida mezi
+      blockujici duvody -> overall_status je vzdy BLOCKED, kdykoli je
+      assess BLOCKED (I-1: zeleny report na BLOCKED datech je nebezpecny,
+      report se krmi do kalibrace/M3). Per-kolo GEOMETRY_OK zaznamy
+      v tele reportu zustavaji nedotceny.
     Deterministicke: zadne casy, zadny nahodny obsah; report_id default
     vehicle_id@sha256[:12].
     """
@@ -425,6 +507,11 @@ def build_inspection_report(vehicle_id, source_file, source_sha256, wheels,
         coordinate_frame = dict(COORDINATE_FRAME_ACTUAL)
     warn = list(warnings) if warnings else []
     unidentified = list(unidentified) if unidentified else []
+    known = list(known_non_wheels) if known_non_wheels else []
+    if known:
+        warn.append("%d known chassis part(s) documented "
+                    "(allowlist, not wheels, not blocking)"
+                    % len(known))
     if report_id is None:
         report_id = "%s@%s" % (vehicle_id, (source_sha256 or "")[:12])
 
@@ -475,6 +562,8 @@ def build_inspection_report(vehicle_id, source_file, source_sha256, wheels,
         blocked.append("unidentified inside Wheels: id=%r name=%r (%s)"
                        % (item.get("instance_id"), item.get("name"),
                           item.get("reason") or "not_a_wheel"))
+    for reason in assess_blocked_reasons or []:
+        blocked.append("assess BLOCKED: %s" % (reason,))
     for des in WHEEL_DESIGNATIONS:
         if entries[des]["status"] == "UNKNOWN" and entries[des]["reason"] is None:
             entries[des]["reason"] = "unknown"
@@ -588,6 +677,11 @@ def build_inspection_report(vehicle_id, source_file, source_sha256, wheels,
         "coordinate_frame": dict(coordinate_frame),
         "method": method,
         "warnings": warn,
+        "known_non_wheels": [
+            {"instance_id": k.get("instance_id"), "name": k.get("name"),
+             "shape": k.get("shape"), "tier": "KNOWN_NON_WHEEL"}
+            for k in known
+        ],
         "overall_status": overall,
     }
 
@@ -599,6 +693,13 @@ def report_from_assess(vehicle_id, source_file, source_sha256, assess_result,
     assess assessuje (r/bxm_parser.py, cizi modul — jen se cte):
     GEOMETRY_OK zaznamy nesou size/position; UNKNOWN nesou failed_checks
     jako reason. Hierarchicke/duplicitni chyby -> BLOCKED zaznam kola.
+    Zaznamy unidentified se jmenem z CHASSIS_PART_ALLOWLIST se preklapi
+    na known_non_wheels (evidovany legitimni podvozek, NEBLOKUJI);
+    zbytek unidentified blokuje jako dosud.
+    PROPAGACE I-1: je-li assess BLOCKED (blocked / status / blocked_reasons),
+    preda se kazdy assess blocked_reason do build_inspection_report jako
+    assess_blocked_reasons -> overall_status reportu je vzdy BLOCKED.
+    Per-kolo GEOMETRY_OK zaznamy v tele reportu zustavaji nedotceny.
     """
     wheels = {}
     for des in WHEEL_DESIGNATIONS:
@@ -622,16 +723,30 @@ def report_from_assess(vehicle_id, source_file, source_sha256, assess_result,
             "status": status,
             "reason": reason,
         }
-    unidentified = [{"instance_id": u.get("instance_id"),
-                     "name": u.get("name"),
-                     "reason": ",".join(u.get("failed_checks") or [])}
-                    for u in assess_result.get("unidentified") or []]
+    unidentified = []
+    known = list((assess_result.get("known_non_wheels") or []))
+    for u in assess_result.get("unidentified") or []:
+        if u.get("name") in CHASSIS_PART_ALLOWLIST:
+            known.append(u)
+        else:
+            unidentified.append({
+                "instance_id": u.get("instance_id"),
+                "name": u.get("name"),
+                "reason": ",".join(u.get("failed_checks") or [])})
     warn = list(kwargs.pop("warnings", []) or [])
-    for reason in assess_result.get("blocked_reasons") or []:
-        if "float_decode_unverified" in reason or "kalibraci" in reason:
-            warn.append("assess: " + reason)
+    assess_reasons = list(assess_result.get("blocked_reasons") or [])
+    assess_is_blocked = (bool(assess_result.get("blocked"))
+                         or assess_result.get("status") == "BLOCKED"
+                         or bool(assess_reasons))
+    for reason in assess_reasons:
+        warn.append("assess: " + reason)
+    assess_blocked = list(assess_reasons)
+    if assess_is_blocked and not assess_blocked:
+        assess_blocked = ["assess reported BLOCKED without reasons"]
     return build_inspection_report(
         vehicle_id, source_file, source_sha256, wheels,
         parser_version, code_version,
+        assess_blocked_reasons=assess_blocked,
         unidentified=unidentified + kwargs.pop("unidentified", []),
+        known_non_wheels=known + kwargs.pop("known_non_wheels", []),
         warnings=warn, **kwargs)
