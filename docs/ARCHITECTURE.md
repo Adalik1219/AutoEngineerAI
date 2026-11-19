@@ -350,3 +350,16 @@ Odvozeno z fází plánu; žádný krok nepřeskakovat:
 1. Koordinátor schválí/zamítne tuto architekturu.
 2. Založit JSON schémata + validátory (`tools/`) dle kap. 3.
 3. Spustit FÁZI 1 (audit A-Chassis) a FÁZI 2 (knowledge transfer) jako vstupy pro adaptér.
+
+## 12. Hybridní režim M1–M9 (doplněno 2026-11-19, nemění kapitoly 1–11)
+
+Nad touto architekturou stojí hybridní plán: `docs/IMPLEMENTATION_ROADMAP.md` (backlog M1–M9),
+`docs/HYBRID_WORKFLOW.md` (proces člověk + stroj), `docs/PRODUCT_VISION.md` (vize),
+`docs/VEHICLE-SPECIFICATIONS.md` (Mustang GT 2024 EU), `docs/ACCEPTANCE_CRITERIA.md` (brány),
+`docs/PROJECT_STATUS.md` (audit stavu), `AGENTS.md` (instrukce). Mapování:
+M1→ReferenceIntelligence, M2→Analyzer, M3/M4→PhysicsAnalysis, M5→DecisionAI/ChassisAdapter,
+M6→Engineering/VariantStore, M7→TestEnvironment, M8→TelemetryEval/Optimizer, M9→orchestrace.
+Pětice artefaktů (`VehicleProfile / ReferenceProfile / ChangePlan / VehicleConfig / TestResult`)
+zůstává; M-kroky ji používají přes `contracts/*.schema.json`. Kategorie parametrů
+(`MUTABLE_TUNE | SCRIPT_CONTROLLED | STRUCTURE_CONTROLLED | READ_ONLY | UNKNOWN`) a `mode`
+flag simulace-vs-runtime se nemění.
