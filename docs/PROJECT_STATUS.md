@@ -10,7 +10,7 @@
 
 | Modul | Stav | Důkaz |
 |---|---|---|
-| M1 Vehicle Specs | PARTIAL | `_schema.json` + `loader/validate/compare` + vozy civic, gr86; **mustang profil chybí** |
+| M1 Vehicle Specs | PARTIAL | `_schema.json` + `loader/validate/compare` + vozy civic, gr86, mustang GT 2024 EU factory standard (20 testů M1-T01…M1-T20 PASS) |
 | M2 RBXM Inspector | NOT IMPLEMENTED | žádný RBXM parser v `src/` ani `tools/` (pouze zmínky v docs) |
 | M3 Geometry Engine | NOT IMPLEMENTED | žádný modul; `src/common/units.py` existuje (rozšířit) |
 | M4 Physics v2 | PARTIAL | `src/Physics/` 10 modulů + selftesty; chybí torque_curve s UNKNOWN, cíle Mustangu, nejistoty |
@@ -45,8 +45,8 @@ formulář (M7) · loader měření + advisor (M8) · orchestrace M9.
 
 ## 5. Neověřené údaje Mustangu (z `VEHICLE-SPECIFICATIONS.md`)
 
-Převodové poměry 1–6 + stálý převod · momentová křivka · rozložení hmotnosti a těžiště ·
-brzdy standardního GT · 0–100 km/h a V-max pro EU manuál · aerodynamika. Vše UNKNOWN do M1.
+Stálý převod (kandidáti 3.15:1/3.55:1 bez přiřazení) · momentová křivka · rozložení hmotnosti a těžiště ·
+bias · Cd/čelní plocha. Vše UNKNOWN (převody 1–6, brzdy Brembo, kola, 0–100 5,3 s, V-max 250 km/h jsou od M1.5 VERIFIED).
 
 ## 6. Konzistence dokumentace (kontrola této branche)
 
@@ -107,3 +107,23 @@ C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commi
 - **Otevřené body pro uživatele:** (1) varianta „standard GT bez Packu" vs. EU realita
   (Performance Pack zřejmě standardem EU GT — brzdy/LSD z [1b] proto nezamčeny);
   (2) kandidáti M1.5 (převody, final drive, 0–100, V-max, brzdy) ke schválení jako VERIFIED.
+
+### Kontrolní opakování po povýšení M1.5 (Agent D, 2026-11-19, rozhodnutí uživatele)
+- **Rozhodnutí zapracováno:** varianta přejmenována na EUROPEAN FACTORY STANDARD
+  SPECIFICATION, `vehicle_id` beze změny; povýšeno na VERIFIED: poměry 1–6
+  (3.237/2.104/1.422/1.000/0.814/0.622), 0–100 5,3 s, V-max 250 km/h, kotouče
+  390x36/355x28 + Brembo six-piston, LSD obecně, kola 19x9.0J/19x9.5J + pneu
+  255/40–275/40 R19 — vše factory, confidence ≥ 0.85, zdroj s URL [1]/[1b] + datem.
+- **Zdroje:** každé VERIFIED má URL Ford EU PDF/mirror + datum 2026-11-19,
+  confidence ≥ 0.8; žádné US hodnoty (Torsen/Tremec/Dark Horse/453 PS jen
+  v notes-negacích a GT-vs-Dark-Horse rozlišení sloupců, nikoli jako hodnoty).
+- **Stavy:** final_drive UNKNOWN s oběma kandidáty v notes + GUARD test T17
+  (použití jako definitivní hodnota → chyba); křivka/rozložení/bias/Cd UNKNOWN s `CHYBÍ:`.
+- **Validace:** profil 0 errors / 0 warnings; M1 sada 20/20 PASS;
+  `tests/run_all.py` → 199 běhů, **195 PASS, 0 FAIL, 4 PENDING** (PENDING beze změny).
+- **Návaznost M1→M2:** `contracts/` nedotčeny (jen 4 soubory M1 v diffu),
+  inspection_report kontrakt beze změny; profil použitelný pro M3/M4 cíle
+  (6 poměrů, Pmax/Mmax, pneu, rozměry), final_drive blokován GUARDem.
+- **Opraveno touto kontrolou:** ROADMAP M1.13 (stale „převody, brzdy UNKNOWN") +
+  M1.14 („profil chybí"); PROJECT_STATUS §1 a §5 (stale UNKNOWN výčty).
+  Verdikt: **PASS** (otevřené body z 9. odstavce uzavřeny rozhodnutím uživatele).

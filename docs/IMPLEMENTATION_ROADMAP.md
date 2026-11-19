@@ -34,13 +34,13 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
    chybějící údaj `notes: "CHYBÍ: … + postup doplnění"`; `value: null` + `confidence > 0.5` je chyba;
    `source_type: factory` vyžaduje `confidence ≥ 0.8`.
 7. **Závislosti:** žádné (paralelně s M2).
-8. **Úkoly:** M1.1 model `VehicleSpecification` · M1.2 oddělené modely motor/převodovka/pneu/geometrie · M1.3 metadata zdrojů (URL, datum, jednotky, autorita) · M1.4 stavy VERIFIED/ESTIMATED/UNKNOWN · M1.5 profil Mustangu · M1.6 oddělení standard GT vs. Performance Pack · M1.7 kontrola kompatibility variant (EU≠US, GT≠Pack) · M1.8 export/import specifikace · **M1.9 výjimka torque_curve: `VEHICLE-DATA.md` §2.3 žádá ≥2 tovární kotvy, pro Mustang existuje 0 — profil proto nese prázdnou křivku se statusem UNKNOWN a zdůvodněním v `notes` (`CHYBÍ: …`); `validate.py` je null-safe (`or {}`), výjimku explicitně zdokumentovat a nesmí se stát precedentem pro domýšlení bodů**.
-9. **Unit testy:** načtení Mustangu; chybějící povinné pole → odmítnuto; neplatná převodovka → odmítnuto; záměna EU/US → odmítnuto; neznámá křivka **a neznámé převodové poměry** zůstávají UNKNOWN; VERIFIED bez zdroje → odmítnuto; smíchání GT/Pack → odmítnuto.
+8. **Úkoly:** M1.1 model `VehicleSpecification` · M1.2 oddělené modely motor/převodovka/pneu/geometrie · M1.3 metadata zdrojů (URL, datum, jednotky, autorita) · M1.4 stavy VERIFIED/ESTIMATED/UNKNOWN · M1.5 profil Mustangu · M1.6 přejmenování na EU factory standard (Pack je standardem EU GT) · M1.7 kontrola kompatibility variant (EU≠US; odmítnutí US komponent v EU profilu) · M1.8 export/import specifikace · **M1.9 výjimka torque_curve: `VEHICLE-DATA.md` §2.3 žádá ≥2 tovární kotvy, pro Mustang existuje 0 — profil proto nese prázdnou křivku se statusem UNKNOWN a zdůvodněním v `notes` (`CHYBÍ: …`); `validate.py` je null-safe (`or {}`), výjimku explicitně zdokumentovat a nesmí se stát precedentem pro domýšlení bodů**.
+9. **Unit testy:** načtení Mustangu; chybějící povinné pole → odmítnuto; neplatná převodovka → odmítnuto; záměna EU/US → odmítnuto; neznámá křivka, final drive a bias zůstávají UNKNOWN; VERIFIED bez zdroje → odmítnuto; Brembo/LSD povoleny (EU standard), záměna EU/US komponent → odmítnuta.
 10. **Integration testy:** profil projde `tools/validate_contracts.py`; `source_vehicle_id` linkuje DB záznam s pipeline profilem.
 11. **Akceptační kritéria:** M1-T01…M1-T07 dle zadání (vše PASS); každá známá hodnota má zdroj, každá neznámá zůstává neznámá.
 12. **Definition of Done:** Mustang se načte jako validní verzovaný profil; zdroje dohledatelné.
-13. **Omezení/rizika:** převody, křivka, rozložení hmotnosti, brzdy, aero jsou UNKNOWN — M4 s nimi musí počítat; riziko záměny EU/US a GT/Pack dat.
-14. **Stav:** PARTIAL — schémata a 2 referenční vozy existují (civic, gr86), mustang profil chybí.
+13. **Omezení/rizika:** křivka, rozložení hmotnosti, bias, Cd/čelní plocha, stálý převod (kandidáti 3.15:1/3.55:1 bez přiřazení), zpátečka a kompresní poměr jsou UNKNOWN — M4 s nimi musí počítat; převody 1–6, brzdy Brembo 390/355, kola, 0–100 5,3 s a V-max 250 km/h jsou VERIFIED (M1.5, 2026-11-19); riziko záměny EU/US a GT/Dark Horse dat.
+14. **Stav:** PARTIAL — schémata a 3 referenční vozy existují (civic, gr86, mustang GT 2024 EU factory standard); profil Mustangu validuje 0/0, 20 testů M1-T01…M1-T20 PASS.
 
 ## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: NOT IMPLEMENTED
 

@@ -1,8 +1,12 @@
-"""Akceptační testy M1-T01…M1-T07 — Mustang GT 2024 EU manuál standard.
+"""Akceptační testy M1-T01…M1-T07 + M1.5 promoce — Mustang GT 2024 EU manuál.
 
 Vazba: docs/IMPLEMENTATION_ROADMAP.md (M1), docs/VEHICLE-SPECIFICATIONS.md,
 docs/ACCEPTANCE_CRITERIA.md (M1-T01…M1-T07), vehicle-data/references/.
 Pravidla: stdlib only (unittest), česky komentáře, identifikátory anglicky.
+
+Varianta (rozhodnutí uživatele 2026-11-19): EUROPEAN FACTORY STANDARD
+SPECIFICATION — Performance Pack je standardem EU GT, Brembo/LSD patří
+do EU profilu. vehicle_id je stabilní a nemění se.
 """
 
 import copy
@@ -20,42 +24,79 @@ from src.Reference import loader
 from src.Reference import validate as vmod
 
 MUSTANG_FILENAME = "ford-mustang-gt-2024-eu-manual-standard.json"
+MUSTANG_VEHICLE_ID = "ford-mustang-gt-2024-eu-manual-standard"
 
-#: Známky Performance Packu — nesmí se objevit ve standardním profilu (M1.7).
-PACK_MARKERS = ("performance pack", "brembo")
+#: US znaky — nesmí se objevit v komponentních řetězcích EU profilu
+#: (nikoli v notes, kde smí být zmíněny v negaci: "není Torsen …").
+US_MARKERS = ("tremec", "tr-3160", "torsen", "dark horse", "453 ps")
+
+#: Starý název varianty — po přejmenování odmítnut.
+OLD_NAME_MARKERS = ("bez performance packu", "without performance pack")
+
+
+def _component_text(profile: dict) -> str:
+    """Texty určující variantu (bez notes — ty smí US hodnoty negovat)."""
+    parts = [
+        str(profile.get("identity", {}).get("trim", "")),
+        str((profile.get("transmission") or {}).get("type", "")),
+        str((profile.get("brakes") or {}).get("front_type", "")),
+        str((profile.get("brakes") or {}).get("rear_type", "")),
+    ]
+    diff = (profile.get("drivetrain") or {}).get("differential_rear")
+    if isinstance(diff, dict):
+        parts.append(str(diff.get("value", "")))
+    elif diff is not None:
+        parts.append(str(diff))
+    return "\n".join(parts)
 
 
 def check_variant_compatibility(profile: dict) -> None:
-    """Kontrola kompatibility variant M1.6/M1.7: EU≠US, GT≠Pack.
+    """Kontrola kompatibility variant M1.6/M1.7: EU factory standard.
 
-    Vyhazuje ValueError při záměně trhu (US místo EU) nebo při smíchání
-    výbavy Performance Packu do standardního GT.
+    EU≠US (žádné US komponenty do EU profilu); starý název
+    "bez Performance Packu" odmítnut; Brembo/LSD jsou EU standardem
+    (povoleny). Vyhazuje ValueError při porušení.
     """
     identity = profile.get("identity", {})
     if identity.get("market") != "EU":
         raise ValueError(
             "záměna varianty EU/US: market=%r (očekáváno 'EU')"
             % (identity.get("market"),))
-    vehicle_id = profile.get("vehicle_id", "")
-    if "-eu-" not in vehicle_id or not vehicle_id.endswith("-standard"):
+    if profile.get("vehicle_id") != MUSTANG_VEHICLE_ID:
         raise ValueError(
-            "vehicle_id %r nepatří variantě EU standard" % (vehicle_id,))
-    trim = str(identity.get("trim", "")).lower()
-    if "performance pack" in trim and "bez performance packu" not in trim:
-        raise ValueError("trim hlásí Performance Pack: %r" % (identity.get("trim"),))
-    text = "".join([
-        str((profile.get("brakes", {}).get("front_type", ""))),
-        str((profile.get("brakes", {}).get("rear_type", ""))),
-        str((profile.get("drivetrain", {}).get("differential_rear", ""))),
-    ]).lower()
-    for marker in PACK_MARKERS:
+            "vehicle_id %r nepatří variantě EU factory standard"
+            % (profile.get("vehicle_id"),))
+    trim = str(identity.get("trim", ""))
+    if "european factory standard" not in trim.lower():
+        raise ValueError(
+            "trim nehlásí EUROPEAN FACTORY STANDARD SPECIFICATION: %r"
+            % (identity.get("trim"),))
+    if any(m in trim.lower() for m in OLD_NAME_MARKERS):
+        raise ValueError("starý název varianty: %r" % (identity.get("trim"),))
+    text = _component_text(profile).lower()
+    for marker in US_MARKERS:
         if marker in text:
             raise ValueError(
-                "smíchání GT/Pack: komponenta Packu %r ve standardním GT" % marker)
+                "US komponenta %r nepatří do EU profilu" % marker)
+
+
+def resolve_final_drive_value(profile: dict) -> float:
+    """GUARD: stálý převod smí do M3/M4 jen jako definitivní hodnota.
+
+    UNKNOWN (value None) → ValueError (použití musí skončit chybou,
+    nikdy tichým dosazením kandidáta 3.15:1 / 3.55:1).
+    """
+    node = (profile.get("transmission") or {}).get("final_drive") or {}
+    value = node.get("value")
+    if value is None:
+        raise ValueError(
+            "final_drive je UNKNOWN (kandidáti 3.15:1 / 3.55:1 bez přiřazení) "
+            "— nelze použít jako definitivní hodnotu pro výpočty M3/M4")
+    return float(value)
 
 
 class MustangProfileTest(unittest.TestCase):
-    """M1-T01…M1-T07."""
+    """M1-T01…M1-T07 + promoce M1.5 (EU factory standard)."""
 
     @classmethod
     def setUpClass(cls):
@@ -69,11 +110,9 @@ class MustangProfileTest(unittest.TestCase):
 
     def test_m1_t01_mustang_loads_valid(self):
         """M1-T01: Mustang se načte jako validní verzovaný profil."""
-        self.assertEqual(
-            self.profile["vehicle_id"],
-            "ford-mustang-gt-2024-eu-manual-standard")
+        self.assertEqual(self.profile["vehicle_id"], MUSTANG_VEHICLE_ID)
         self.assertTrue(re.match(r"^[a-z0-9]+(-[a-z0-9]+)*$",
-                                 self.profile["vehicle_id"]))
+                                self.profile["vehicle_id"]))
         self.assertEqual(self.profile["schema_version"], "1.0.0")
         for key in ("schema_version", "vehicle_id", "identity", "meta"):
             self.assertIn(key, self.profile)
@@ -108,18 +147,25 @@ class MustangProfileTest(unittest.TestCase):
             check_variant_compatibility(mutant2)
 
     def test_m1_t05_unknowns_stay_unknown(self):
-        """M1-T05: neznámá křivka a neznámé převodové poměry zůstávají UNKNOWN."""
+        """M1-T05: neznámá křivka, bias a aero zůstávají UNKNOWN."""
         tc = self.profile["torque_curve"]
         self.assertEqual(tc["points"], [])
         self.assertEqual(tc["interpolation"], "none")
         curve = tc["curve_source"]
         self.assertIsNone(curve.get("value", None))
         self.assertTrue(str(curve.get("notes") or "").startswith("CHYBÍ:"))
-        for entry in self.profile["transmission"]["gear_ratios"]:
-            self.assertIsNone(entry["ratio"]["value"])
-            self.assertTrue(
-                str(entry["ratio"].get("notes") or "").startswith("CHYBÍ:"))
-        self.assertIsNone(self.profile["transmission"]["final_drive"]["value"])
+        for section, key in (
+                ("brakes", "brake_bias_front_pct"),
+                ("aero", "drag_coefficient_cd"),
+                ("aero", "frontal_area"),
+                ("mass", "weight_distribution_front_pct"),
+                ("mass", "cog_height")):
+            with self.subTest(field="%s.%s" % (section, key)):
+                env = self.profile[section][key]
+                self.assertIsNone(env["value"])
+                self.assertTrue(
+                    str(env.get("notes") or "").startswith("CHYBÍ:"),
+                    env.get("notes"))
         # M1.9 výjimka: prázdná křivka UNKNOWN je validní (žádné chyby).
         self.assertEqual(self._errors(self.profile), [])
 
@@ -133,24 +179,17 @@ class MustangProfileTest(unittest.TestCase):
         errors = self._errors(mutant)
         self.assertTrue(any("bez zdroje" in e for e in errors), errors)
 
-    def test_m1_t07_gt_pack_mix_rejected(self):
-        """M1-T07: smíchání GT/Pack → odmítnuto."""
+    def test_m1_t07_eu_factory_standard_brembo_allowed(self):
+        """M1-T07: Brembo/LSD jsou EU standardem (povoleny), starý název ne."""
+        check_variant_compatibility(self.profile)
+        self.assertIn("brembo",
+                      str(self.profile["brakes"].get("front_type", "")).lower())
+        # Starý název varianty je po přejmenování odmítnut.
         mutant = copy.deepcopy(self.profile)
-        mutant["brakes"]["front_type"] = "Brembo 6-piston (Performance Pack)"
+        mutant["identity"]["trim"] = (
+            "GT 5.0 Ti-VCT V8, 6MT, standard (bez Performance Packu)")
         with self.assertRaises(ValueError):
             check_variant_compatibility(mutant)
-        # Originál žádné znaky Packu nenese.
-        check_variant_compatibility(self.profile)
-        claimed = " ".join([
-            str(self.profile["identity"].get("trim", "")),
-            str(self.profile.get("brakes", {}).get("front_type", "")),
-            str(self.profile.get("brakes", {}).get("rear_type", "")),
-            str(self.profile.get("drivetrain", {}).get("differential_rear", "")),
-        ]).lower()
-        self.assertNotIn("brembo", claimed)
-        self.assertNotIn("performance pack", claimed.replace(
-            "bez performance packu", ""))
-
 
     def test_m1_t08_m19_bypass_single_point_rejected(self):
         """M1.9: jeden vymyšlený bod křivky → odmítnuto (minItems 2)."""
@@ -225,29 +264,119 @@ class MustangProfileTest(unittest.TestCase):
         self.assertEqual(curb["source_type"], "estimate")
         self.assertIn("1808", curb["source"])
 
-    def test_m1_t13_m15_unknowns_stay_unknown_with_candidates(self):
-        """M1.5: křivka/rozložení/bias/Cd/stálý převod zůstávají UNKNOWN + kandidáti v notes."""
-        null_paths = [
-            ("aero", "drag_coefficient_cd"), ("aero", "frontal_area"),
-            ("mass", "weight_distribution_front_pct"),
-            ("mass", "cog_height"),
-            ("brakes", "brake_bias_front_pct"),
-            ("transmission", "final_drive"),
-        ]
-        for section, key in null_paths:
-            with self.subTest(field="%s.%s" % (section, key)):
-                env = self.profile[section][key]
-                self.assertIsNone(env["value"])
-                self.assertTrue(
-                    str(env.get("notes") or "").startswith("CHYBÍ:"),
-                    env.get("notes"))
-        self.assertEqual(self.profile["torque_curve"]["points"], [])
-        for entry in self.profile["transmission"]["gear_ratios"]:
-            self.assertIsNone(entry["ratio"]["value"])
-            self.assertIn("kandidat", entry["ratio"]["notes"].lower())
-        self.assertIn("3.15", self.profile["transmission"]["final_drive"]["notes"])
-        self.assertIsNone(self.profile["performance"]["accel_0_100"]["value"])
-        self.assertIsNone(self.profile["performance"]["vmax"]["value"])
+    def test_m1_t13_m15_final_drive_unknown_with_candidates(self):
+        """M1.5: stálý převod UNKNOWN + oba kandidáti v notes, žádný výběr."""
+        env = self.profile["transmission"]["final_drive"]
+        self.assertIsNone(env["value"])
+        self.assertTrue(
+            str(env.get("notes") or "").startswith("CHYBÍ:"),
+            env.get("notes"))
+        self.assertIn("3.15", env["notes"])
+        self.assertIn("3.55", env["notes"])
+
+    def test_m1_t14_gear_ratios_verified(self):
+        """Povýšení M1.5: 6 poměrů Getrag MT-82 VERIFIED (factory, URL)."""
+        expected = {1: 3.237, 2: 2.104, 3: 1.422,
+                    4: 1.000, 5: 0.814, 6: 0.622}
+        gears = self.profile["transmission"]["gear_ratios"]
+        self.assertEqual(len(gears), 6)
+        for entry in gears:
+            with self.subTest(gear=entry["gear"]):
+                ratio = entry["ratio"]
+                self.assertAlmostEqual(ratio["value"],
+                                       expected[entry["gear"]], places=3)
+                self.assertEqual(ratio["unit"], ":1")
+                self.assertEqual(ratio["source_type"], "factory")
+                self.assertGreaterEqual(ratio["confidence"], 0.8)
+                self.assertIn("http", ratio["source"])
+                self.assertIn("media.ford.com", ratio["source"])
+
+    def test_m1_t15_performance_verified(self):
+        """Povýšení M1.5: 0-100 5.3 s + V-max 250 km/h VERIFIED (EU PDF)."""
+        accel = self.profile["performance"]["accel_0_100"]
+        self.assertAlmostEqual(accel["value"], 5.3, places=1)
+        self.assertEqual(accel["unit"], "s")
+        self.assertEqual(accel["source_type"], "factory")
+        self.assertGreaterEqual(accel["confidence"], 0.8)
+        self.assertIn("http", accel["source"])
+        vmax = self.profile["performance"]["vmax"]
+        self.assertEqual(vmax["value"], 250)
+        self.assertEqual(vmax["unit"], "km/h")
+        self.assertEqual(vmax["source_type"], "factory")
+        self.assertGreaterEqual(vmax["confidence"], 0.8)
+        self.assertIn("http", vmax["source"])
+
+    def test_m1_t16_brakes_verified_brembo_eu_standard(self):
+        """Povýšení M1.5: brzdy 390x36 / 355x28 + Brembo VERIFIED."""
+        front = self.profile["brakes"]["front_disc_diameter"]
+        self.assertEqual(front["value"], 390)
+        self.assertEqual(front["source_type"], "factory")
+        self.assertGreaterEqual(front["confidence"], 0.8)
+        self.assertIn("http", front["source"])
+        rear = self.profile["brakes"]["rear_disc_diameter"]
+        self.assertEqual(rear["value"], 355)
+        self.assertEqual(rear["source_type"], "factory")
+        self.assertGreaterEqual(rear["confidence"], 0.8)
+        self.assertIn("http", rear["source"])
+        self.assertIn("brembo",
+                      str(self.profile["brakes"].get("front_type", "")).lower())
+        self.assertIn("six-piston",
+                      str(self.profile["brakes"].get("front_type", "")).lower())
+        # Bias zůstává UNKNOWN.
+        bias = self.profile["brakes"]["brake_bias_front_pct"]
+        self.assertIsNone(bias["value"])
+        self.assertTrue(str(bias.get("notes") or "").startswith("CHYBÍ:"))
+
+    def test_m1_t17_final_drive_guard_rejects_use_as_definitive(self):
+        """GUARD: UNKNOWN final_drive nelze použít jako definitivní hodnotu."""
+        with self.assertRaises(ValueError):
+            resolve_final_drive_value(self.profile)
+        # Po budoucím ověření guard propustí číselnou hodnotu.
+        mutant = copy.deepcopy(self.profile)
+        mutant["transmission"]["final_drive"]["value"] = 3.55
+        self.assertAlmostEqual(resolve_final_drive_value(mutant), 3.55)
+
+    def test_m1_t18_us_parts_rejected(self):
+        """US hodnoty (Torsen, Tremec TR-3160, Dark Horse 453 PS) → odmítnuty."""
+        mutant = copy.deepcopy(self.profile)
+        mutant["transmission"]["type"] = "6-speed manual Tremec TR-3160 (US)"
+        with self.assertRaises(ValueError):
+            check_variant_compatibility(mutant)
+        mutant2 = copy.deepcopy(self.profile)
+        mutant2["drivetrain"]["differential_rear"] = {
+            "value": "Torsen limited-slip differential", "unit": "type",
+            "source": "US brožura", "source_type": "factory",
+            "confidence": 0.9, "notes": None}
+        with self.assertRaises(ValueError):
+            check_variant_compatibility(mutant2)
+        mutant3 = copy.deepcopy(self.profile)
+        mutant3["identity"]["trim"] = "Dark Horse, 453 PS, 6MT (US)"
+        with self.assertRaises(ValueError):
+            check_variant_compatibility(mutant3)
+        # Notes smí US hodnoty zmiňovat v negaci ("není Torsen") — originál projde.
+        check_variant_compatibility(self.profile)
+
+    def test_m1_t19_wheels_verified(self):
+        """Kontrola M1.5: kola 19x9.0 / 19x9.5 VERIFIED (factory, URL)."""
+        front = self.profile["wheels_tires"]["wheel_front"]
+        self.assertIn("9.0", str(front["value"]))
+        self.assertEqual(front["source_type"], "factory")
+        self.assertGreaterEqual(front["confidence"], 0.8)
+        self.assertIn("http", front["source"])
+        rear = self.profile["wheels_tires"]["wheel_rear"]
+        self.assertIn("9.5", str(rear["value"]))
+        self.assertEqual(rear["source_type"], "factory")
+        self.assertGreaterEqual(rear["confidence"], 0.8)
+        self.assertIn("http", rear["source"])
+
+    def test_m1_t20_variant_renamed_id_stable(self):
+        """Přejmenování: trim nese EU factory standard, vehicle_id beze změny."""
+        self.assertEqual(self.profile["vehicle_id"], MUSTANG_VEHICLE_ID)
+        trim = str(self.profile["identity"].get("trim", ""))
+        self.assertIn("european factory standard", trim.lower())
+        self.assertNotIn("bez performance packu", trim.lower())
+        self.assertIn("european factory standard",
+                      str(self.profile["transmission"].get("type", "")).lower())
 
 
 if __name__ == "__main__":
