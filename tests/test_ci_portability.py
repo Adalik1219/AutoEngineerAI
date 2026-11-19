@@ -2,7 +2,8 @@
 
 Každý test kryje jednu příčinu červeného CI (run 44581124660):
   1. žádné absolutní cesty v tests/ a tools/ (repo-relative),
-  2. loader referencí repo-relative (AUTOENGINEERAI_ROOT),
+  2. loader referencí repo-relative (default z umístění souboru,
+     env jen explicitní override; žádný import-time side effect),
   3. RBXM fixture = verzovaný JeepTemplate se SHA kontrolou,
   4. chybějící ne-verzovaný soubor -> SKIP (PENDING), ne ERROR,
   5. kanonický runner = tests/run_all.py (i ve workflow).
@@ -15,14 +16,17 @@ import os
 import re
 import sys
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-# Stejné sjednocení kořene jako v test_m1_mustang_profile.py.
-os.environ["AUTOENGINEERAI_ROOT"] = ROOT
+# Záměrně ŽÁDNÝ import-time side effect na prostředí (žádné
+# os.environ[...] = ... na úrovni modulu): loader default odvozuje kořen
+# z vlastního umístění, takže testy musí projít i bez přednastaveného env
+# — jinak by maskovaly regresi hardcoded defaultu (původní chyba CI).
 
 from src.Reference import loader  # noqa: E402
 
@@ -71,25 +75,73 @@ class TestRepoRelativePaths(unittest.TestCase):
 class TestLoaderRepoRelative(unittest.TestCase):
     """2. Loader referencí funguje repo-relative (bez defaultu vývojáře)."""
 
+    def _without_env(self):
+        """Kontext bez override proměnné (senses repo z umístění souboru)."""
+        env = dict(os.environ)
+        env.pop("AUTOENGINEERAI_ROOT", None)
+        return mock.patch.dict(os.environ, env, clear=True)
+
     def test_load_schema_repo_relative(self):
-        """_schema.json se načte z tohoto repa (env -> ROOT)."""
-        schema = loader.load_schema()
-        self.assertIsInstance(schema, dict)
-        self.assertEqual(loader.schema_path(),
-                         loader.references_dir() / "_schema.json")
+        """_schema.json se načte z tohoto repa (default, bez env)."""
+        with self._without_env():
+            schema = loader.load_schema()
+            self.assertIsInstance(schema, dict)
+            self.assertEqual(loader.schema_path(),
+                             loader.references_dir() / "_schema.json")
 
     def test_references_dir_points_into_this_repo(self):
         """references_dir() leží uvnitř tohoto repa (ne default vývojáře)."""
-        refs = str(loader.references_dir())
-        self.assertTrue(refs.startswith(ROOT),
-                        "references_dir mimo repo: %r" % refs)
+        with self._without_env():
+            refs = str(loader.references_dir())
+            self.assertTrue(refs.startswith(ROOT),
+                            "references_dir mimo repo: %r" % refs)
 
-    def test_mustang_test_unifies_root_via_env(self):
-        """Regrese: mustang test sjednocuje kořen přes env (ne default)."""
+    def test_mustang_test_has_no_import_time_env_side_effect(self):
+        """Regrese: mustang test nesjednocuje kořen zápisem do env při importu.
+
+        Původní stav (os.environ[...] = ... na úrovni modulu) maskoval
+        hardcoded default loaderu; kořen se nyní odvozuje z umístění
+        souboru (kryto v tests/test_reference_loader_root.py). Testuje se
+        jen kód (bez # komentářů) na nejvyšší úrovni odsazení — záměrně
+        projde i na souboru, kde AUTOENGINEERAI_ROOT zmiňuje jen komentář.
+        """
         fpath = os.path.join(ROOT, "tests", "test_m1_mustang_profile.py")
         with open(fpath, encoding="utf-8") as fh:
             src = fh.read()
-        self.assertIn("AUTOENGINEERAI_ROOT", src)
+        bad = []
+        for lineno, line in enumerate(src.splitlines(), 1):
+            code = line.split("#", 1)[0]
+            if not code.strip():
+                continue
+            if code[0].isspace():
+                continue  # uvnitř funkcí/tříd (např. mock.patch.dict) je OK
+            if re.search(r"os\.environ|os\.putenv", code):
+                bad.append("%d: %s" % (lineno, line.strip()))
+        self.assertEqual(bad, [],
+                         "import-time side effect na env: %r" % (bad,))
+
+    def test_mustang_fixture_resolves_without_env(self):
+        """Mustang profil se najde přes default kořen i bez env."""
+        with self._without_env():
+            fpath = (loader.references_dir()
+                     / "ford-mustang-gt-2024-eu-manual-standard.json")
+            self.assertTrue(os.path.exists(str(fpath)),
+                            "mustang profil mimo default kořen: %s" % fpath)
+
+    def test_loader_source_has_no_hardcoded_default(self):
+        """Regrese: v loader.py není hardcoded absolutní default kořene.
+
+        Behaviorální testy výše chytí hardcoded default, jen když repo
+        leží jinde (na tomto stroji se kryje s cestou vývojáře);
+        tento zdrojový test chytí původní chybu i zde.
+        """
+        fpath = os.path.join(ROOT, "src", "Reference", "loader.py")
+        with open(fpath, encoding="utf-8") as fh:
+            bad = ["%d: %s" % (lineno, line.strip())
+                   for lineno, line in enumerate(fh, 1)
+                   if ABSOLUTE_PATH_RE.search(line.split("#", 1)[0])]
+        self.assertEqual(bad, [],
+                         "hardcoded absolutní cesta v loaderu: %r" % (bad,))
 
 
 class TestJeepFixture(unittest.TestCase):

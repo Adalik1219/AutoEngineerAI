@@ -19,8 +19,11 @@ REFERENCE_FILENAMES = (
 
 
 def project_root() -> Path:
-    """Kořen AutoEngineerAI (env přepíše default)."""
-    return Path(os.environ.get("AUTOENGINEERAI_ROOT", r"C:/.DATA/AutoEngineerAI"))
+    """Kořen AutoEngineerAI (env přepíše default odvozený z loader.py)."""
+    override = os.environ.get("AUTOENGINEERAI_ROOT")
+    if override:
+        return Path(override)
+    return Path(__file__).resolve().parents[2]
 
 
 def references_dir() -> Path:

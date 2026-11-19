@@ -20,10 +20,9 @@ ROOT = os.path.dirname(HERE)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-# Testy musi byt repo-relative: loader default (src/Reference/loader.py)
-# ukazuje na lokalni cestu vyvojare, proto testy sjednoti koren repa
-# pres env promennou (src/ se nesmi menit — patri jinemu agentovi).
-os.environ["AUTOENGINEERAI_ROOT"] = ROOT
+# Testy jsou repo-relative: loader default (src/Reference/loader.py) odvozuje
+# koren z vlastniho umisteni; override pres AUTOENGINEERAI_ROOT zustava
+# podporovan (kryto v tests/test_reference_loader_root.py).
 
 from src.Reference import loader
 from src.Reference import validate as vmod
