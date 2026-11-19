@@ -1,5 +1,7 @@
 # Project Status – stav k 2026-11-19 (větev `feat/m2-m3-geometry`; PR #2 OPEN jinde)
 
+**Aktuální dokumentační SHA:** `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43` (docs-only sync). **Technický verifikační SHA:** `626c25859cbd143662013930123611c82be4c00f`; koordinátorovy sériové testy patří k tomuto SHA. Kód a testy se v docs-only delta nezměnily.
+
 **Aktuální stav:** M1 CODE-VERIFIED; M2 CONDITIONAL PASS (parser C05 + 4-tier
 detekce CODE-VERIFIED, kalibrace BLOCKED 7,44 %, M3 brána VERIFIED-only, M3
 NEOTEVŘENA) — větev `feat/m2-m3-geometry` @ `626c258` (closeout sync;
