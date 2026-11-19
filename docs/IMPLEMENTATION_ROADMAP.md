@@ -43,8 +43,9 @@ následující body 1–14 jsou schválená specifikace, aktuální stav drží 
 13. **Omezení/rizika:** křivka, rozložení hmotnosti, bias, Cd/čelní plocha, stálý převod (kandidáti 3.15:1/3.55:1 bez přiřazení), zpátečka a kompresní poměr jsou UNKNOWN — M4 s nimi musí počítat; převody 1–6, brzdy Brembo 390/355, kola, 0–100 5,3 s a V-max 250 km/h jsou VERIFIED (M1.5, 2026-11-19); riziko záměny EU/US a GT/Dark Horse dat.
 14. **Stav:** CODE-VERIFIED — schémata a 3 referenční vozy existují (civic, gr86, mustang GT 2024 EU factory standard); profil Mustangu validuje 0/0, 20 testů M1-T01…M1-T20 PASS. (M1 nemá runtime složku; vyšší stupeň neexistuje.)
 
-## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: ČÁSTEČNĚ (M2.1 spike +
-M2.2 detekce kol CODE-VERIFIED; M2.3–M2.10 parser/měření/kalibrace NOT IMPLEMENTED;
+## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: ČÁSTEČNĚ
+(parser C05 + detekce kol M2.1/M2.2 CODE-VERIFIED @ `ff6f266`, není RUNTIME;
+měření M2.4–M2.8 BLOCKED kalibrační bránou; kalibrace M2.9/M2.10 NOT IMPLEMENTED;
 aktuální stav drží `docs/PROJECT_STATUS.md` §0; body 1–14 níže jsou schválená specifikace)
 
 1. **Cíl:** read-only změřit existující RBXM (kola, nápravy, rozměry) a určit měřítko studs/m.
@@ -54,9 +55,12 @@ aktuální stav drží `docs/PROJECT_STATUS.md` §0; body 1–14 níže jsou sch
 5. **Vztah:** `k = W_studs / 2.719`, kde `W_studs` je naměřený rozvor; konzistence ověřena přes ≥2 nezávislé rozměry (rozvor + rozchod + průměr kola).
 6. **Navržené soubory:** `src/autoengineer/inspection/{rbxm_inspector,geometry_reader,part_inventory,achassis_reader,inspection_report}.py`; `src/autoengineer/units/{conversions,scale_calibration}.py` — ověřit proti `src/common/units.py` (existuje, rozšířit místo duplikace).
 7. **Závislosti:** žádné (paralelně s M1).
-8. **Úkoly:** M2.1 spike formátu RBXM: HOTOVO (parser `src/Inspection/rbxm_parser.py`
-   implementuje INST + PRNT + SSTR/META/Name + Shape/Size/CFrame s provenancí),
-   read-only na kopii s hash-kontrolou ·
+8. **Úkoly:** M2.1 spike formátu RBXM: HOTOVO (read-only sonda na kopii
+   s hash-kontrolou; výstupem spike je pouze rozhodnutí o čtecí metodě) ·
+   **C05 produkční parser: HOTOVO, CODE-VERIFIED** (`src/Inspection/rbxm_parser.py`
+   @ `ff6f266`: chunk reader + INST + PRNT + SSTR/META/Name + Shape/Size/CFrame
+   s provenancí; důkazy `reports/AUDIT-parser-security.md`,
+   `AUDIT-format-compat.md`, `AUDIT-qa-final.md`) — přebírá pravidlo kol doslovně ·
    M2.2 identifikace 4 kol a středů **heuristikou z `docs/A-CHASSIS-AUDIT.md` (§Model:Wheels → díly
    FL/FR/RL/RR; kola tvar Ball; `wDia` se odvozuje ze `Size.x` největšího hnacího kola)** ·
    M2.3 identifikace náprav · M2.4 rozvor · M2.5 rozchody · M2.6 průměry pneu **s křížovou kontrolou
@@ -68,14 +72,25 @@ aktuální stav drží `docs/PROJECT_STATUS.md` §0; body 1–14 níže jsou sch
    Ball-součástí). Při porušení libovolné podmínky: kandidát → `UNKNOWN` se záznamem, který
    bod selhal. **Analýza se zastaví s `BLOCKED` při:** chybějícím `Model:Wheels`; počtu
    identifikovaných kol ≠ 4; nekonzistentním měřítku z ≥2 rozměrů; jakémkoli `UNKNOWN` u kola.
+   **Presety CFrame (ověřené vs. unread odděleně):** id 0 = vlastní matice
+   (čtena), id 2 = identita; ostatní id → `unread-preset-N` (pozice čtena,
+   orientace `None`, nikdy odhad) — plné ověření tabulky presetů mimo M2
+   (follow-up, neblokuje; viz `AUDIT-qa-final.md` §4/3).
    **Spike (M2.1) vs. produkce:** výstupem spike je pouze rozhodnutí o čtecí metodě + read-only
-   sonda na kopii; produkční parser (C05/C06) vzniká až po něm a přebírá toto pravidlo doslovně.
+   sonda na kopii; produkční parser C05 po něm vznikl a převzal toto pravidlo doslovně
+   (C06/kalibrace vzniká až po M3 Studio ground-truth).
 9. **Unit testy:** determinismus (2× stejný RBXM = identický výstup); všechna 4 kola rozpoznána; nápravy určeny; rozvor/rozchod shodné s referencí.
 10. **Integration testy:** report proti ručnímu měření ve Studiu; nekonzistentní měřítko → WARNING/BLOCKED; nejednoznačné označení kola → UNKNOWN.
 11. **Akceptační kritéria:** M2-T01…M2-T08 (včetně **zápis do originálu RBXM se nesmí stát** — hash vstupu se po běhu nemění).
 12. **Definition of Done:** modul změří model a určí měřítko, nebo prokazatelně oznámí, že to nelze.
-13. **Omezení/rizika:** žádný RBXM parser v repu zatím neexistuje (největší riziko plánu); float/CFrame rozměry A-Chassis dosud neověřeny ve Studiu (otevřený bod ze STATUS).
-14. **Stav:** NOT IMPLEMENTED.
+13. **Omezení/rizika:** parser C05 existuje a je CODE-VERIFIED (viz bod 8),
+   ale float/CFrame rozměry A-Chassis dosud neověřeny ve Studiu (otevřený bod
+   ze STATUS) — proto měření BLOCKED kalibrační bránou; největším zbývajícím
+   rizikem zůstává kalibrace `studs_per_meter` (M2.9/M2.10, až po Studio ground-truth).
+14. **Stav:** ČÁSTEČNĚ — C05 parser + detekce kol CODE-VERIFIED
+   (`src/Inspection/rbxm_parser.py` + `wheel_detect.py` @ `ff6f266`;
+   důkazy `reports/AUDIT-qa-final.md`); měření M2.4–M2.8 BLOCKED kalibrační
+   bránou; kalibrace M2.9/M2.10 NOT IMPLEMENTED. Není RUNTIME.
 
 ## M3 – Geometry Engine · priorita P0 · stav: NOT IMPLEMENTED
 

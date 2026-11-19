@@ -1,7 +1,10 @@
 # Project Status – stav k 2026-11-19 (větev `feat/m1-m2-foundation`, PR #2)
 
-**Aktuální stav:** M1 + M2 (profil, parser INST/PRNT/Shape/Size/CFrame, detekce kol) hotovo na této větvi; testy
-**260 běhů, 256 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py`, PENDING beze změny).
+**Aktuální stav:** M1 CODE-VERIFIED; M2 parser C05 CODE-VERIFIED (není RUNTIME),
+geometrie/měření BLOCKED, kalibrace NOT IMPLEMENTED; M3 NOT IMPLEMENTED —
+vše na této větvi @ `ff6f266` (PR #2, OPEN, NEMERGOVAT); testy
+**260 běhů, 256 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `ff6f266`,
+ověřeno během 2026-11-19; PENDING beze změny).
 **RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
 
 > **§1–§8 = HISTORICKÝ audit před implementací** (stav k `dd9efdf`, 162 PASS).
@@ -22,32 +25,48 @@
 - Validace: profil 0 errors / 0 warnings; sada M1-T01…M1-T20 20/20 PASS.
 - Detail: §9 níže (kontroly Agenta D + opakování po povýšení M1.5).
 
-### 0.2 M2 – spike + detekce kol (hotovo); produkční parser a měření NENÍ hotovo
-- Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`), rozhodovací pravidlo kol
-  `(a) v Model:Wheels + (b) FL/FR/RL/RR + (c) tvar Ball` v
-  `src/Inspection/wheel_detect.py` (19 testů v `tests/test_m2_wheel_detect.py`, vše PASS).
-- P0 oprava (tato změna): cyklus v parent hierarchii ani chybějící parent ID
-  ani duplicitní instance ID se nikdy neklasifikuje jako validní — vždy BLOCKED
-  (`parent_cycle` / `missing parent id` / `duplicate instance id` v blocked_reasons).
-- NOT IMPLEMENTED / BLOCKED: produkční RBXM parser (C05/C06) a měření
-  rozvoru/rozchodů z geometrie — žádné měření se neodhaduje, vše UNKNOWN/BLOCKED.
+### 0.2 M2 – parser C05 hotov (CODE-VERIFIED); měření/kalibrace BLOCKED / NOT IMPLEMENTED
+- Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`); produkční parser **C05**
+  (`src/Inspection/rbxm_parser.py`, 1345 řádků @ `ff6f266`): chunk reader +
+  INST + PRNT + SSTR/META/Name + Shape/Size/CFrame s provenancí
+  (`read/missing/unread`; floaty vždy `trusted=False`). P0 oprava: cyklus
+  v parent hierarchii, chybějící parent ID i duplicitní instance ID →
+  vždy BLOCKED, nikdy validní (`parent_cycle` / `missing parent id` /
+  `duplicate instance id` v blocked_reasons).
+- Důkazy: `reports/AUDIT-parser-security.md` (P0: 0; 5× P1 + 2× P2 vše
+  OPRAVENO s regresními testy) + `reports/AUDIT-format-compat.md` +
+  `reports/AUDIT-geometry.md` + `reports/AUDIT-qa-final.md`
+  (7 vlastních adversarial sond vše fail-closed; verdikt MERGE, podmínky docs-only).
+  Stupeň: **CODE-VERIFIED, není RUNTIME** (žádné Studio měření — viz §0.5/4).
+- Presety CFrame **ověřené vs. unread odděleně**: id 0 = vlastní matice
+  (čtena), id 2 = identita; ostatní id → `unread-preset-N` (pozice čtena,
+  orientace `None`, nikdy odhad) — kryto `test_f6_cframe_preset_sweep`,
+  `test_cframe_unknown_preset_unread`, `test_assess_unread_rotation_blocked`.
+- Detekce kol: rozhodovací pravidlo `(a) v Model:Wheels + (b) FL/FR/RL/RR +
+  (c) tvar Ball` v `src/Inspection/wheel_detect.py` (21 testů, vše PASS).
+- BLOCKED / NOT IMPLEMENTED: geometrie z měření (M2.4–M2.6 rozvor/rozchody/
+  průměry) — kalibrační brána drží **BLOCKED** (`float_decode_unverified`;
+  reálná kopie: 44 dílů → BLOCKED, ověřeno během); kalibrace `studs_per_meter`
+  (M2.9/M2.10, C06) **NOT IMPLEMENTED** — až po M3 Studio ground-truth.
+  Žádné měření se neodhaduje, vše UNKNOWN/BLOCKED.
 
 ### 0.3 M3–M9 (beze změny)
 - M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
   auditu §1 (stav před implementací této větve).
 
-### 0.4 Testy a RBXM integrita (nový běh 2026-11-19)
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `ff6f266`)
 - `python tests/run_all.py` → **260 běhů, 256 PASS, 0 FAIL, 4 PENDING**
-  (baseline před změnou 199/195/0/4; +6 nových adversarial testů cyklů/hierarchie,
-  1 test přepsán z OK na BLOCKED; PENDING totožné).
+  (historické: 199/195/0/4 před M2 hardeningem — viz §9 níže;
+  192/188/0/4 stav k Agentu D — viz §9; PENDING totožné).
 - RBXM: `assets/chassis-original/chasis-work-copy.rbxm` —
   `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`
   (před/po shodné, pouze čteno). Druhý soubor v repu
   (`testgame/.../JeepTemplate.rbxm`) má stejný hash, rovněž beze změny.
 
 ### 0.5 Otevřené body
-1. Produkční RBXM parser (C05/C06) + kalibrace měřítka (M2.9/M2.10) — největší riziko plánu.
-2. Měření rozvoru/rozchodů — NOT IMPLEMENTED, blokuje M3 cíle.
+1. Kalibrace měřítka (M2.9/M2.10, C06) + měření rozvoru/rozchodů — NOT IMPLEMENTED /
+   BLOCKED, největší riziko plánu. Parser C05 je hotov (CODE-VERIFIED, viz §0.2).
+2. M3 Geometry Engine NOT IMPLEMENTED — blokováno bodem 1 (bez kalibrace žádné cíle).
 3. Rozhodnuto a uzavřeno: final drive ZŮSTÁVÁ UNKNOWN (kandidáti 3.15/3.55 jen v notes,
    rozhodnutí uživatele); trvale UNKNOWN bez nového zdroje: momentová křivka, rozložení
    hmotnosti + těžiště, brzdový bias, Cd/plocha.
