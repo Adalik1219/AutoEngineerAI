@@ -1,6 +1,8 @@
 # Agent C — Integration & Calibration Audit (M2–M3)
 
-**Větev:** `feat/m2-m3-geometry` · **HEAD:** `64be2c6` · **Datum:** 2026-11-19
+**Větev:** `feat/m2-m3-geometry` · **HEAD:** `64be2c6` (psáno) · **Re-verifikace Agent C:** 2026-11-19,
+pracovní strom dle zadání (HEAD `66c27e9`; rozdíl `64be2c6..66c27e9` bez git operací neověřen —
+níže čerstvé běhy na aktuálním stromě, výsledky shodné).
 **Režim:** READ-ONLY vůči `src/` (pouze čtení + běhy testů); měněny jen reporty.
 **Zdroje:** `reports/M2-M3/INTEGRATION-TEST-REPORT.md` (§1–§9), `reports/M2/SCALE-CALIBRATION-REPORT.md` (§0–§9), `src/Inspection/rbxm_parser.py` (`calibrate_studs_per_meter`, assess `block(...)`), `src/Inspection/scale_calibration.py` (čtení), živé běhy níže.
 
@@ -57,3 +59,53 @@ Ověřeno čtením obou implementací (žádný rozpor, dvě různé vrstvy):
 - Integrace M2 zelená na `64be2c6`: **168/168 M2 sad OK, plná sada 368/372 PASS + 4 očekávané PENDING, 0 FAIL**; I-1 historicky uzavřena; M3 brána držena oběma nohama (inspekce BLOCKED + kalibrace BLOCKED 7.44 %).
 - Kód neměněn (read-only dodrženo); změněny jen 3 vlastněné reporty (tento audit nový).
 - Otevřené: skutečná mustangovská kalibrace čeká na RBXM měření + Studio ground-truth (mimo rozsah Agent C); do té doby každý reálný výstup UNKNOWN/BLOCKED a M3 NOT READY trvá.
+
+## 7. Re-verifikace na aktuálním stromě (Agent C, 2026-11-19, zadání HEAD `66c27e9`)
+
+Čerstvé sériové běhy, výsledky shodné s §1/§4–§5 (žádná regrese):
+
+| Příkaz | Výsledek |
+|---|---|
+| `python -m unittest tests.test_m2_wheel_detect tests.test_m2_rbxm_parser` | **110 testů, OK** (53 + 57 — §6 WHEEL-reportu sedí) |
+| `python -m unittest tests.test_m2_scale_calibration` | **31 testů, OK** |
+| `python -m unittest tests.test_m2_rbxm_parser tests.test_m2_rbxm_inspector tests.test_m2_wheel_detect tests.test_m2_scale_calibration tests.test_m2_integration` | **168 testů, OK** (57+7+53+31+20) |
+| `python tests/run_all.py` | **běhů=372 PASS=368 FAIL=0 ERROR=0 PENDING=4** |
+| `python tools/validate_contracts.py` | **24 kontrol, 0 chyb, exit 0** |
+
+Dodatečně ověřeno čtením kódu: `report_from_assess` docstring nese
+„PROPAGACE I-1 … overall_status reportu je vždy BLOCKED. Per-kolo GEOMETRY_OK
+záznamy v těle reportu zůstávají nedotčeny" — I-1 uzavřena i na úrovni kódu.
+`COORDINATE_FRAME_ACTUAL` (x=lateral, z=longitudinal, `verified_in_studio: True`)
+a `usable_for_m3()` STRICT `== VERIFIED` potvrzeny čtením. WHEEL-report §4 uvádí
+`overall_status = BLOCKED` a §6 „110/110" — oba dřívější nálezy z §8 (GEOMETRY_OK
+věta, „109 testů") jsou vlastníkem opraveny, bez akce.
+
+## 8. M3 proposal §4/§7 (Agent E, HEAD `ab840a9`) — ověřeno + 2 nové nálezy
+
+- **VERIFIED-only brána sedí:** proposal §4 (`overall_status == VERIFIED` STRICT,
+  „ESTIMATED STOP") a §7 (`!= VERIFIED` → BLOCKED vč. ESTIMATED) jsou v souladu
+  s `usable_for_m3()`/`require_verified_for_m3()`. Původní NÁLEZ SCALE-reportu §4
+  je VYŘEŠEN. Zbývající výskyty ESTIMATED v proposalu jsou statusy per-hodnota
+  (M3.5, schémata, M3-T02), ne díra v bráně. — VERIFIED.
+- **F-1 (nový, vlastník Agent E + vlastník `units.py`): proposal §4 ř. 110 jmenuje
+  špatný rámec** („rámec x-vpřed/y-vlevo/z-vzhůru z `units.py`") — tatáž konvence je
+  ve WHEEL-reportu §3 datově vyvrácena (platí x=lateral / y=up / z=longitudinal,
+  Y konstantní 23.62; docstring `units.py` „x vpřed, y vlevo, z vzhůru" je s daty
+  v rozporu). Brána sama je správně (vyžaduje `verified_in_studio == true`), ale
+  odkaz má znít na `COORDINATE_FRAME_ACTUAL`, ne na `units.py`. Kód M2 se nemění.
+- **F-2 (nový, vlastník Agent E): proposal §9 zastaralý** („kalibrace M2.9/M2.10
+  NOT IMPLEMENTED") — engine existuje (`scale_calibration.py`, 31 testů). Hlavička
+  proposalu (HEAD `ab840a9`) je historická; aktualizovat při nejbližším touchi.
+
+## 9. NEOVĚŘENO a sync-poznámky
+
+- Hash RBXM před/po a bitová shoda dvojího běhu (G-10) v tomto auditu znovu
+  neměřeny — převzato z INTEGRATION-reportu §8 (řetěz je read-only).
+- Studio ground-truth měření — převzato z `STUDIO_GROUND_TRUTH.md`, bez přístupu
+  do Studia.
+- Hlavičkové HEAD všech 4 reportů (WHEEL `a7e89e5`, SCALE/INTEGRATION `64be2c6`,
+  proposal `ab840a9`) jsou starší než zadaný `66c27e9`; bez git operací nelze
+  ověřit mezilehlé diffy, proto hlavičky ponechány vlastníkům (F-3, bez akce zde).
+- M3: návrh only, žádná implementace — M3-T01…T09 není co exekuovat.
+- V tomto auditu: žádné změny `src/`/`tests/` ani 4 reportů (vše již opraveno
+  vlastníky nebo patří jim); změněn pouze tento audit (§7–§9 + hlavička).

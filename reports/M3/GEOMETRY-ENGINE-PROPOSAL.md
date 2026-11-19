@@ -2,7 +2,9 @@
 
 > Status: **NÁVRH v1 (2026-11-19, větev `feat/m2-m3-geometry`, HEAD `ab840a9`) — žádná implementace.**
 > Produkce (`geometry_target.json` / `diff.json`, jakýkoli kód v `src/`) je **BLOKOVÁNA do brány M2**
-> (kalibrace `studs_per_meter` M2.9/M2.10 NOT IMPLEMENTED; měření M2.4–M2.8 BLOCKED).
+> (hodnota měřítka `studs_per_meter` M2.9/M2.10 není stanovena — kalibrace JeepTemplate
+> BLOCKED 7,44 %; kalibrační engine `scale_calibration.py` přitom EXISTUJE a je
+> CODE-VERIFIED; měření M2.4–M2.8 BLOCKED kalibrační bránou).
 > Tento dokument pouze navrhuje; nic nepočítá za produkci.
 > Vlastněný soubor Agenta E: `reports/M3/GEOMETRY-ENGINE-PROPOSAL.md` (nový).
 
@@ -107,7 +109,9 @@ Kontrakt vstupu (FREEZE, neměnit bez nové verze):
 `require_verified_for_m3()` v `src/Inspection/scale_calibration.py` propouští do M3
 pouze VERIFIED; ESTIMATED STOP — odhadnuté měřítko `k` by vyrábělo falešně přesnou
 geometrii) + `studs_per_meter` konečné kladné + `uncertainty` přítomna, jinak STOP.
-- `coordinate_frame.verified_in_studio == true`, jinak STOP (rámec x-vpřed/y-vlevo/z-vzhůru z `units.py` by byl neověřený předpoklad).
+- `coordinate_frame.verified_in_studio == true`, jinak STOP (rámec musí být
+  ověřený `COORDINATE_FRAME_ACTUAL`: x=lateral, y=up, z=longitudinal —
+  starší formulace x-vpřed/y-vlevo/z-vzhůru je daty vyvrácena, viz WHEEL §3).
 - Každé M2 měření bez statusu = odmítnuto (G-02/G-03).
 
 Převodní pravidlo: `target_studs = value_mm / 1000 × studs_per_meter`
@@ -204,8 +208,9 @@ Integration: diff report proti M2 inspekci reálného RBXM; `tools/validate_cont
 
 ## 9. Závislosti a rizika
 
-- **Závislosti:** M1 DONE (profil čitelný) · M2 kalibrace M2.9/M2.10 NOT IMPLEMENTED =
-  produkce M3 BLOKOVÁNA (očekávaný stav, ne selhání). M4/M5 čekají na M3 (milník M1–M3).
+- **Závislosti:** M1 DONE (profil čitelný) · hodnota měřítka M2.9/M2.10 nestanovena
+  (kalibrace JeepTemplate BLOCKED; engine existuje) = produkce M3 BLOKOVÁNA
+  (očekávaný stav, ne selhání). M4/M5 čekají na M3 (milník M1–M3).
 - **R1 kalibrace měřítka** (největší; ROADMAP M2 bod 13): bez `k` nelze nic — mitigace:
   pořadí implementace `validator → dimensions → diff`, vše za bránou.
 - **R2 nominální ≠ zatížené průměry:** mitigace ESTIMATED + tolerance, M4/M7 kalibrují.

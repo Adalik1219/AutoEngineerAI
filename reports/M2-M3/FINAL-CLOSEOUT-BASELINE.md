@@ -21,3 +21,13 @@ FINAL-INDEPENDENT-QA.md, PROJECT_STATUS.md, IMPLEMENTATION_ROADMAP.md.
 Pouze dokumentace + audit. Žádné změny `src/` ani `tests/`, žádná M3,
 žádný merge, žádný rebase/force-push. Nález funkční chyby = popsat + důkaz,
 neopravovat bez souhlasu.
+
+## Vlna final-closeout (2026-11-19, HEAD 66c27e9)
+
+- Branch `feat/m2-m3-geometry` = origin, strom čistý, main `5b67315` netknut.
+- PR #2 OPEN (head `ab840a9`, jiná větev). M3 zavřená.
+- CI run `44618988364`: head_sha `66c27e963dd62deb2b07967b820a96644ff71dcd`
+  (= HEAD, ověřeno GitHub API), branch `feat/m2-m3-geometry`, event push,
+  conclusion success, joby 4/4 (3.11–3.14). (Starší run `44617147977`
+  patří k `a7e89e5` — viz §0 výše, nezaměňovat.)
+- Rozsah: pouze dokumentace + audit (§0). Funkční kód/testy/RBXM beze změny.

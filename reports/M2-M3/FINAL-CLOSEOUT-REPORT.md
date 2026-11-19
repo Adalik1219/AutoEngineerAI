@@ -5,9 +5,9 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 
 ## 1. Identifikace
 
-- Výchozí SHA: `a7e89e5c6a35245f72b5bb3e141dd33da41f09d5`
-- Finální SHA: `dfb2e55a032e863a784ea9ddaaaa44926d9212af` (+ tento report)
-- CI run k finálnímu SHA: viz §4 (docs-only delta, testy nedotčeny).
+- Výchozí SHA: `66c27e963dd62deb2b07967b820a96644ff71dcd`
+- Finální SHA: viz commit této vlny níže (docs-only).
+- Předchozí: `a7e89e5` (auditní základ), `dfb2e55` (sync) — historie.
 
 ## 2. Agenti
 
@@ -26,23 +26,39 @@ mezera přiznána, kryjí testy klíčů).
 
 ## 4. CI
 
-Run `44617147977` = přesně `a7e89e5`, 4/4 success (3.11–3.14).
-Finální commit je docs-only nad ním; CI běh k němu: viz dodatek po pushi.
+- Run `44617147977` → přesně `a7e89e5` (historie), 4/4 success.
+- Run `44618988364` → přesně `66c27e9` (výchozí HEAD této vlny),
+  větev `feat/m2-m3-geometry`, event push, 4/4 success (3.11–3.14) —
+  ověřeno koordinátorem přes GitHub API (head_sha, branch, joby).
+- Nový run k finálnímu commitu: viz dodatek po pushi (docs-only).
 
 ## 5. Dokumentační konzistence
 
 PROJECT_STATUS, ROADMAP, WHEEL/SCALE/INTEGRATION reporty, QA verze —
-vše na `a7e89e5`, počty 372/368, M2 CONDITIONAL PASS, M3 NEOTEVŘENA.
-Historie append-only, nic nemazáno.
+vše na `66c27e9`, počty 372/368, M2 CONDITIONAL PASS, M3 NEOTEVŘENA.
+Historie append-only, nic nemazáno. Rámec: x=lateral/y=up/z=long (WHEEL §3);
+proposal §4/§9 opraveny (VERIFIED-only brána, engine existuje, stub odlišen).
 
 ## 6. G-brány
 
-G-01–G-07 PASS (hash, jednotky, zdroje, UNKNOWN≠odhad, PENDING≠PASS,
-CODE≠RUNTIME, simulace≠runtime); G-10 PASS; G-08/G-09 mimo rozsah vlny.
+| Brána | Verdikt | Důkaz |
+|---|---|---|
+| G-01 originál nedotčen | PASS | hash před/po shodný, pouze čtení |
+| G-02 jednotky | PASS | studs + SI v kontraktech |
+| G-03 zdroje/provenance | PASS | profil VERIFIED + CHYBÍ notes |
+| G-04 UNKNOWN≠odhad | PASS | null + důvody, žádná falešná čísla |
+| G-05 PENDING≠PASS | PASS | 4 zdůvodněné, odděleně |
+| G-06 CODE≠RUNTIME | PASS | žádný runtime claim |
+| G-07 simulace≠runtime | PASS | simulace nevydávána za důkaz |
+| G-08 iterace | OUT OF SCOPE | vlna bez změn konfigurace |
+| G-09 rollback | OUT OF SCOPE | vlna bez změn konfigurace |
+| G-10 reprodukovatelnost | PASS | determinismus, dvojí běh shodný |
 
 ## 7. Konečný stav
 
-- M2: CONDITIONAL PASS · M3: NEOTEVŘENA · M4–M9: BEZE ZMĚNY
+- M2: CONDITIONAL PASS · kalibrace: BLOCKED (rozptyl 7,44 % > 5 %;
+  JeepTemplate = jiné vozidlo; stub trvale NOT IMPLEMENTED, engine
+  IMPLEMENTED + CODE-VERIFIED) · M3: NEOTEVŘENA · M4–M9: BEZE ZMĚNY
 - PR #2: OPEN · funkční kód: BEZE ZMĚNY v této vlně
 - Otevřené (vědomě): float_decode text (aktualizace po kalibrační vlně),
   Play/runtime důkazy, 3. distinctní RBXM, M2/M3 freeze schémata v contracts/.
