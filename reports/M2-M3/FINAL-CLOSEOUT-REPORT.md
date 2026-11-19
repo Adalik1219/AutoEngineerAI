@@ -8,10 +8,12 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 - Auditní základ: `a7e89e5c6a35245f72b5bb3e141dd33da41f09d5`
 - Sync: `dfb2e55a032e863a784ea9ddaaaa44926d9212af`
 - Předchozí finální: `66c27e963dd62deb2b07967b820a96644ff71dcd`
-- TATO vlna: technický verifikační SHA `626c25859cbd143662013930123611c82be4c00f`;
-  finální dokumentační SHA `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43` (docs-only).
-  Sériové testy koordinátora byly spuštěny na `626c258`, nikoli `f60ec9b`;
-  kód i testy se mezi těmito SHA nezměnily.
+- Technický verifikační/testovací SHA: `626c25859cbd143662013930123611c82be4c00f`;
+  koordinátorovy sériové testy byly spuštěny na tomto SHA. Docs baseline SHA:
+  `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43` (docs-only commit s CI runem
+  `44627333247`). Skutečný dokumentační HEAD před touto opravou:
+  `6d421e8e5dc64c5261916e194303a064314a299c`. Kód a testy se mezi těmito
+  dokumentačními commity nezměnily.
 - Větev `feat/m2-m3-geometry`, PR #2 OPEN, NEMERGOVAT. Kód ani testy
   neměněny, žádné git operace agentem, `main` netknut.
 
@@ -48,13 +50,12 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 |---|---|
 | `reports/M2-M3/FINAL-CLOSEOUT-REPORT.md` | ZMĚNĚN (tato oprava: §1, §3, §4, §4b) |
 | `reports/M2-M3/AGENT-A-DOCUMENTATION-REPORT.md` | ZMĚNĚN (nová sekce vlny, formát 1–10) |
-| `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_ROADMAP.md` | ZMĚNĚNY (pouze explicitní oddělení technického SHA `626c258` a docs SHA `f60ec9b`) |
+| `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_ROADMAP.md` | ZMĚNĚNY (opravené rozlišení technického SHA, docs baseline a aktuální dokumentační HEAD) |
 | Kód (`src/`), testy (`tests/`), `contracts/` | NE (beze změny) |
 
 ## 5. Dokumentační konzistence
 
-PROJECT_STATUS a ROADMAP rozlišují technický verifikační SHA `626c258`
-a dokumentační finální SHA `f60ec9b`; kód/testy se mezi nimi nezměnily.
+PROJECT_STATUS a ROADMAP rozlišují technický verifikační/testovací SHA `626c258`, docs baseline `f60ec9b` a dokumentační HEAD před opravou `6d421e8`. Run `44627333247` patří výhradně k `f60ec9b`; CI pro `6d421e8` zde není tvrzeno. Kód/testy se v dokumentačních změnách nezměnily.
 Ostatní WHEEL/SCALE/INTEGRATION reporty a historické QA sekce zachovávají
 své tehdejší piny. M2 zůstává CONDITIONAL PASS; kalibrace BLOCKED; M3
 NEOTEVŘENA. Agent D neprovedl nové testy na `f60ec9b`.
@@ -78,9 +79,7 @@ proposal §4/§9 opraveny (VERIFIED-only brána, engine existuje, stub odlišen)
 
 ## 7. Konečný stav
 
-**Dokumentační synchronizace:** dokončena na `f60ec9b` po ověření runu
-`44627333247`. Koordinátorovy sériové testy zůstávají připnuté k `626c258`;
-Agent D neprovedl nové sériové běhy na `f60ec9b`.
+**Dokumentační baseline:** `f60ec9b` s runem `44627333247`. Před touto opravou byl skutečný dokumentační HEAD `6d421e8`; CI pro tento SHA nebylo při revizi dohledáno. Koordinátorovy sériové testy zůstávají připnuté k `626c258`; Agent D neprovedl nové sériové běhy na `f60ec9b` ani na pozdějších docs-only SHA.
 
 - M2: CONDITIONAL PASS · kalibrace: BLOCKED (rozptyl 7,44 % > 5 %;
   JeepTemplate = jiné vozidlo; stub trvale NOT IMPLEMENTED, engine

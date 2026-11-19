@@ -1,6 +1,6 @@
 # Implementation Roadmap – backlog M1–M9 (hybridní režim)
 
-**Aktuální dokumentační SHA:** `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43` (docs-only sync). **Technický verifikační SHA:** `626c25859cbd143662013930123611c82be4c00f`; koordinátorovy sériové testy patří k tomuto SHA. Kód a testy se v docs-only delta nezměnily.
+**Technický verifikační/testovací SHA:** `626c25859cbd143662013930123611c82be4c00f` (koordinátorovy sériové testy byly spuštěny na tomto SHA). **Docs baseline SHA:** `f60ec9b6837659a2e6b907bd5b862fbe6dfbdd43` (docs-only commit s CI runem `44627333247`). **Aktuální dokumentační HEAD před touto opravou:** `6d421e8e5dc64c5261916e194303a064314a299c`. Kód a testy se v předchozích docs-only změnách nezměnily.
 
 **Stav:** návrh v1 (ke schválení). Hlavní technická specifikace pro implementační agenty.
 **Cílové vozidlo:** `docs/VEHICLE-SPECIFICATIONS.md`. **Proces:** `docs/HYBRID_WORKFLOW.md`.
