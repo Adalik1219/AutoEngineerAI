@@ -30,8 +30,9 @@ Každé kritérium má jasný PASS/FAIL a měřitelný důkaz. Vzor: F7.2 AC1–
 - **M5:** 7 pravidel (neznámý/READ-Only/mimo-rozsah/konflikt → odmítnuto; struktura oddělená; důvod + původní hodnota; žádná neověřená VERIFIED).
 - **M6:** 7 pravidel + atomicita M6.10 (kopie+swap, kill-test, last-known-good s nulovým diffem); hash originálu; unikátní ID; žádná auto-aplikace.
 - **M7:** každý test = postup + cíl s číselnou tolerancí + `verdict_rule` (explicitní nerovnost) +
-  jednotky + vyhodnocení; protokol bez čísel se zamítá; minima opakování z `HYBRID_WORKFLOW.md` §3;
-  `environment.mode` musí být `roblox-runtime`, jinak výsledek není runtime důkaz (G-07).
+  jednotky + vyhodnocení + důkazní úroveň L1/L2/L3; protokol bez čísel se zamítá;
+  minima opakování z `HYBRID_WORKFLOW.md` §3; **L3 (jízdní chování) → `environment.mode:
+  roblox-runtime` povinně**, jinak výsledek není runtime důkaz (G-07).
 - **M8:** 8 pravidel + `n < 3 → INSUFFICIENT` (nikdy PASS); opakovatelnost `R` vs. přesnost
   `|x̄−target|/|target|` odděleně; outlier flagnut (|odchylka| > 3s), nikdy tiše smazán.
 - **M9:** 9 pravidel (workflow s testovacím RBXM i Mustangem; 2 iterace; import výsledků; rollback; hash; žádné runtime PASS bez Studia).

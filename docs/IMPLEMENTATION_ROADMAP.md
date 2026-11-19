@@ -35,7 +35,7 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
    `source_type: factory` vyžaduje `confidence ≥ 0.8`.
 7. **Závislosti:** žádné (paralelně s M2).
 8. **Úkoly:** M1.1 model `VehicleSpecification` · M1.2 oddělené modely motor/převodovka/pneu/geometrie · M1.3 metadata zdrojů (URL, datum, jednotky, autorita) · M1.4 stavy VERIFIED/ESTIMATED/UNKNOWN · M1.5 profil Mustangu · M1.6 oddělení standard GT vs. Performance Pack · M1.7 kontrola kompatibility variant (EU≠US, GT≠Pack) · M1.8 export/import specifikace · **M1.9 výjimka torque_curve: `VEHICLE-DATA.md` §2.3 žádá ≥2 tovární kotvy, pro Mustang existuje 0 — profil proto nese prázdnou křivku se statusem UNKNOWN a zdůvodněním v `notes` (`CHYBÍ: …`); `validate.py` je null-safe (`or {}`), výjimku explicitně zdokumentovat a nesmí se stát precedentem pro domýšlení bodů**.
-9. **Unit testy:** načtení Mustangu; chybějící povinné pole → odmítnuto; neplatná převodovka → odmítnuto; záměna EU/US → odmítnuto; neznámá křivka zůstává UNKNOWN; VERIFIED bez zdroje → odmítnuto; smíchání GT/Pack → odmítnuto.
+9. **Unit testy:** načtení Mustangu; chybějící povinné pole → odmítnuto; neplatná převodovka → odmítnuto; záměna EU/US → odmítnuto; neznámá křivka **a neznámé převodové poměry** zůstávají UNKNOWN; VERIFIED bez zdroje → odmítnuto; smíchání GT/Pack → odmítnuto.
 10. **Integration testy:** profil projde `tools/validate_contracts.py`; `source_vehicle_id` linkuje DB záznam s pipeline profilem.
 11. **Akceptační kritéria:** M1-T01…M1-T07 dle zadání (vše PASS); každá známá hodnota má zdroj, každá neznámá zůstává neznámá.
 12. **Definition of Done:** Mustang se načte jako validní verzovaný profil; zdroje dohledatelné.
@@ -58,7 +58,14 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
    M2.3 identifikace náprav · M2.4 rozvor · M2.5 rozchody · M2.6 průměry pneu **s křížovou kontrolou
    proti `wDia`** · M2.7 inventář dílů/hmotností · M2.8 čtení Tune/Script/Structure parametrů ·
    M2.9 kalibrace `studs_per_meter` · M2.10 kontrola konzistence měřítka z více rozměrů.
-   Nejednoznačné označení kola nebo chybějící `Model:Wheels` → `UNKNOWN` + `BLOCKED`, nikdy odhad.
+   **Rozhodovací pravidlo pro kola (konjunkce, pořadí závazné):** kandidát je kolo, jen pokud
+   současně (a) leží v `Model:Wheels`, (b) nese označení FL/FR/RL/RR, (c) má tvar Ball —
+   Ball-tvar mimo `Model:Wheels` se kolem **nikdy** nestane (ochrana před záměnou s jinou
+   Ball-součástí). Při porušení libovolné podmínky: kandidát → `UNKNOWN` se záznamem, který
+   bod selhal. **Analýza se zastaví s `BLOCKED` při:** chybějícím `Model:Wheels`; počtu
+   identifikovaných kol ≠ 4; nekonzistentním měřítku z ≥2 rozměrů; jakémkoli `UNKNOWN` u kola.
+   **Spike (M2.1) vs. produkce:** výstupem spike je pouze rozhodnutí o čtecí metodě + read-only
+   sonda na kopii; produkční parser (C05/C06) vzniká až po něm a přebírá toto pravidlo doslovně.
 9. **Unit testy:** determinismus (2× stejný RBXM = identický výstup); všechna 4 kola rozpoznána; nápravy určeny; rozvor/rozchod shodné s referencí.
 10. **Integration testy:** report proti ručnímu měření ve Studiu; nekonzistentní měřítko → WARNING/BLOCKED; nejednoznačné označení kola → UNKNOWN.
 11. **Akceptační kritéria:** M2-T01…M2-T08 (včetně **zápis do originálu RBXM se nesmí stát** — hash vstupu se po běhu nemění).
@@ -165,12 +172,14 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
    `{target, unit, tolerance, min_repetitions, verdict_rule}`; verdict_rule je explicitní nerovnost
    (např. `|Error_%| ≤ tolerance → PASS`), protokol bez čísel se zamítá.
    Trasabilita na existující scénáře: T-ACC-01 → S1 (akcelerace), T-BRK-01 → S3 (brzdy 100→0).
-9. **Unit testy:** každý test má postup + jednotky + toleranci; schéma výsledku validuje prázdný i plný formulář.
+9. **Unit testy:** každý test má postup + jednotky + toleranci + důkazní úroveň L1/L2/L3; schéma výsledku validuje prázdný i plný formulář; L3 test bez `roblox-runtime` modu → odmítnuto.
 10. **Integration testy:** protokol pro iteration_NNN proti `expected_results.json`; podmínky odpovídají prostředí Studia (`ROBLOX-RUNTIME.md`).
 11. **Akceptační kritéria:** každý test má jednoznačný postup, očekávané hodnoty **s číselnou
-    tolerancí a verdict_rule**, jednotky, vyhodnocení; počty opakování = minimum výše;
-    `environment.mode` výsledku musí být `roblox-runtime` (dle `contracts/test_result.schema.json`),
-    jinak výsledek není runtime důkaz.
+    tolerancí a verdict_rule**, jednotky, vyhodnocení; počty opakování = minimum výše.
+    **Důkazní úrovně:** L1 výpočet bez Studia (žádný `mode`); L2 měření ve Studiu bez jízdy
+    (T-GEO-01/02, hash-kontroly — ruční záznam, `mode` jen je-li přiložena telemetrie);
+    **L3 jízdní chování (T-ACC/T-BRK/T-STEER/T-REL/T-STAB) → `environment.mode: roblox-runtime`
+    povinně** (dle `contracts/test_result.schema.json`); výsledek L3 s jiným modem není runtime důkaz.
 12. **Definition of Done:** člověk bez expertních znalostí provede test a odevzdá validní měření.
 13. **Omezení/rizika:** lidský faktor (opakovatelnost); F7.2 AC1–AC7 ukazují, jak přísné musí být prahy a symetrie.
 14. **Stav:** PARTIAL — scénáře a telemetrická schémata existují (Sim + testgame + Lua), chybí generátor lidsky čitelných protokolů a formulář.
