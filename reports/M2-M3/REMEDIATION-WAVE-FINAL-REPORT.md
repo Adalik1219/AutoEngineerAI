@@ -71,3 +71,14 @@ Pravidla: M3 NEOTEVŘENA · originál RBXM nedotčen · PENDING≠PASS · CODE�
 - Commit: `a94e4a2` · run `44611902993` · 4/4 success (3.11–3.14).
 - Předchozí runy: vlna 34a4994 zelená lokálně 372/368/0/4 (CI běží jen na push;
   mezilehlé commity bez push nebyly testovány v CI — lokální běhy doloženy v reportech).
+
+## Dodatek — finální auditní vlna (HEAD c1a138b + docs, 2026-11-19)
+
+- A: 4-tier + allowlist 11 názvů ověřen read-only (53/53, 110/110 s parserem);
+  2 zastaralé věty opraveny koordinátorem (§4 BLOCKED propagace, §6 110 testů).
+- B: kalibrace read-only audit (31/31); brána VERIFIED-only; JeepTemplate BLOCKED 7,44 %.
+- C: integrace 20/20; I-1 sekce opravena (HISTORICKÝ STAV + Final re-verification);
+  plná sada 372/368/0/4; validate_contracts 24/0; G-01–G-07, G-10 PASS.
+- D: finální QA — M2 CONDITIONAL PASS, M3 NEOTEVŘENA (15 sond + I-1).
+- PENDING: 4 (Studio Play, F5 schema, 2× baseline F9/10). BLOCKED drží (kalibrace,
+  geometrie reportu). M3 bez kódu. Originál RBXM hash shodný.

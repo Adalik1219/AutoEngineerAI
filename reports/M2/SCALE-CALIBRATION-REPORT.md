@@ -127,3 +127,12 @@ NEMĚNĚNO: `docs/*.md` (sync dělá koordinátor), cizí moduly, návrh M3.
 - Otevřené / mimo rozsah: skutečná mustangovská kalibrační čísla čekají na
   měření z RBXM (Agent B) a Studio ground-truth; do té doby je každý reálný
   výstup UNKNOWN/BLOCKED a do M3 nic neprojde. M3 NOT READY trvá.
+
+## 9. Read-only audit 2026-11-19 (HEAD c1a138b, větev feat/m2-m3-geometry)
+
+- `src/Inspection/scale_calibration.py::calibrate()` ověřen čtením: rodiny wheelbase/track/tire_diameter, BLOCKED pořadí (UNKNOWN → <2 rodiny → rozptyl >5 %), VERIFIED jen vše-VERIFIED + max|odchylka| ≤2 %, jinak ESTIMATED. Kód ani testy NEMĚNĚNY.
+- Reference: wheelbase/track_f/track_r VERIFIED (±0,003 m), tire_d_f 0,6866 / tire_d_r 0,7026 m ESTIMATED (±0,005 m, nominální výpočet z designace) — sedí s §2.
+- JeepTemplate (přesná čísla z `TestJeepTemplateGroundTruth`: 10.522796630859375 / 5.99066162109375 / 5.99072265625 / 2.7 / 2.7): `BLOCKED`, `blocked_reason` obsahuje `7.44`, `estimates: []`, `uncertainty: null`, brána `usable_for_m3()=False` + `require_verified_for_m3()` zvedá `CalibrationBlockedError` — sedí s §5.
+- Brána M3: V→projde; E/U/B→neprojdou (vč. konzistentní ESTIMATED z plné sady a non-dict odmítnut) — kryto `TestM3Gate` (4 testy), ověřeno živým během.
+- Návrh M3 §4/§7: NÁLEZ z §4 tohoto reportu je VYŘEŠEN — proposal nyní STRICT `overall_status == VERIFIED` (§4: "pouze VERIFIED; ESTIMATED STOP"; §7: `!= VERIFIED` → BLOCKED vč. ESTIMATED). Zbývající výskyty ESTIMATED v proposal jsou statusy per-hodnota/outputů (M3.5, schémata, M3-T02), ne díra v bráně.
+- Testy: `python -m unittest tests.test_m2_scale_calibration` → **31/31 OK** (6 tříd: UnitConversions 4, Shape 4, Blocked 7, M3Gate 4, JeepTemplate 2, EdgeCases 10 — viz `grep def test` = 31).

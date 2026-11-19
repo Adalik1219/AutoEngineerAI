@@ -63,11 +63,11 @@ neblokují, zůstávají evidovány v `known_non_wheels` (detect i writer).
 Ověřeno end-to-end na reálné kopii (`dc8747e0…fefdf`, read-only,
 hash před/po shodný):
 `detect_wheels` → 4× VALID_WHEEL + 44× KNOWN_NON_WHEEL, 0 unidentified,
-`blocked = false`; `assess` (cizí modul, beze změny) 4× GEOMETRY_OK,
-ale `blocked` (44 unidentified + `float_decode_unverified`);
-`report_from_assess` překlápí allowlistové záznamy na known_non_wheels →
-`overall_status = GEOMETRY_OK`, číselně `wheelbase 10.52278`, rozchod
-5.99066/5.99072, Y-spread 0.0 — vše souhlasí s §2.
+`blocked = false`; `assess` 4× GEOMETRY_OK, `blocked` (kalibrace
+`float_decode_unverified` — 44 dílů už jako unidentified nefiguruje);
+`report_from_assess` překlápí allowlistové záznamy na known_non_wheels a
+propaguje assess-BLOCKED (I-1) → `overall_status = BLOCKED`, číselně
+`wheelbase 10.52278`, rozchod 5.99066/5.99072, Y-spread 0.0 — vše souhlasí s §2.
 Neznámý kandidát vedle allowlistu (např. Spare) blokuje jako dosud.
 
 Poznámka pro M3: důvod `float_decode_unverified` v assess je zastaralý —
@@ -89,10 +89,10 @@ swap / asymetrie → BLOCKED; chybějící geometrie nebo
 Deterministické (`report_id = vehicle_id@sha256[:12]`, žádné časy),
 žádný odhad — chybějící hodnota je `None` + reason.
 
-## 6. Testy — 53/53 OK (18 povinných 4-tier v `TestWheelFourTier`)
+## 6. Testy — 53/53 OK v modulu, 110/110 s parserem (18 povinných 4-tier v `TestWheelFourTier`)
 
 `python3 -m unittest tests.test_m2_wheel_detect tests.test_m2_rbxm_parser`
-→ **109 testů, OK** (z toho `test_m2_wheel_detect`: 53 — 35 původních
+→ **110 testů, OK** (z toho `test_m2_wheel_detect`: 53 — 35 původních
 pravidel identity/writeru beze změny chování + 18 nových 4-tier):
 4 kola VALID_WHEEL (Studio id 3/52/101/150); 44 dílů allowlistu neblokuje
 + evidováno 44× KNOWN_NON_WHEEL; allowlist mimo Wheels neplatí; chybějící
@@ -131,3 +131,42 @@ allowlistu stále BLOCKED.
   směr); rozšíření allowlistu je věc M3 s vlastníkem parseru.
 - **Další krok:** M3 kalibrace (Agent C) → vymazání
   `float_decode_unverified`; práh brány ponechán.
+
+## 8. Read-only audit klasifikace (Agent A, 2026-11-19, HEAD `c1a138b`, strom čistý)
+
+Rozsah: `src/Inspection/wheel_detect.py` + `tests/test_m2_wheel_detect.py` +
+tento report. Kód ani testy se neměnily (pouze append této sekce).
+
+- **4 tiery:** `classify_candidate` vrací `VALID_WHEEL / KNOWN_NON_WHEEL /
+  UNKNOWN_CANDIDATE / INVALID_WHEEL` — pravdivostní tabulka kryta testem
+  `test_classify_four_tiers`. OK.
+- **Allowlist:** `CHASSIS_PART_ALLOWLIST` má přesně **11** názvů
+  (`CLower/CUpper/Hub/LowerArm/LowerArmB/LowerArmF/SpringBottom/
+  SpringTop/UpperArm/UpperArmB/UpperArmF`); `KNOWN_NON_WHEEL` platí **jen
+  uvnitř Wheels** (`Hub` mimo Wheels → `UNKNOWN_CANDIDATE`, test_04). OK.
+- **44 dílů neblokuje:** syntetický model 11×4 → `blocked=false`,
+  44× `KNOWN_NON_WHEEL`, 0 unidentified (test_02); reálná kopie
+  (815 instancí) → `detect_wheels`: **4 VALID_WHEEL + 44 KNOWN_NON_WHEEL +
+  0 unidentified, `blocked=false`**. OK.
+- **BLOCKED drží:** chybějící `Model:Wheels` / 3 kola (`!= 4`) /
+  duplicita designace / `bad_shape` → `INVALID_WHEEL` / `Spare` Ball →
+  `UNKNOWN_CANDIDATE` / prohození stran i náprav (`side_or_axle_swap`) /
+  `diameter_asymmetry` / `height_asymmetry` (`Y+0.5`) / cyklus
+  (`parent_cycle`) / chybějící parent / duplicitní id / les / duplicitní
+  `Model:Wheels` — vše `blocked=true`, kryto testy. Ball mimo Wheels se
+  kolem nikdy nestane (`INVALID_WHEEL`, neblokuje). OK.
+- **Reálná kopie:** `assets/chassis-original/chasis-work-copy.rbxm`,
+  SHA-256 `dc8747e016e1…fefdf` — hash před/po shodný (read-only);
+  `assess_wheel_geometry` → `blocked=true`
+  (`float_decode_unverified`), per-kolo detaily 4× GEOMETRY_OK. OK.
+- **Testy:** `python -m unittest tests.test_m2_wheel_detect` → **53/53
+  OK**; s parserem `tests.test_m2_wheel_detect
+  tests.test_m2_rbxm_parser` → **110/110 OK**.
+- **Nálezy (report zastaralý, kód/testy správně):**
+  1. §4 věta "`report_from_assess` … → `overall_status = GEOMETRY_OK`"
+  je nepravdivá — I-1 propagace `assess BLOCKED` dává **BLOCKED**
+  (kód `build_inspection_report` + test_18/`test_report_from_assess…`
+  to vyžadují; popis testů v §6 BLOCKED jinde uvádí správně).
+  2. §6 "109 testů" nesouhlasí — aktuálně **110** (53 + 57;
+  parser-suite má 57, ne 56). Doporučeno opravit obě věty vlastníkem
+  reportu (Agent B).
