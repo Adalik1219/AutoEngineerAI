@@ -860,5 +860,640 @@ class TestRbxmParser(unittest.TestCase):
         self.assertTrue(cal2["inputs_ignored"])
 
 
+    def test_assess_inf_size_blocked(self):
+        """B1-P0: +Inf size nesmi projit jako GEOMETRY_OK (drive prosel)."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        inf = float("inf")
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(inf, inf, inf),
+                                        (2.7, 2.7, 2.7),
+                                        (2.7, 2.7, 2.7),
+                                        (2.7, 2.7, 2.7)])),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                                       [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+        self.assertIn("nonfinite_size",
+                      geo["wheels"]["FL"]["failed_checks"])
+
+    def test_assess_nan_size_label(self):
+        """B1-P2: NaN size ma vlastni label, ne matouci nonpositive_size."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        nan = float("nan")
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(nan, 2.7, 2.7),
+                                        (2.7, 2.7, 2.7),
+                                        (2.7, 2.7, 2.7),
+                                        (2.7, 2.7, 2.7)])),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                                       [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+        self.assertIn("nonfinite_size",
+                      geo["wheels"]["FL"]["failed_checks"])
+        self.assertNotIn("nonpositive_size",
+                         geo["wheels"]["FL"]["failed_checks"])
+
+    def test_assess_inf_nan_position_blocked(self):
+        """B1-P0: +Inf/NaN pozice nikdy GEOMETRY_OK (drive prosla)."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        for bad in (float("inf"), float("nan")):
+            model = parse_bytes(build_model(
+                [(0, "Model", ["Root", "Wheels"]),
+                 (1, "Part", ["FL", "FR", "RL", "RR"])],
+                [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+                extra_chunks=[
+                    ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                    ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                    ("PROP", _cframe_prop(
+                        1, "CFrame",
+                        [(bad, 1.0, 0.0), (6.0, 1.0, 0.0),
+                         (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                        [0, 0, 0, 0], [ident] * 4)),
+                ]))
+            geo = assess_wheel_geometry(model["instances"])
+            self.assertEqual(geo["status"], "BLOCKED", "bad=%r" % (bad,))
+            self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+            self.assertIn("nonfinite_position",
+                          geo["wheels"]["FL"]["failed_checks"])
+
+    def test_assess_invalid_rotation_blocked(self):
+        """B1-P1: skalujici/prevracena matice neni rotace -> BLOCKED."""
+        positions = [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                     (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)]
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        for bad_mat in ((2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0),
+                        (-1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)):
+            model = parse_bytes(build_model(
+                [(0, "Model", ["Root", "Wheels"]),
+                 (1, "Part", ["FL", "FR", "RL", "RR"])],
+                [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+                extra_chunks=[
+                    ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                    ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                    ("PROP", _cframe_prop(1, "CFrame", positions,
+                                           [0, 0, 0, 0],
+                                           [bad_mat, ident, ident, ident])),
+                ]))
+            geo = assess_wheel_geometry(model["instances"])
+            self.assertEqual(geo["status"], "BLOCKED")
+            self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+            self.assertIn("invalid_rotation",
+                          geo["wheels"]["FL"]["failed_checks"])
+            for des in ("FR", "RL", "RR"):
+                self.assertEqual(geo["wheels"][des]["status"],
+                                 "GEOMETRY_OK")
+
+    def test_assess_nonfinite_rotation_blocked(self):
+        """B1-P0: Inf/NaN v matici -> BLOCKED, nikdy GEOMETRY_OK."""
+        positions = [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                     (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)]
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        for bad_val in (float("inf"), float("nan")):
+            bad_mat = (bad_val, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+            model = parse_bytes(build_model(
+                [(0, "Model", ["Root", "Wheels"]),
+                 (1, "Part", ["FL", "FR", "RL", "RR"])],
+                [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+                extra_chunks=[
+                    ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                    ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                    ("PROP", _cframe_prop(1, "CFrame", positions,
+                                           [0, 0, 0, 0],
+                                           [bad_mat, ident, ident, ident])),
+                ]))
+            geo = assess_wheel_geometry(model["instances"])
+            self.assertEqual(geo["status"], "BLOCKED")
+            self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+            self.assertIn("nonfinite_rotation",
+                          geo["wheels"]["FL"]["failed_checks"])
+
+    def test_assess_unread_rotation_blocked(self):
+        """B1-P1: kolo s neoverenou CFrame presetou (bez matice) neni
+        geometricky OK — orientace se neodhaduje."""
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                ("PROP", _cframe_prop(
+                    1, "CFrame",
+                    [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                     (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                    [7, 0, 0, 0],
+                    [None, (1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                            0.0, 0.0, 1.0),
+                     (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0),
+                     (1.0, 0.0, 0.0, 0.0, 1.0, 0.0,
+                      0.0, 0.0, 1.0)])),
+            ]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertIsNone(by_id[2]["rotation"])
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+        self.assertIn("unread_rotation",
+                      geo["wheels"]["FL"]["failed_checks"])
+
+    def test_forest_two_roots_rejected(self):
+        """B1-F2: les o 2 korenech -> hierarchicka chyba pri parsovani
+        a BLOCKED v assess (politika roots != 1)."""
+        data = build_model([(0, "Model", ["RootA", "RootB"])],
+                           [(0, None), (1, None)])
+        with self.assertRaises(RbxmHierarchyError):
+            parse_bytes(data)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)]))
+        instances = [dict(i) for i in model["instances"]]
+        instances.append({"id": 99, "class_name": "Model", "name": "Other",
+                          "shape": None, "size": None, "position": None,
+                          "rotation": None, "props": {}, "parent_id": None})
+        geo = assess_wheel_geometry(instances)
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertTrue(any("forest" in r
+                            for r in geo["blocked_reasons"]))
+
+    def test_self_loop_rejected(self):
+        """B1-F3a: self-parent [(0,0)] je cyklus delky 1 -> chyba."""
+        data = build_model([(0, "Model", ["A"])], [(0, 0)])
+        with self.assertRaises(RbxmHierarchyError):
+            parse_bytes(data)
+
+
+class TestParserLimitsPerformance(unittest.TestCase):
+    """B2: regresni testy P1/P2 limitu a vykonu (bez zmeny chovani na
+    validnich datech — viz test_valid_rbxm_full_hierarchy vyse)."""
+
+    def test_b2_len_before_bytes(self):
+        """P1-1: bytearray/memoryview nad limitem se odmitne; validni
+        bytearray/memoryview se parsuje stejne jako bytes."""
+        import time
+        from src.Inspection.rbxm_parser import MAX_FILE_BYTES
+        big = bytearray(MAX_FILE_BYTES + 1)
+        t0 = time.perf_counter()
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(big)
+        self.assertLess(time.perf_counter() - t0, 5.0)
+        good = mini_tree()
+        for view in (bytearray(good), memoryview(good)):
+            model = parse_bytes(view)
+            self.assertEqual(model["num_instances"], 6)
+
+    def test_b2_input_type_check(self):
+        """P2-6: str/None/int se odmitnou jako RbxmCorruptError
+        (zadny unik TypeError mimo RbxmError)."""
+        for bad in ("<roblox!", None, 123, 4.5, [1, 2]):
+            with self.assertRaises(RbxmCorruptError):
+                parse_bytes(bad)
+
+    def test_b2_parse_rbxm_read_cap(self):
+        """P1-2: parse_rbxm odmítne soubor nad limitem (read s cap)."""
+        import tempfile
+        from src.Inspection.rbxm_parser import MAX_FILE_BYTES
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(b"\x00" * (MAX_FILE_BYTES + 16))
+            path = tmp.name
+        try:
+            with self.assertRaises(RbxmCorruptError):
+                parse_rbxm(path)
+        finally:
+            os.unlink(path)
+        # Validni soubor porad projde a hash se nemeni.
+        before = sha256_of(WORK_COPY)
+        model = parse_rbxm(WORK_COPY)
+        self.assertEqual(model["num_instances"], 815)
+        self.assertEqual(sha256_of(WORK_COPY), before)
+
+    def test_b2_lz4_block_copy_fast_and_exact(self):
+        """P1-3: offset=1 expanze na 1 MiB je rychla (< 2 s) a bitove
+        presna (opakuje posledni bajt)."""
+        import time
+        need = 1024 * 1024 - 2 - 19
+        extents = bytearray()
+        while True:
+            if need > 255:
+                extents.append(255)
+                need -= 255
+            elif need == 255:
+                extents += bytes((255, 0))
+                break
+            else:
+                extents.append(need)
+                break
+        block = b"\x2F" + b"AB" + bytes((1, 0)) + bytes(extents)
+        t0 = time.perf_counter()
+        out = lz4_decompress(block, 1024 * 1024)
+        self.assertLess(time.perf_counter() - t0, 2.0)
+        self.assertEqual(out, b"AB" + b"B" * (1024 * 1024 - 2))
+
+    def test_b2_field_value_cap(self):
+        """P1-4: per-pole cap (100k) odmitne obri lane/INST/PRNT/Name
+        driv, nez se postavi Python seznamy (< 1 s misto desitek s)."""
+        import time
+        from src.Inspection.rbxm_parser import (
+            MAX_FIELD_VALUES, _decode_enum_lanes, _decode_float_lanes,
+            _decode_referents)
+        over = MAX_FIELD_VALUES + 1
+        t0 = time.perf_counter()
+        with self.assertRaises(RbxmCorruptError):
+            _decode_float_lanes(b"\x00" * (12 * over), over, "probe")
+        with self.assertRaises(RbxmCorruptError):
+            _decode_referents(b"\x00" * (4 * over), over, "probe")
+        with self.assertRaises(RbxmCorruptError):
+            _decode_enum_lanes(b"\x00" * (4 * over), over, "probe")
+        self.assertLess(time.perf_counter() - t0, 1.0)
+        # Cap je nad realnou kopii: 815 instanci porad projde.
+        model = parse_rbxm(WORK_COPY)
+        self.assertEqual(model["num_instances"], 815)
+        # Obri INST count v tele se odmitne take pred dekodovanim.
+        hdr = (_u32(0) + _string("Part") + b"\x00"
+               + _u32(over) + b"\x00" * (4 * over))
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                  _chunk("INST", hdr),
+                  _chunk("PROP", _name_prop(0, ["X"] * 0)),
+                  _chunk("PRNT", _prnt([], [])),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        with self.assertRaises(RbxmError):
+            parse_bytes(_header(1, over) + b"".join(chunks))
+
+    def test_b2_ref_to_type_correct(self):
+        """P1-5: mapovani ref->type je spravne i pri mnoha typech
+        (100 typu x 20 instanci < 5 s, shoda trida/jmeno/pozice)."""
+        import time
+        specs = [(t, "Part", ["N%d_%d" % (t, k) for k in range(20)])
+                 for t in range(100)]
+        refs, links = [], []
+        cursor = 0
+        for t in range(100):
+            refs.append(list(range(cursor, cursor + 20)))
+            cursor += 20
+        links = [(0, None)] + [(r, 0) for r in range(1, 2000)]
+        t0 = time.perf_counter()
+        model = parse_bytes(build_model(specs, links, ref_lists=refs))
+        self.assertLess(time.perf_counter() - t0, 5.0)
+        self.assertEqual(len(model["instances"]), 2000)
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(by_id[1999]["name"], "N99_19")
+        self.assertEqual(by_id[1999]["class_name"], "Part")
+
+    def test_b2_assess_deep_chain_fast(self):
+        """P2-7: linearni retez 3000 Partu pod Wheels se posoudi rychle
+        (< 5 s) se stejnym vysledkem jako pri kratkem retezu."""
+        import time
+        depth = 3000
+        insts = [{"id": 0, "class_name": "Model", "name": "Root",
+                   "shape": None, "size": None, "position": None,
+                   "rotation": None, "props": {}, "parent_id": None},
+                  {"id": 1, "class_name": "Model", "name": "Wheels",
+                   "shape": None, "size": None, "position": None,
+                   "rotation": None, "props": {}, "parent_id": 0}]
+        for i in range(2, depth):
+            insts.append({"id": i, "class_name": "Part",
+                          "name": "P%d" % i, "shape": None,
+                          "size": None, "position": None,
+                          "rotation": None, "props": {},
+                          "parent_id": i - 1})
+        t0 = time.perf_counter()
+        result = assess_wheel_geometry(insts)
+        self.assertLess(time.perf_counter() - t0, 5.0)
+        # Bez kol FL..RR: chybejici kola + BLOCKED (stejne jako pred B2).
+        self.assertEqual(result["status"], "BLOCKED")
+        self.assertEqual(result["wheels"]["FL"]["status"], "UNKNOWN")
+
+
+class TestFuzzF1F8(unittest.TestCase):
+    """Faze C: strukturalni + hranicni fuzz dle AUDIT-test-baseline §5
+    (F1-F8, seed-rodina 20261119; kazdy test konci aserci invariantu
+    z praveho sloupce planu, nikdy jen 'nespadl')."""
+
+    def test_f1_inst_structural(self):
+        """F1 (3 mutace + presnost): useknuty referent-seznam, count!=payload,
+        prazdny INST s nenulovym poctem, duplicitni referent —
+        vzdy RbxmCorruptError, nikdy tichy model se spatnymi pocty."""
+        cases = 0
+        # count=2, lane-bajty jen pro 1 referent.
+        bad_lanes = (_u32(0) + _string("Part") + b"\x00" + _u32(2)
+                     + _encode_referents([7]))
+        # count=3, zadne lane-bajty.
+        bad_empty = _u32(0) + _string("Part") + b"\x00" + _u32(3)
+        # Duplicitni referent v jednom INST.
+        bad_dup = _inst(0, "Part", [5, 5])
+        for bad in (bad_lanes, bad_empty, bad_dup):
+            chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                      _chunk("INST", bad),
+                      _chunk("PROP", _name_prop(0, ["A", "B"])),
+                      _chunk("PRNT", _prnt([5, 6], [None, 5])),
+                      b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                      + b"</roblox>"]
+            with self.assertRaises(RbxmCorruptError):
+                parse_bytes(_header(1, 2) + b"".join(chunks))
+            cases += 1
+        # Presnost: platny 2-referentovy INST projde s presnymi pocty
+        # a kazdy parent je v mnozine id.
+        model = parse_bytes(build_model(
+            [(0, "Part", ["A", "B"])], [(0, None), (1, 0)]))
+        self.assertEqual(len(model["instances"]),
+                         model["num_instances"])
+        by_id = {i["id"] for i in model["instances"]}
+        for inst in model["instances"]:
+            if inst["parent_id"] is not None:
+                self.assertIn(inst["parent_id"], by_id)
+        self.assertEqual(cases, 3)  # 3 strukturalni mutace INST
+
+    def test_f2_prnt_structural(self):
+        """F2 (3 pripady): parent ve zdravem rozsahu, ale mimo referenty
+        INST (mezera) = RbxmHierarchyError; PRNT count!=payload =
+        RbxmCorruptError; nikdy tichy model s visicim parentem."""
+        # Referenty [0, 1]; parent 5 je v rozsahu hlavicky (2 instance),
+        # ale neni to znamy referent.
+        data = build_model([(0, "Model", ["Root", "Kid"])],
+                           [(0, None), (1, 5)],
+                           ref_lists=[[0, 1]])
+        with self.assertRaises(RbxmHierarchyError):
+            parse_bytes(data)
+        # PRNT: deklarovan count=2, payload jen pro 1 dite+1 parenta.
+        full_one = _prnt([0], [None])
+        short = full_one[0:1] + _u32(2) + full_one[5:]
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                  _chunk("INST", _inst(0, "Model", [0, 1])),
+                  _chunk("PROP", _name_prop(0, ["A", "B"])),
+                  _chunk("PRNT", short),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(_header(1, 2) + b"".join(chunks))
+        # Presnost: stejny strom se spravnym parentem projde.
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Kid"])], [(0, None), (1, 0)],
+            ref_lists=[[0, 1]]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(by_id[1]["parent_id"], 0)
+
+    def test_f3_length_fields_edge(self):
+        """F3 (5 pripadu): uncomp_len/comp_len na hrane a ramecek +-1 B —
+        odmitnuti pred alokaci (rychle), zadna alokace >= limitu."""
+        import time
+        from src.Inspection.rbxm_parser import MAX_UNCOMPRESSED_BYTES
+        big = MAX_UNCOMPRESSED_BYTES
+        # uncomp_len = limit + 1: odmitnuto bez dekomprese.
+        broken = bytearray(mini_tree())
+        struct.pack_into("<I", broken, 32 + 8, big + 1)
+        t0 = time.perf_counter()
+        with self.assertRaises(RbxmError):
+            parse_bytes(bytes(broken))
+        self.assertLess(time.perf_counter() - t0, 5.0)
+        # uncomp_len presne na limitu, ale soubor drobny: odmitnuto
+        # pred alokaci (zadnych 256 MiB v pameti, rychle).
+        broken2 = bytearray(mini_tree())
+        struct.pack_into("<I", broken2, 32 + 8, big)
+        t0 = time.perf_counter()
+        with self.assertRaises(RbxmError):
+            parse_bytes(bytes(broken2))
+        self.assertLess(time.perf_counter() - t0, 5.0)
+        # comp_len = limit + 1: stejne odmitnuti.
+        broken3 = bytearray(mini_tree())
+        struct.pack_into("<I", broken3, 32 + 4, big + 1)
+        with self.assertRaises(RbxmError):
+            parse_bytes(bytes(broken3))
+        # Ramecek -1 B (useknute telo END) a +1 B (vlozeny bajt
+        # do prvniho chunku): vzdy RbxmError, nikdy tichy posun.
+        good = mini_tree()
+        with self.assertRaises(RbxmError):
+            parse_bytes(good[:-10] + good[-9:])
+        with self.assertRaises(RbxmError):
+            parse_bytes(good[:40] + b"\x00" + good[40:])
+
+    def test_f4_aggregate_bomb_scaled(self):
+        """F4 (2 soubory): N legalnich chunku, jejichz SOUCET presahne
+        agregatni limit = RbxmCorruptError; limit je pro rychlost
+        skalovan monkeypatchi (4 KiB), logika souctu je stejna."""
+        import time
+        from src.Inspection import rbxm_parser as mod
+        base = mini_tree()
+        pad = b"Q" * 1024
+        many = base[:-len(b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                     + b"</roblox>")]
+        tail = (b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                + b"</roblox>")
+        few = many + _chunk("XXXX", pad) * 2 + tail
+        bomb = many + _chunk("XXXX", pad) * 6 + tail
+        old = mod.MAX_TOTAL_UNCOMPRESSED
+        mod.MAX_TOTAL_UNCOMPRESSED = 4096
+        try:
+            # Pod limitem: presny census, presne pocty (presnost).
+            t0 = time.perf_counter()
+            model = parse_bytes(few)
+            self.assertLess(time.perf_counter() - t0, 5.0)
+            self.assertEqual(len(model["instances"]), 6)
+            self.assertEqual(model["skipped_chunks"].count("XXXX"), 2)
+            # Nad limitem: agregatni odmitnuti pred alokaci (rychle).
+            t0 = time.perf_counter()
+            with self.assertRaises(RbxmCorruptError) as ctx:
+                parse_bytes(bomb)
+            self.assertLess(time.perf_counter() - t0, 5.0)
+            self.assertIn("celkova dekomprese", str(ctx.exception))
+        finally:
+            mod.MAX_TOTAL_UNCOMPRESSED = old
+
+    def test_f5_nonfinite_matrix(self):
+        """F5 (14 kombinaci): -Inf/NaN v kazde slozce size/pozice/matice
+        + neznamy shape-enum — parser znaci trusted=False, assess hlasi
+        BLOCKED s nonfinite_* labelem; zdrava kola zustavaji
+        GEOMETRY_OK; zjednotlive -Inf chybi v B1."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        bads = (float("-inf"), float("nan"))
+        combos = 0
+        for bad in bads:
+            for slot in ("sx", "sy", "sz", "px", "py", "pz", "mat"):
+                sizes = [(2.7, 2.7, 2.7)] * 4
+                poss = [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)]
+                mats = [ident] * 4
+                if slot == "sx":
+                    sizes[0] = (bad, 2.7, 2.7)
+                elif slot == "sy":
+                    sizes[0] = (2.7, bad, 2.7)
+                elif slot == "sz":
+                    sizes[0] = (2.7, 2.7, bad)
+                elif slot == "px":
+                    poss[0] = (bad, 1.0, 0.0)
+                elif slot == "py":
+                    poss[0] = (0.0, bad, 0.0)
+                elif slot == "pz":
+                    poss[0] = (0.0, 1.0, bad)
+                else:
+                    mats[0] = (bad, 0.0, 0.0, 0.0, 1.0, 0.0,
+                               0.0, 0.0, 1.0)
+                model = parse_bytes(build_model(
+                    [(0, "Model", ["Root", "Wheels"]),
+                     (1, "Part", ["FL", "FR", "RL", "RR"])],
+                    [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+                    extra_chunks=[
+                        ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                        ("PROP", _size_prop(1, sizes)),
+                        ("PROP", _cframe_prop(1, "CFrame", poss,
+                                               [0, 0, 0, 0], mats)),
+                    ]))
+                by_id = {i["id"]: i for i in model["instances"]}
+                # Parser: floaty vzdy trusted=False (i zdrave).
+                self.assertFalse(by_id[2]["props"]["size"]["trusted"])
+                self.assertFalse(by_id[2]["props"]["CFrame"]["trusted"])
+                geo = assess_wheel_geometry(model["instances"])
+                self.assertEqual(geo["status"], "BLOCKED",
+                                 "bad=%r slot=%s" % (bad, slot))
+                self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN",
+                                 "bad=%r slot=%s" % (bad, slot))
+                label = ("nonfinite_size" if slot[0] == "s"
+                         else "nonfinite_position" if slot[0] == "p"
+                         else "nonfinite_rotation")
+                self.assertIn(label,
+                              geo["wheels"]["FL"]["failed_checks"])
+                for des in ("FR", "RL", "RR"):
+                    self.assertEqual(geo["wheels"][des]["status"],
+                                     "GEOMETRY_OK",
+                                     "bad=%r slot=%s" % (bad, slot))
+                combos += 1
+        self.assertEqual(combos, 14)  # 2 hodnoty x 7 pozic
+        # Neznama hodnota shape-enum: tvar None + unread, assess BLOCKED
+        # s bad_shape (nikdy odhad).
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [7, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                ("PROP", _cframe_prop(
+                    1, "CFrame",
+                    [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                     (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                    [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertIsNone(by_id[2]["shape"])
+        self.assertEqual(by_id[2]["props"]["shape"]["status"], "unread")
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertIn("bad_shape", geo["wheels"]["FL"]["failed_checks"])
+
+    def test_f6_cframe_preset_sweep(self):
+        """F6 (11 id): CFrame orientacni id 0-8 + 9/255 — id 0 matice,
+        id 2 identita, vse ostatni unread-preset-N; pozice vzdy presne."""
+        import math
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        tried = 0
+        for oid in (0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 255):
+            mat = [ident if oid == 0 else None]
+            model = parse_bytes(build_model(
+                [(0, "Part", ["P"])], [(0, None)],
+                extra_chunks=[("PROP", _cframe_prop(
+                    0, "CFrame", [(1.0, 2.0, 3.0)], [oid], mat))]))
+            inst = model["instances"][0]
+            self.assertEqual(inst["position"], (1.0, 2.0, 3.0),
+                             "orient=%d" % oid)
+            entry = inst["props"]["CFrame"]
+            self.assertEqual(entry["status"], "read")
+            self.assertFalse(entry["trusted"])
+            if oid == 0:
+                self.assertEqual(entry["rotation_status"], "matrix")
+                self.assertTrue(all(math.isclose(a, b)
+                                    for a, b in zip(inst["rotation"],
+                                                    ident)))
+            elif oid == 2:
+                self.assertEqual(entry["rotation_status"],
+                                 "identity-preset (tabulka neoverena)")
+                self.assertEqual(inst["rotation"], "identity")
+            else:
+                self.assertEqual(entry["rotation_status"],
+                                 "unread-preset-%d" % oid)
+                self.assertIsNone(inst["rotation"])
+            tried += 1
+        self.assertEqual(tried, 11)
+
+    def test_f7_long_cycles(self):
+        """F7 (3 pripady): cyklus delky 3 a delky 5 = RbxmHierarchyError;
+        platny retez delky 5 projde s presnymi parenty (presnost
+        detektoru, zadny falesny poplach)."""
+        # 3-cyklus A->B->C->A.
+        data3 = build_model([(0, "Model", ["A", "B", "C"])],
+                            [(0, 1), (1, 2), (2, 0)])
+        with self.assertRaises(RbxmHierarchyError):
+            parse_bytes(data3)
+        # 5-cyklus.
+        names5 = ["N%d" % k for k in range(5)]
+        links5 = [(k, (k + 1) % 5) for k in range(5)]
+        with self.assertRaises(RbxmHierarchyError):
+            parse_bytes(build_model([(0, "Model", names5)], links5))
+        # Presnost: retez 5 bez cyklu projde, parenti presne.
+        chain = [(0, None)] + [(k, k - 1) for k in range(1, 5)]
+        model = parse_bytes(build_model([(0, "Model", names5)], chain))
+        by_id = {i["id"]: i for i in model["instances"]}
+        for k in range(1, 5):
+            self.assertEqual(by_id[k]["parent_id"], k - 1)
+        self.assertIsNone(by_id[0]["parent_id"])
+
+    def test_f8_byte_fuzz_1000(self):
+        """F8: 1000 byte-mutaci realne kopie (seed 20261119+8, 1-3 B)
+        + 7 trunkaci — invariant: jen RbxmError, nebo platny model
+        (815 instanci, platni parenti, tvary ze zname mnoziny);
+        soubor zustava hashove netknuty (read-only)."""
+        import random
+        rng = random.Random(FUZZ_SEED + 8)
+        with open(WORK_COPY, "rb") as handle:
+            raw = handle.read()
+        accepted = 0
+        trials = 1000
+        for trial in range(trials):
+            blob = bytearray(raw)
+            for _ in range(rng.randint(1, 3)):
+                blob[rng.randrange(len(blob))] = rng.randrange(256)
+            try:
+                model = parse_bytes(bytes(blob))
+            except RbxmError:
+                continue
+            accepted += 1
+            self.assertEqual(model["num_instances"], 815,
+                             "fuzz trial %d" % trial)
+            self.assertEqual(len(model["instances"]), 815)
+            by_id = {i["id"] for i in model["instances"]}
+            for inst in model["instances"]:
+                parent = inst["parent_id"]
+                if parent is not None:
+                    self.assertIn(parent, by_id, "fuzz trial %d" % trial)
+                self.assertTrue(
+                    inst["shape"] is None
+                    or inst["shape"] in PART_TYPE_NAMES.values(),
+                    "fuzz trial %d" % trial)
+        for cut in (1, 32, 1000, len(raw) // 2, len(raw) - 10,
+                    len(raw) - 1, 33):
+            with self.assertRaises(RbxmError):
+                parse_bytes(raw[:cut])
+        self.assertEqual(sha256_of(WORK_COPY), EXPECTED_SHA256)
+        self.assertLessEqual(accepted, trials)
+
+
 if __name__ == "__main__":
     unittest.main()

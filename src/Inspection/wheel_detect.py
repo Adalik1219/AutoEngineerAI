@@ -219,6 +219,13 @@ def detect_wheels(instances):
         block(str(exc))
         return result
 
+    # Les (vice korenu) neni strom M2 drahy kol: explicitni politika
+    # BLOCKED (format-audit §3/F2), nikdy tichy pruchod.
+    roots = [i for i in instances if i.get("parent_id") is None]
+    if len(roots) != 1:
+        block("forest: ocekavan prave 1 koren, nalezeno %d" % len(roots))
+        return result
+
     hits = {des: [] for des in WHEEL_DESIGNATIONS}
     for inst in instances:
         if inst.get("id") == wheels_id:

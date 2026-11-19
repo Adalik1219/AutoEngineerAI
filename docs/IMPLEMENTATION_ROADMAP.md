@@ -54,8 +54,9 @@ aktuální stav drží `docs/PROJECT_STATUS.md` §0; body 1–14 níže jsou sch
 5. **Vztah:** `k = W_studs / 2.719`, kde `W_studs` je naměřený rozvor; konzistence ověřena přes ≥2 nezávislé rozměry (rozvor + rozchod + průměr kola).
 6. **Navržené soubory:** `src/autoengineer/inspection/{rbxm_inspector,geometry_reader,part_inventory,achassis_reader,inspection_report}.py`; `src/autoengineer/units/{conversions,scale_calibration}.py` — ověřit proti `src/common/units.py` (existuje, rozšířit místo duplikace).
 7. **Závislosti:** žádné (paralelně s M1).
-8. **Úkoly:** M2.1 spike formátu RBXM: v repu **žádná čtečka neexistuje** — nejdřív ověřit,
-   čím binární RBXM číst (stdlib vs. existující nástroj), read-only na kopii s hash-kontrolou ·
+8. **Úkoly:** M2.1 spike formátu RBXM: HOTOVO (parser `src/Inspection/rbxm_parser.py`
+   implementuje INST + PRNT + SSTR/META/Name + Shape/Size/CFrame s provenancí),
+   read-only na kopii s hash-kontrolou ·
    M2.2 identifikace 4 kol a středů **heuristikou z `docs/A-CHASSIS-AUDIT.md` (§Model:Wheels → díly
    FL/FR/RL/RR; kola tvar Ball; `wDia` se odvozuje ze `Size.x` největšího hnacího kola)** ·
    M2.3 identifikace náprav · M2.4 rozvor · M2.5 rozchody · M2.6 průměry pneu **s křížovou kontrolou

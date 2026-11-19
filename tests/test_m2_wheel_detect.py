@@ -239,6 +239,31 @@ class TestInspectionReportSchema(unittest.TestCase):
         self.assertTrue(any("parent_cycle" in r
                             for r in res["blocked_reasons"]))
 
+    def test_forest_two_roots_blocked(self):
+        # Les o 2 korenech: explicitni politika BLOCKED (format-audit
+        # §3/F2) — zadny tichy pruchod, ani pri zdravych kolech.
+        insts = _ok_model() + [{"id": 900, "name": "Other",
+                               "class_name": "Model", "shape": None,
+                               "parent_id": None}]
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("forest" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_self_loop_on_wheel_blocked(self):
+        # Explicitni self-loop na kole (FL -> FL): cyklus delky 1,
+        # vzdy BLOCKED s duvodem parent_cycle.
+        insts = _ok_model()
+        for inst in insts:
+            if inst["id"] == 3:
+                inst["parent_id"] = 3
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("parent_cycle" in r
+                            for r in res["blocked_reasons"]))
+
     def test_offchain_model_cycle_does_not_block(self):
         # Cyklus 600 <-> 601 mezi Modely mimo retez kol nesmi
         # blokovat jinak validni detekci (specificita, zadny falesny BLOCKED).

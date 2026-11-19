@@ -51,6 +51,7 @@ identifikatory anglicky. Soubor se nikdy neotevira k zapisu.
 
 from __future__ import annotations
 
+import math
 import os
 import struct
 
@@ -70,6 +71,12 @@ MAX_TOTAL_UNCOMPRESSED = 256 * 1024 * 1024
 MAX_INSTANCES = 10_000_000
 MAX_CHUNKS = 100_000
 MAX_META_ENTRIES = 100_000
+# Per-pole cap poctu hodnot (P1-4): realna kopie ma 815 instanci; cokoli
+# nad 10^5 v jednom poli je mimo formatovy ucel. Vynucuje se PRED stavbou
+# Python seznamu (1 vstupni bajt -> ~30B objekt by jinak dal GB/minuty
+# uvnitr povolenych limitu). Plati pro referenty, enum/int lane, float
+# lane, CFrame pole, Name pocty i PRNT.
+MAX_FIELD_VALUES = 100_000
 
 # Hodnota referentu -1 = koren (zadny rodic).
 NULL_PARENT = -1
@@ -152,7 +159,10 @@ def lz4_decompress(block, expected_len):
     Striktni: prekroceni ocekavane delky, zkraceny vstup, nulovy nebo
     neplatny offset, nedosazeni presne delky a prebytecny vstup vedou
     k RbxmCorruptError. Prekryvajici se match-copy je legalni a kopiruje
-    se po bajtech.
+    se po blocich (slice `out[a:b]` se vyhodnoti najednou, takze prekryv
+    je bezpecny; pri offsetu mensim nez delka matche se zdrojove okno
+    s kazdym blokem prodluzuje, takze vysledek je stejny jako kopie
+    po bajtech). Jedna kontrola delky na konci misto testu za kazdy bajt.
     """
     if expected_len < 0 or expected_len > MAX_UNCOMPRESSED_BYTES:
         raise RbxmCorruptError(
@@ -202,11 +212,19 @@ def lz4_decompress(block, expected_len):
                 if byte != 255:
                     break
         match_len += 4
-        for _ in range(match_len):
-            out.append(out[len(out) - offset])
-            if len(out) > expected_len:
-                raise RbxmCorruptError(
-                    "LZ4: match presahl ocekavanou delku")
+        if len(out) + match_len > expected_len:
+            raise RbxmCorruptError(
+                "LZ4: match presahl ocekavanou delku")
+        # Blokove kopie: jeden slice se vyhodnoti naraz (prekryv OK).
+        # Okno [start, ...) roste s kazdym blokem (zdvojovani), takze
+        # i offset < match_len da stejna data jako kopie po bajtech
+        # v O(log n) blocich misto O(n) iteraci.
+        start = len(out) - offset
+        while match_len > 0:
+            avail = len(out) - start
+            take = match_len if match_len < avail else avail
+            out += out[start:start + take]
+            match_len -= take
         if len(out) == expected_len:
             break
     if pos != size:
@@ -221,6 +239,10 @@ def _decode_referents(segment, count, what):
 
     Format overen na pracovni kopii: INST dava presne 0..814.
     """
+    if count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError(
+            "%s: absurdni pocet referentu %d (cap %d); bezpecne odmitnuto"
+            % (what, count, MAX_FIELD_VALUES))
     if len(segment) != 4 * count:
         raise RbxmCorruptError(
             "%s: spatna delka pole referentu (%d != 4*%d)"
@@ -238,6 +260,10 @@ def _decode_referents(segment, count, what):
 
 def _decode_enum_lanes(data, count, what):
     """Dekoduje enum/int PROP: 4 lane, LSB lane prvni, bez zigzagu a delt."""
+    if count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError(
+            "%s: absurdni pocet enum hodnot %d (cap %d); bezpecne odmitnuto"
+            % (what, count, MAX_FIELD_VALUES))
     if len(data) != 4 * count:
         raise RbxmCorruptError(
             "%s: spatna delka enum pole (%d != 4*%d)"
@@ -255,6 +281,10 @@ def _decode_float_lanes(data, count, what):
     Vraci [xs, ys, zs] (kazdy list delky count). Overeno: size kol
     (2.7, 2.7, 2.7) a symetricke pozice FL/FR/RL/RR.
     """
+    if count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError(
+            "%s: absurdni pocet float hodnot %d (cap %d); bezpecne odmitnuto"
+            % (what, count, MAX_FIELD_VALUES))
     if len(data) != 12 * count:
         raise RbxmCorruptError(
             "%s: spatna delka float pole (%d != 12*%d)"
@@ -287,6 +317,10 @@ def _parse_cframe_array(data, count, what):
     ids = []
     matrices = []
     pos = 0
+    if count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError(
+            "%s: absurdni pocet %d (cap %d); bezpecne odmitnuto"
+            % (what, count, MAX_FIELD_VALUES))
     for _ in range(count):
         if pos >= len(data):
             raise RbxmCorruptError(
@@ -454,8 +488,9 @@ def _parse_inst(body, seen_ids, seen_type_ids):
     pos += 1
     count = _u32(body, pos)
     pos += 4
-    if count > MAX_INSTANCES:
-        raise RbxmCorruptError("INST %s: absurdni pocet %d" % (name, count))
+    if count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError("INST %s: absurdni pocet %d (cap %d)"
+                               % (name, count, MAX_FIELD_VALUES))
     referents = _decode_referents(body[pos:], count, "INST %s" % name)
     for ref in referents:
         if ref < 0:
@@ -477,6 +512,10 @@ def _parse_name_prop(body, expected_count):
     prop_name, pos = _read_string(body, 4)
     if pos >= len(body):
         raise RbxmCorruptError("PROP/Name: chybi typ hodnoty")
+    if expected_count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError(
+            "PROP/Name: absurdni pocet jmen %d (cap %d); bezpecne odmitnuto"
+            % (expected_count, MAX_FIELD_VALUES))
     value_type = body[pos]
     pos += 1
     if prop_name != "Name" or value_type != 0x01:
@@ -559,11 +598,18 @@ def _clusters(values):
 
 def parse_bytes(data):
     """Parsuje RBXM data z pameti; vrati dict modelu (viz parse_rbxm)."""
-    data = bytes(data)
+    # P2-6: odmitnout ne-bytes vstup jako RbxmCorruptError (misto uniku
+    # TypeError z bytes(str) / bytes(None)); P1-1: delku kontrolovat PRED
+    # kopii — len() kopii nepotrebuje, bytes(bytearray/memoryview) ano.
+    if not isinstance(data, (bytes, bytearray, memoryview)):
+        raise RbxmCorruptError(
+            "ocekavan bytes/bytearray/memoryview, ne %s; bezpecne odmitnuto"
+            % type(data).__name__)
     if len(data) > MAX_FILE_BYTES:
         raise RbxmCorruptError(
             "soubor presahuje limit (%d > %d B); bezpecne odmitnuto"
             % (len(data), MAX_FILE_BYTES))
+    data = bytes(data)
     num_types, num_instances = _parse_header(data)
     chunks = _read_chunks(data)
 
@@ -733,6 +779,10 @@ def parse_bytes(data):
         raise RbxmUnsupportedError(
             "PRNT: nepodporovana verze %d" % prnt_body[0])
     prnt_count = _u32(prnt_body, 1)
+    if prnt_count > MAX_FIELD_VALUES:
+        raise RbxmCorruptError(
+            "PRNT: absurdni pocet %d (cap %d); bezpecne odmitnuto"
+            % (prnt_count, MAX_FIELD_VALUES))
     if prnt_count != num_instances:
         raise RbxmCorruptError(
             "PRNT: pocet %d != num_instances %d" % (prnt_count,
@@ -759,11 +809,20 @@ def parse_bytes(data):
                 "neplatny parent id %r u instance %r" % (parent, child))
         parent_of[child] = None if parent == NULL_PARENT else parent
     _check_hierarchy(parent_of)
+    roots = [rid for rid, parent in parent_of.items() if parent is None]
+    if len(roots) != 1:
+        raise RbxmHierarchyError(
+            "les: ocekavan prave 1 koren, nalezeno %d" % len(roots))
 
     class_by_id = {}
+    ref_to_type = {}
     for entry in inst_list:
         for ref in entry["referents"]:
             class_by_id[ref] = entry["class_name"]
+            # P1-5: mapa ref->type postavena jednou (O(n)); drivejsi
+            # next(... if ref in ref_pos[...]) za kazdou instanci bylo
+            # O(num_types x num_instances).
+            ref_to_type[ref] = entry["type_id"]
     names_full = {}
     for entry in inst_list:
         names = name_by_type.get(entry["type_id"])
@@ -777,8 +836,11 @@ def parse_bytes(data):
     instances = []
     for ref in sorted(seen_ids):
         class_name = class_by_id[ref]
-        type_id = next(entry["type_id"] for entry in inst_list
-                       if ref in ref_pos[entry["type_id"]])
+        try:
+            type_id = ref_to_type[ref]
+        except KeyError:
+            raise RbxmCorruptError(
+                "chybejici typ pro referent %r (interni chyba)" % (ref,))
         pos_in_type = ref_pos[type_id][ref]
         name = names_full.get(ref)
         props = {}
@@ -954,17 +1016,43 @@ def parse_bytes(data):
 def parse_rbxm(path):
     """Parsuje RBXM soubor, pouze pro cteni (open 'rb').
 
-    Velikost se kontroluje pred nactenim (MAX_FILE_BYTES); soubor se
-    nikdy neotevira k zapisu; pred/po kontrolu hashe dela volajici
-    (testy, G-01 brana).
+    Velikost se kontroluje pred nactenim (MAX_FILE_BYTES) i pri cteni
+    (read s limitem MAX_FILE_BYTES+1, takze soubor narostly mezi getsize
+    a read (TOCTOU) se odmitne po alokaci nejvyse ~8 MiB, ne celem GB);
+    soubor se nikdy neotevira k zapisu; pred/po kontrolu hashe dela
+    volajici (testy, G-01 brana).
     """
-    if os.path.getsize(path) > MAX_FILE_BYTES:
+    # Rychla cesta (poradni, ne bezpecnostni kontrola): getsize muze byt
+    # v okamziku read uz neplatne (TOCTOU).
+    try:
+        if os.path.getsize(path) > MAX_FILE_BYTES:
+            raise RbxmCorruptError(
+                "soubor %r presahuje limit %d B; bezpecne odmitnuto"
+                % (path, MAX_FILE_BYTES))
+    except OSError:
+        pass
+    with open(path, "rb") as handle:
+        data = handle.read(MAX_FILE_BYTES + 1)
+    if len(data) > MAX_FILE_BYTES:
         raise RbxmCorruptError(
             "soubor %r presahuje limit %d B; bezpecne odmitnuto"
             % (path, MAX_FILE_BYTES))
-    with open(path, "rb") as handle:
-        data = handle.read()
     return parse_bytes(data)
+
+
+def _is_rotation_matrix(matrix, tol=1e-3):
+    """Ortonormalita 3x3 matice v toleranci (radky jednotkove, kolme,
+    determinant +1). Neortonomalni/skalicí matice neni rotace."""
+    rows = (matrix[0:3], matrix[3:6], matrix[6:9])
+    for a in range(3):
+        if abs(sum(v * v for v in rows[a]) - 1.0) > tol:
+            return False
+        for b in range(a + 1, 3):
+            if abs(sum(x * y for x, y in zip(rows[a], rows[b]))) > tol:
+                return False
+    a, b, c, d, e, f, g, h, i = matrix
+    det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+    return abs(det - 1.0) <= tol
 
 
 def assess_wheel_geometry(instances):
@@ -1017,7 +1105,53 @@ def assess_wheel_geometry(instances):
         return result
     wheels_id = wheels_models[0].get("id")
 
+    # Les (vice korenu) neni strom M2 drahy kol: explicitni politika
+    # BLOCKED (format-audit §3/F2), nikdy tichy pruchod.
+    roots = [i.get("id") for i in instances if i.get("parent_id") is None]
+    if len(roots) != 1:
+        block("forest: ocekavan prave 1 koren, nalezeno %d" % len(roots))
+        return result
+
     parent_of = {i.get("id"): i.get("parent_id") for i in instances}
+
+    # P2-7: memoizovane retezy predku (amortizovane O(n) misto O(d^2)).
+    # Semantika stejna jako _ancestor_chain: cyklus / neplatny parent
+    # -> RbxmHierarchyError pro danou instanci. Sufixy sdilene mezi Party
+    # se pocitaji jednou (kazdy uzel se navstivi nejvyse jednou).
+    chain_memo = {}
+
+    def cached_inside(target_id, start_id):
+        """Je target_id v retezu predku start_id? Memoizovane, sdili sufixy."""
+        if start_id in chain_memo:
+            return target_id in chain_memo[start_id]
+        chain = []
+        seen = {start_id}
+        parent = parent_of.get(start_id)
+        prefix = []  # nove navstivene uzly od start_id vzhuru
+        while parent is not None:
+            if parent in seen:
+                raise RbxmHierarchyError(
+                    "cyklus v parent hierarchii u instance %r" % start_id)
+            if parent not in parent_of:
+                raise RbxmHierarchyError(
+                    "neplatny parent id %r u instance %r" % (parent,
+                                                             start_id))
+            if parent in chain_memo:
+                chain.append(parent)
+                chain.extend(chain_memo[parent])
+                break
+            seen.add(parent)
+            chain.append(parent)
+            prefix.append(parent)
+            parent = parent_of.get(parent)
+        chain_memo[start_id] = chain
+        # Sufixy nove projdenych uzlu si pamatujeme take (sdileni prace).
+        # Retez je striktni (bez sebe sama): predci uzlu prefix[idx]
+        # = chain[idx+1:].
+        for idx, node in enumerate(prefix):
+            if node not in chain_memo:
+                chain_memo[node] = chain[idx + 1:]
+        return target_id in chain
 
     parts_in_wheels = []
     for inst in instances:
@@ -1026,8 +1160,7 @@ def assess_wheel_geometry(instances):
         if inst.get("class_name") != "Part":
             continue
         try:
-            inside = wheels_id in _ancestor_chain(inst.get("id"),
-                                                 parent_of)
+            inside = cached_inside(wheels_id, inst.get("id"))
         except RbxmHierarchyError as exc:
             result["unidentified"].append({
                 "instance_id": inst.get("id"),
@@ -1068,6 +1201,11 @@ def assess_wheel_geometry(instances):
         elif not all(isinstance(v, float) for v in size):
             failed.append("bad_size")
             size = None
+        elif not all(math.isfinite(v) for v in size):
+            # Inf/NaN neni "nonpositive_size" ani koule — vlastni label,
+            # nikdy GEOMETRY_OK (P0: inf driv prosel jako GEOMETRY_OK).
+            failed.append("nonfinite_size")
+            size = None
         elif not all(v > 0 for v in size):
             failed.append("nonpositive_size")
             size = None
@@ -1078,6 +1216,32 @@ def assess_wheel_geometry(instances):
         if position is None or pos_entry.get("status") != "read":
             failed.append("missing_position")
             position = None
+        elif not (isinstance(position, (tuple, list))
+                  and len(position) == 3
+                  and all(isinstance(v, float) for v in position)):
+            failed.append("bad_position")
+            position = None
+        elif not all(math.isfinite(v) for v in position):
+            # Inf/NaN pozice driv prosla per-kolo verdiktem (P0).
+            failed.append("nonfinite_position")
+            position = None
+        rotation = inst.get("rotation")
+        if pos_entry.get("status") == "read":
+            if rotation is None:
+                # Znama preseta "identity" ma rotation="identity" (retezec);
+                # None pri ctenem CFrame = neoverena preseta bez matice.
+                failed.append("unread_rotation")
+            elif isinstance(rotation, str):
+                pass  # "identity": ortonormalni trivialne, tabulka viz audit
+            elif not (isinstance(rotation, (tuple, list))
+                      and len(rotation) == 9
+                      and all(isinstance(v, float)
+                              for v in rotation)):
+                failed.append("bad_rotation")
+            elif not all(math.isfinite(v) for v in rotation):
+                failed.append("nonfinite_rotation")
+            elif not _is_rotation_matrix(tuple(rotation)):
+                failed.append("invalid_rotation")
         if failed:
             result["wheels"][des] = {
                 "status": "UNKNOWN",
@@ -1114,32 +1278,41 @@ def assess_wheel_geometry(instances):
             if w.get("status") == "GEOMETRY_OK"]
     if len(good) == 4:
         sizes = [w["size"] for w in good]
-        ref = sum(sum(s) for s in sizes) / 12.0
-        if any(abs(v - ref) > 0.01 * ref
-               for s in sizes for v in s):
-            block("inconsistent wheel sizes: %r" % (sizes,))
         positions = [w["position"] for w in good]
-        xs = sorted(p[0] for p in positions)
-        ys = [p[1] for p in positions]
-        zs = sorted(p[2] for p in positions)
-        x_cls = _clusters(xs)
-        z_cls = _clusters(zs)
-        if len(x_cls) != 2 or len(z_cls) != 2:
-            block("wheel layout not rectangular: x=%r z=%r"
-                  % (xs, zs))
-        elif max(ys) - min(ys) > 0.05:
-            block("wheel heights differ: %r" % (ys,))
+        if (not all(isinstance(v, float) and math.isfinite(v)
+                   for s in sizes for v in s)
+                or not all(isinstance(v, float) and math.isfinite(v)
+                           for p in positions for v in p)):
+            # Obranna brana pred krizovymi vypocty: nekonecna hodnota
+            # se sem po per-kolo kontrolach nesmi dostat; kdyby ano,
+            # zadny layout-vyrok, jen BLOCKED.
+            block("nonfinite wheel geometry in cross-check")
         else:
-            have = set()
-            for p in positions:
-                xi = 0 if abs(p[0] - x_cls[0][0]) <= 0.06 else 1
-                zi = 0 if abs(p[2] - z_cls[0][0]) <= 0.06 else 1
-                if abs(p[0] - x_cls[xi][0]) > 0.06 \
-                        or abs(p[2] - z_cls[zi][0]) > 0.06:
-                    xi = zi = -1
-                have.add((xi, zi))
-            if have != {(0, 0), (0, 1), (1, 0), (1, 1)}:
-                block("wheel layout not a 2x2 grid: %r" % (positions,))
+            ref = sum(sum(s) for s in sizes) / 12.0
+            if any(abs(v - ref) > 0.01 * ref
+                   for s in sizes for v in s):
+                block("inconsistent wheel sizes: %r" % (sizes,))
+            xs = sorted(p[0] for p in positions)
+            ys = [p[1] for p in positions]
+            zs = sorted(p[2] for p in positions)
+            x_cls = _clusters(xs)
+            z_cls = _clusters(zs)
+            if len(x_cls) != 2 or len(z_cls) != 2:
+                block("wheel layout not rectangular: x=%r z=%r"
+                      % (xs, zs))
+            elif max(ys) - min(ys) > 0.05:
+                block("wheel heights differ: %r" % (ys,))
+            else:
+                have = set()
+                for p in positions:
+                    xi = 0 if abs(p[0] - x_cls[0][0]) <= 0.06 else 1
+                    zi = 0 if abs(p[2] - z_cls[0][0]) <= 0.06 else 1
+                    if abs(p[0] - x_cls[xi][0]) > 0.06 \
+                            or abs(p[2] - z_cls[zi][0]) > 0.06:
+                        xi = zi = -1
+                    have.add((xi, zi))
+                if have != {(0, 0), (0, 1), (1, 0), (1, 1)}:
+                    block("wheel layout not a 2x2 grid: %r" % (positions,))
     elif not result["blocked"]:
         block("identified wheels != 4 (got %d)" % len(good))
 

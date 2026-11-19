@@ -1,7 +1,7 @@
 # Project Status – stav k 2026-11-19 (větev `feat/m1-m2-foundation`, PR #2)
 
-**Aktuální stav:** M1 + M2 (spike + detekce kol) hotovo na této větvi; testy
-**205 běhů, 201 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py`, PENDING beze změny).
+**Aktuální stav:** M1 + M2 (profil, parser INST/PRNT/Shape/Size/CFrame, detekce kol) hotovo na této větvi; testy
+**260 běhů, 256 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py`, PENDING beze změny).
 **RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
 
 > **§1–§8 = HISTORICKÝ audit před implementací** (stav k `dd9efdf`, 162 PASS).
@@ -37,7 +37,7 @@
   auditu §1 (stav před implementací této větve).
 
 ### 0.4 Testy a RBXM integrita (nový běh 2026-11-19)
-- `python tests/run_all.py` → **205 běhů, 201 PASS, 0 FAIL, 4 PENDING**
+- `python tests/run_all.py` → **260 běhů, 256 PASS, 0 FAIL, 4 PENDING**
   (baseline před změnou 199/195/0/4; +6 nových adversarial testů cyklů/hierarchie,
   1 test přepsán z OK na BLOCKED; PENDING totožné).
 - RBXM: `assets/chassis-original/chasis-work-copy.rbxm` —
