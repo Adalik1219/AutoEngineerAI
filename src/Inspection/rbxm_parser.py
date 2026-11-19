@@ -21,7 +21,9 @@ co se neinterpretovalo.
 Kodovani lane (overeno na pracovni kopii, reports/RBXM-SPIKE.md §C05-D):
   - referenty INST/PRNT: 4 prokladane lane, MSB lane prvni, zigzag,
     delta-akumulace,
-  - enum/int PROP: 4 lane, LSB lane prvni, bez zigzagu a bez delt,
+  - enum/int PROP: 4 lane, lane 0 na pozici LSB (poradi vuci formatu
+    NEOVERENO pro nenulove hodnoty; kola Ball=0 invariantni; viz N1
+    v reports/M2/RBXM-INSPECTOR-REPORT.md), bez zigzagu a bez delt,
   - floaty (Vector3 size, pozice CFrame): component-major, 4 lane
     na slozku, MSB lane prvni, u32 transformovano ror1
     (bits = (w >> 1) | ((w & 1) << 31)),
@@ -259,7 +261,8 @@ def _decode_referents(segment, count, what):
 
 
 def _decode_enum_lanes(data, count, what):
-    """Dekoduje enum/int PROP: 4 lane, LSB lane prvni, bez zigzagu a delt."""
+    """Dekoduje enum/int PROP: 4 lane, lane 0 na pozici LSB.
+    Poradi vuci formatu NEOVERENO pro nenulove hodnoty (N1); fail-safe."""
     if count > MAX_FIELD_VALUES:
         raise RbxmCorruptError(
             "%s: absurdni pocet enum hodnot %d (cap %d); bezpecne odmitnuto"
@@ -852,7 +855,7 @@ def parse_bytes(data):
             if shape_name is not None:
                 props["shape"] = {
                     "status": "read", "trusted": True,
-                    "how": ("PROP shape enum u32 lane LSB-prvni; "
+                    "how": ("PROP shape enum u32 lane0=LSB (poradi formatu neovereno, N1); "
                             "mapovano PartType Ball/Block/Cylinder"),
                     "value": shape_name,
                 }
@@ -860,7 +863,7 @@ def parse_bytes(data):
             else:
                 props["shape"] = {
                     "status": "unread", "trusted": False,
-                    "how": "PROP shape enum u32 lane LSB-prvni",
+                    "how": "PROP shape enum u32 lane0=LSB (poradi formatu neovereno, N1)",
                     "reason": ("neznama hodnota enum %d; tvar se neodhaduje"
                                % raw),
                     "value": None,

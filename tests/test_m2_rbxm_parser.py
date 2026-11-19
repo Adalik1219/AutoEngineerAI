@@ -154,7 +154,7 @@ def _rol32(value, bits):
 
 
 def _encode_enum(values):
-    """Zakoduje enum/int PROP: 4 lane, LSB lane prvni (viz parser)."""
+    """Zakoduje enum/int PROP: 4 lane, lane 0 na pozici LSB (viz parser N1)."""
     count = len(values)
     lanes = [bytearray(count) for _ in range(4)]
     for i, value in enumerate(values):
@@ -306,7 +306,7 @@ class TestRbxmParser(unittest.TestCase):
             self.assertNotIn(name, by_id[2]["props"])
         self.assertEqual(by_id[3]["props"]["shape"],
                          {"status": "read", "trusted": True,
-                          "how": ("PROP shape enum u32 lane LSB-prvni; "
+                          "how": ("PROP shape enum u32 lane0=LSB (poradi formatu neovereno, N1); "
                                   "mapovano PartType Ball/Block/Cylinder"),
                           "value": "Ball"})
 

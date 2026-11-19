@@ -24,6 +24,37 @@ DEFAULT_DT = 1.0 / 240.0
 
 STUDS_PER_METER = 1.0 / METERS_PER_STUD
 
+MM_PER_INCH = 25.4
+MM_PER_M = 1000.0
+
+
+def mm_to_m(mm: float) -> float:
+    """Milimetry -> metry (SI)."""
+    return _finite(mm, "mm") / MM_PER_M
+
+
+def m_to_mm(meters: float) -> float:
+    """Metry (SI) -> milimetry."""
+    return _finite(meters, "meters") * MM_PER_M
+
+
+def tire_diameter_mm(width_mm: float, aspect_ratio_pct: float,
+                     rim_diameter_in: float) -> float:
+    """Nominální (nezatížený) průměr pneu z designace v mm.
+
+    D = rim_in * 25.4 + 2 * width_mm * aspect_pct / 100.
+    Nominální výpočet, ne měření — tolerance dezénu cca ±5 mm;
+    výsledek je ESTIMATED, ne VERIFIED reference.
+    """
+    w = _finite(width_mm, "width_mm")
+    a = _finite(aspect_ratio_pct, "aspect_ratio_pct")
+    r = _finite(rim_diameter_in, "rim_diameter_in")
+    if w <= 0 or a <= 0 or r <= 0:
+        raise ValueError("rozměry pneu musí být > 0: "
+                         f"{width_mm!r}, {aspect_ratio_pct!r}, "
+                         f"{rim_diameter_in!r}")
+    return r * MM_PER_INCH + 2.0 * w * a / 100.0
+
 
 def _finite(value: float, name: str) -> float:
     v = float(value)
