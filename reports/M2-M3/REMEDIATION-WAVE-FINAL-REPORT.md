@@ -65,3 +65,9 @@ Pravidla: M3 NEOTEVŘENA · originál RBXM nedotčen · PENDING≠PASS · CODE�
 - **M2: CONDITIONAL PASS** (kalibrace konkrétního modelu BLOCKED — očekávané, ne defekt).
 - **M3: BLOCKED (NEOTEVŘENA)** — chybí VERIFIED měřítko; otevření jen s validním měřítkem + splněnými branami §10.3.
 - Další samostatná vlna možná: identifikace referenčního vozidla JeepTemplate + kalibrace vůči jeho továrním rozměrům (vyžaduje schválení).
+
+## 6b. CI finálního commitu (doplněno koordinátorem)
+
+- Commit: `a94e4a2` · run `44611902993` · 4/4 success (3.11–3.14).
+- Předchozí runy: vlna 34a4994 zelená lokálně 372/368/0/4 (CI běží jen na push;
+  mezilehlé commity bez push nebyly testovány v CI — lokální běhy doloženy v reportech).
