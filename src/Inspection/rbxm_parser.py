@@ -1031,8 +1031,15 @@ def parse_rbxm(path):
                 % (path, MAX_FILE_BYTES))
     except OSError:
         pass
-    with open(path, "rb") as handle:
-        data = handle.read(MAX_FILE_BYTES + 1)
+    try:
+        with open(path, "rb") as handle:
+            data = handle.read(MAX_FILE_BYTES + 1)
+    except OSError as exc:
+        # AUDIT2-parser-security: souborove selhani (chybejici soubor,
+        # prava, adresar) patri do RbxmError kontraktu, nikdy ven.
+        raise RbxmCorruptError(
+            "soubor %r nelze precist: %s; bezpecne odmitnuto"
+            % (path, exc)) from exc
     if len(data) > MAX_FILE_BYTES:
         raise RbxmCorruptError(
             "soubor %r presahuje limit %d B; bezpecne odmitnuto"

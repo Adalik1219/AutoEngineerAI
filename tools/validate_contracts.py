@@ -476,6 +476,31 @@ def run_selftest() -> tuple[int, int, list[str]]:
     return checks, failures, lines
 
 
+def _is_m19_empty_torque_curve(data: object) -> bool:
+    """M1.9 výjimka (IMPLEMENTATION_ROADMAP.md §M1.8): pro Mustang GT 2024 EU
+    existuje 0 továrních kotev momentové křivky, profil proto nese prázdnou
+    křivku se statusem UNKNOWN. Podmínky: points == [], interpolation "none",
+    curve_source estimate s confidence <= 0.5 a notes "CHYBÍ:...".
+    Stejná podmínka jako src/Reference/validate.py::_is_m19_empty_torque_curve
+    — jakýkoli neprázdný seznam bodů prochází standardní validací (minItems 2).
+    """
+    if not isinstance(data, dict):
+        return False
+    tc = data.get("torque_curve")
+    if not isinstance(tc, dict):
+        return False
+    if tc.get("points") != [] or tc.get("interpolation") != "none":
+        return False
+    curve = tc.get("curve_source")
+    if not isinstance(curve, dict):
+        return False
+    conf = curve.get("confidence")
+    return (curve.get("source_type") == "estimate"
+            and isinstance(conf, (int, float)) and not isinstance(conf, bool)
+            and conf <= 0.5
+            and str(curve.get("notes") or "").startswith("CHYBÍ:"))
+
+
 def check_vehicle_data() -> tuple[int, int, list[str]]:
     """Zkontroluje vehicle-data/references/*.json proti _schema.json."""
     lines: list[str] = []
@@ -489,6 +514,14 @@ def check_vehicle_data() -> tuple[int, int, list[str]]:
             continue
         checks += 1
         errs = check_file(path, VEHICLE_DATA_SCHEMA)
+        if errs:
+            # M1.9 výjimka: prázdná křivka UNKNOWN je záměr — minItems chyba
+            # pro $.torque_curve.points se potlačí (jen při splnění podmínek).
+            data, load_err = load_json(path)
+            if load_err is None and _is_m19_empty_torque_curve(data):
+                errs = [e for e in errs
+                        if not e.endswith("$/torque_curve/points: "
+                                          "pole je příliš krátké (0 < 2)")]
         if errs:
             lines.append(f"[CHYBA] {path.name}: neprošel ({len(errs)} chyb):")
             lines.extend(f"    {e}" for e in errs[:5])

@@ -384,5 +384,54 @@ class MustangProfileTest(unittest.TestCase):
                       str(self.profile["transmission"].get("type", "")).lower())
 
 
+class ContractValidatorConsistencyTest(unittest.TestCase):
+    """Konzistence tools/validate_contracts.py s M1.9 výjimkou (Fáze B).
+
+    tools/validate_contracts.py kontroluje vehicle-data proti _schema.json
+    (minItems 2 na torque_curve.points); bez M1.9 výjimky by legitimní
+    prázdnou křivku UNKNOWN (CHYBÍ:, interpolation none) falešně zamítal,
+    zatímco src/Reference/validate.py ji přijímá.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        import importlib.util
+        tool_path = os.path.join(ROOT, "tools", "validate_contracts.py")
+        spec = importlib.util.spec_from_file_location(
+            "validate_contracts", tool_path)
+        cls.vc = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.vc)
+        schema_path = os.path.join(
+            ROOT, "vehicle-data", "references", "_schema.json")
+        import json
+        with open(schema_path, encoding="utf-8") as fh:
+            cls.schema = json.load(fh)
+
+    def _tool_errors(self, profile):
+        errs = self.vc.validate_against_schema(profile, self.schema)
+        if self.vc._is_m19_empty_torque_curve(profile):
+            errs = [e for e in errs
+                    if e != "$/torque_curve/points: pole je příliš krátké (0 < 2)"]
+        return errs
+
+    def test_m1_t21_contract_validator_accepts_empty_unknown_curve(self):
+        """M1.9: prázdná křivka UNKNOWN projde i přes tools validátor."""
+        profile = loader.load_profile(
+            loader.references_dir() / MUSTANG_FILENAME)
+        self.assertEqual(self._tool_errors(profile), [])
+        checks, failures, _ = self.vc.check_vehicle_data()
+        self.assertGreater(checks, 0)
+        self.assertEqual(failures, 0)
+
+    def test_m1_t22_contract_validator_rejects_single_point_bypass(self):
+        """M1.9: jeden vymyšlený bod zamítne i tools validátor (minItems 2)."""
+        mutant = copy.deepcopy(loader.load_profile(
+            loader.references_dir() / MUSTANG_FILENAME))
+        mutant["torque_curve"]["points"] = [
+            {"rpm": 3000, "torque_nm": 400, "point_type": "estimated"}]
+        errs = self.vc.validate_against_schema(mutant, self.schema)
+        self.assertTrue(any("příliš krátké" in e for e in errs), errs)
+
+
 if __name__ == "__main__":
     unittest.main()

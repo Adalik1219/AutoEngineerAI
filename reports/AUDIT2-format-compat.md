@@ -98,6 +98,30 @@ Oba soubory v repu mají stejný SHA-256 `dc8747e0…fedf` — druhý distinctn�
 (c) do M3 ground-truth povinně i `shape` všech Partů reálné kopie (rozhodne §2);
 (d) `trusted` u floatů uvolnit až po Studio kalibraci — do té doby BLOCKED.
 
+## 8. DOPLNĚNÍ Fáze B (2026-11-19): oprava enum lane-order s důkazem
+
+Nález §2 ověřen na reálné kopii při HEAD `53c2e23` (čtení pouze,
+`open(rb).read()`; SHA-256 kopie před i po sondách
+`dc8747e0…fedf` — G-01 drží):
+
+- `parse_rbxm` na 109 instancích `Part`: **4× `read`/Ball (hodnota 0),
+  104× `unread` („neznama hodnota enum 16777216" = `0x01000000`),
+  1× `unread` („neznama hodnota enum 33554432" = `0x02000000`)**.
+  Tvrzení AUDIT1 §4 / SPIKE C05-D `{0:4, 1:104, 2:1}` produkční kód
+  **nereprodukuje** — je tím opraveno (SPIKE §C05-D, tato fáze).
+- Surový payload `PROP/shape` typu 17 (`Part`): 436 B = 4×109.
+  **lane0–2 = samé `00`, lane3 = `00 01 01 … 01 02`** (104× `01`,
+  1× `02` na konci). Data tedy leží v poslední lane.
+- Kontrolní přepočet obou hypotéz ze stejných bytů:
+  LSB-první → `{0: 4, 16777216: 104, 33554432: 1}` (souhlas s dekodérem);
+  **MSB-první → `{0: 4, 1: 104, 2: 1}`** — přesně spike-tabulka
+  (4× Ball / 104× Block / 1× Cylinder). Pořadí lane u enum je tedy
+  **MSB-první**, konzistentně s floaty; `_decode_enum_lanes` má lane
+  obráceně. Oprava dekodéru patří do M3 s novým auditem (do té doby
+  neměnit — bezpečný směr, `unread` → BLOCKED).
+- Kola (Ball = 0) jsou vůči pořadí lane invariantní — nález se jich
+  **netýká** (4× `read`/Ball potvrzeno i produkčním kódem).
+
 ---
 *Fáze A audit — bez změn kódu. Vlastněný soubor role Format Compatibility Engineer.*
 *Nález §2 (enum lane-order) je jediný bod, kde audit na HEAD rozporuje dřívější tvrzení; vše ostatní potvrzuje nebo uzavírá.*

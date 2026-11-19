@@ -175,9 +175,17 @@ s `uncomp_len` 300 MiB se odmítnou bez alokace.
 
 ## Lane-kódování (vlastní reverzní inženýrství, ověřeno křížově níže)
 
-- **Enum/int PROP** (`shape` 0x12): 4 lane, **LSB lane první**, bez zigzagu
-  a delt. Důkaz: Part `shape` → `{0: 4, 1: 104, 2: 1}` = 4× Ball (kola),
-  104× Block, 1× Cylinder — kola = Ball dle auditu §10.
+- **Enum/int PROP** (`shape` 0x12): 4 lane, bez zigzagu a delt.
+  **OPRAVA Fáze B (2026-11-19):** původní tvrzení „LSB lane první" je
+  **vyvráceno** měřením na reálné kopii (`dc8747e0…fedf`, 109× Part,
+  parser @ `53c2e23`): produkční dekodér dává `{0: 4, 0x01000000: 104,
+  0x02000000: 1}` (4× `read`/Ball, 105× `unread`), nikoli `{0: 4, 1: 104,
+  2: 1}`. Surový payload (Part type 17, 436 B = 4×109): lane0–2 samé
+  `00`, lane3 = `00 01 01 01 …` (1× `02` na konci) — data tedy leží
+  v **poslední** lane, tj. pořadí je **MSB lane první**. Pod MSB-first
+  vychází přesně `{0: 4, 1: 104, 2: 1}` = 4× Ball (kola), 104× Block,
+  1× Cylinder (kola = Ball dle auditu §10). Hodnota 0 (kola) je vůči
+  pořadí lane invariantní, takže tvrzení o kolech tím není dotčeno.
 - **Floaty** (`size` 0x0E, pozice CFrame): **component-major** (X/Y/Z pole
   za sebou, každé 4 lane), **MSB lane první**, u32 transformováno
   **ror1** (`bits = (w >> 1) | ((w & 1) << 31)`). Důkaz: 327/327 kladných,
@@ -195,8 +203,11 @@ s `uncomp_len` 300 MiB se odmítnou bez alokace.
 ## Provenience u každé vlastnosti (D)
 
 Každá instance nese `props[vlastnost] = {status, trusted, how, …}`:
-`status` = `read`/`missing`/`unread`; `trusted=True` jen u tvaru (enum,
-křížově ověřen); floaty vždy `trusted=False` (bez Studio ground-truth).
+`status` = `read`/`missing`/`unread`; `trusted=True` u tvaru platilo jen
+pro hodnotu 0/Ball (kola — invariantní vůči pořadí lane); tvrzení
+o 104× Block + 1× Cylinder je **staženo** (viz oprava lane výše —
+produkční dekodér je vrací jako `unread`); floaty vždy `trusted=False`
+(bez Studio ground-truth).
 Geometrie se **nikdy neodvozuje z názvů** — jen z PROP (test E3: samotné
 jméno FL bez PROP → `bad_shape`/`missing_*` + BLOCKED).
 `model["geometry"] = PARTIAL` + `calibration: NOT_IMPLEMENTED`.

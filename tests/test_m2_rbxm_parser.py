@@ -1103,6 +1103,22 @@ class TestParserLimitsPerformance(unittest.TestCase):
         self.assertEqual(model["num_instances"], 815)
         self.assertEqual(sha256_of(real), before)
 
+    def test_b2_parse_rbxm_missing_file(self):
+        """AUDIT2-parser-security: neexistujici soubor/adresar se odmitne
+        jako RbxmCorruptError (RbxmError kontrakt), nikdy FileNotFoundError
+        ani jiny OSError mimo kontrakt."""
+        import tempfile
+        missing = os.path.join(tempfile.gettempdir(),
+                               "rbxm-neexistuje-20261119.rbxm")
+        if os.path.exists(missing):
+            os.unlink(missing)
+        with self.assertRaises(RbxmCorruptError):
+            parse_rbxm(missing)
+        with self.assertRaises(RbxmError):
+            parse_rbxm(missing)
+        with self.assertRaises(RbxmCorruptError):
+            parse_rbxm(tempfile.gettempdir())
+
     def test_b2_lz4_block_copy_fast_and_exact(self):
         """P1-3: offset=1 expanze na 1 MiB je rychla (< 2 s) a bitove
         presna (opakuje posledni bajt)."""
@@ -1509,7 +1525,7 @@ class TestFuzzF1F8(unittest.TestCase):
                     len(raw) - 1, 33):
             with self.assertRaises(RbxmError):
                 parse_bytes(raw[:cut])
-        self.assertEqual(sha256_of(WORK_COPY), EXPECTED_SHA256)
+        self.assertEqual(sha256_of(real), EXPECTED_SHA256)
         self.assertLessEqual(accepted, trials)
 
 
