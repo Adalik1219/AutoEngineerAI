@@ -154,14 +154,14 @@ def _rol32(value, bits):
 
 
 def _encode_enum(values):
-    """Zakoduje enum/int PROP: 4 lane, lane 0 na pozici LSB (viz parser N1)."""
+    """Zakoduje enum/int PROP: 4 lane, lane 0 na pozici MSB (viz parser)."""
     count = len(values)
     lanes = [bytearray(count) for _ in range(4)]
     for i, value in enumerate(values):
-        lanes[0][i] = value & 0xFF
-        lanes[1][i] = (value >> 8) & 0xFF
-        lanes[2][i] = (value >> 16) & 0xFF
-        lanes[3][i] = (value >> 24) & 0xFF
+        lanes[0][i] = (value >> 24) & 0xFF
+        lanes[1][i] = (value >> 16) & 0xFF
+        lanes[2][i] = (value >> 8) & 0xFF
+        lanes[3][i] = value & 0xFF
     return b"".join(bytes(lane) for lane in lanes)
 
 
@@ -306,7 +306,8 @@ class TestRbxmParser(unittest.TestCase):
             self.assertNotIn(name, by_id[2]["props"])
         self.assertEqual(by_id[3]["props"]["shape"],
                          {"status": "read", "trusted": True,
-                          "how": ("PROP shape enum u32 lane0=LSB (poradi formatu neovereno, N1); "
+                          "how": ("PROP shape enum u32 lane0=MSB (overeno Studiem, "
+                                  "reports/M2/SHAPE-CROSS-CHECK.md); "
                                   "mapovano PartType Ball/Block/Cylinder"),
                           "value": "Ball"})
 
@@ -471,6 +472,37 @@ class TestRbxmParser(unittest.TestCase):
         self.assertTrue(
             any("float_decode_unverified" in r
                 for r in geo["blocked_reasons"]))
+
+    def test_shape_census_msb_first(self):
+        """N1-uzaver (MSB-first): realna kopie ma 4x Ball (kola) + 104x
+        Block + 1x Cylinder a 0 neprectenych shape-enumu (drive
+        104x unread 16777216 + 1x unread 33554432 pri LSB-first).
+        Overeno Studiem: reports/M2/SHAPE-CROSS-CHECK.md."""
+        model = parse_rbxm(_require_real_copy(self))
+        counts = {"Ball": 0, "Block": 0, "Cylinder": 0}
+        unread_enums = []
+        for inst in model["instances"]:
+            rec = inst["props"].get("shape")
+            if rec is None:
+                continue
+            if rec["status"] == "read":
+                counts[inst["shape"]] += 1
+            elif (rec["status"] == "unread"
+                    and rec.get("reason", "").startswith("neznama hodnota enum")):
+                unread_enums.append((inst["id"], rec["reason"]))
+        self.assertEqual(counts, {"Ball": 4, "Block": 104, "Cylinder": 1})
+        self.assertEqual(unread_enums, [])
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(by_id[801]["shape"], "Cylinder")
+
+    def test_synthetic_shape_nonzero_roundtrip(self):
+        """Synteticky Block/Cylinder tam a zpet presne (MSB-first)."""
+        model = parse_bytes(build_model(
+            [(0, "Part", ["A", "B"])], [(0, None), (1, 0)],
+            extra_chunks=[("PROP", _shape_prop(0, [1, 2]))]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(by_id[0]["shape"], "Block")
+        self.assertEqual(by_id[1]["shape"], "Cylinder")
 
     def test_unknown_designation(self):
         """11. Nezname oznaceni kola = UNKNOWN se zaznamem + BLOCKED."""

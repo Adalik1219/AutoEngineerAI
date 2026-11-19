@@ -70,7 +70,8 @@ class TestRbxmInspectorEvidence(unittest.TestCase):
         self.assertEqual(first, second)
 
     def test_shape_ball_read_block_unread_lane_evidence(self):
-        """N1: kola Ball read/trusted; 105x Part shape unread (0x01000000)."""
+        """MSB-first (N1 uzavren, SHAPE-CROSS-CHECK.md): kola Ball
+        read/trusted; 104x Block + 1x Cylinder read; 0 unread shape-enumu."""
         model = parse_rbxm(_require_real_copy(self))
         parts = [i for i in model["instances"]
                  if i["class_name"] == "Part"]
@@ -79,10 +80,12 @@ class TestRbxmInspectorEvidence(unittest.TestCase):
         self.assertEqual(len(balls), 4)
         for wheel in balls:
             self.assertTrue(wheel["props"]["shape"]["trusted"])
+        blocks = [i for i in parts if i.get("shape") == "Block"]
+        self.assertEqual(len(blocks), 104)
+        cyls = [i for i in parts if i.get("shape") == "Cylinder"]
+        self.assertEqual(len(cyls), 1)
         unread = [i for i in parts if i.get("shape") is None]
-        self.assertEqual(len(unread), 105)
-        self.assertIn("16777216",
-                      unread[0]["props"]["shape"]["reason"])
+        self.assertEqual(unread, [])
 
     def test_unsupported_and_corrupt_inputs(self):
         with self.assertRaises(RbxmCorruptError):

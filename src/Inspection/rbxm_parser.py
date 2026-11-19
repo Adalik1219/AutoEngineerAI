@@ -21,9 +21,9 @@ co se neinterpretovalo.
 Kodovani lane (overeno na pracovni kopii, reports/RBXM-SPIKE.md §C05-D):
   - referenty INST/PRNT: 4 prokladane lane, MSB lane prvni, zigzag,
     delta-akumulace,
-  - enum/int PROP: 4 lane, lane 0 na pozici LSB (poradi vuci formatu
-    NEOVERENO pro nenulove hodnoty; kola Ball=0 invariantni; viz N1
-    v reports/M2/RBXM-INSPECTOR-REPORT.md), bez zigzagu a bez delt,
+  - enum/int PROP: 4 lane, lane 0 na pozici MSB (overeno Studiem,
+    reports/M2/SHAPE-CROSS-CHECK.md: 104x Block + 1x Cylinder;
+    kola Ball=0 invariantni), bez zigzagu a bez delt,
   - floaty (Vector3 size, pozice CFrame): component-major, 4 lane
     na slozku, MSB lane prvni, u32 transformovano ror1
     (bits = (w >> 1) | ((w & 1) << 31)),
@@ -91,8 +91,9 @@ IDENTITY_ROTATION = (1.0, 0.0, 0.0,
                      0.0, 1.0, 0.0,
                      0.0, 0.0, 1.0)
 
-# Enum PartType (overeno: kola = 0 = Ball dle auditu; 1 = Block,
-# 2 = Cylinder; jina hodnota = neprecteno, nikdy odhad).
+# Enum PartType (overeno Studiem, reports/M2/SHAPE-CROSS-CHECK.md:
+# kola = 0 = Ball, 1 = Block, 2 = Cylinder;
+# jina hodnota = neprecteno, nikdy odhad).
 PART_TYPE_NAMES = {0: "Ball", 1: "Block", 2: "Cylinder"}
 
 # Oznaceni kol pro geometricke posouzeni (zrcadli wheel_detect.py,
@@ -261,8 +262,11 @@ def _decode_referents(segment, count, what):
 
 
 def _decode_enum_lanes(data, count, what):
-    """Dekoduje enum/int PROP: 4 lane, lane 0 na pozici LSB.
-    Poradi vuci formatu NEOVERENO pro nenulove hodnoty (N1); fail-safe."""
+    """Dekoduje enum/int PROP: 4 lane, lane 0 na pozici MSB.
+
+    Overeno Studiem (reports/M2/SHAPE-CROSS-CHECK.md): 104x Block (1)
+    + 1x Cylinder (2); kola Ball (0) invariantni vuci poradi lane.
+    """
     if count > MAX_FIELD_VALUES:
         raise RbxmCorruptError(
             "%s: absurdni pocet enum hodnot %d (cap %d); bezpecne odmitnuto"
@@ -272,8 +276,8 @@ def _decode_enum_lanes(data, count, what):
             "%s: spatna delka enum pole (%d != 4*%d)"
             % (what, len(data), count))
     lanes = [data[i * count:(i + 1) * count] for i in range(4)]
-    return [lanes[0][i] | (lanes[1][i] << 8)
-            | (lanes[2][i] << 16) | (lanes[3][i] << 24)
+    return [(lanes[0][i] << 24) | (lanes[1][i] << 16)
+            | (lanes[2][i] << 8) | lanes[3][i]
             for i in range(count)]
 
 
@@ -855,7 +859,8 @@ def parse_bytes(data):
             if shape_name is not None:
                 props["shape"] = {
                     "status": "read", "trusted": True,
-                    "how": ("PROP shape enum u32 lane0=LSB (poradi formatu neovereno, N1); "
+                    "how": ("PROP shape enum u32 lane0=MSB (overeno Studiem, "
+                            "reports/M2/SHAPE-CROSS-CHECK.md); "
                             "mapovano PartType Ball/Block/Cylinder"),
                     "value": shape_name,
                 }
@@ -863,7 +868,7 @@ def parse_bytes(data):
             else:
                 props["shape"] = {
                     "status": "unread", "trusted": False,
-                    "how": "PROP shape enum u32 lane0=LSB (poradi formatu neovereno, N1)",
+                    "how": "PROP shape enum u32 lane0=MSB (overeno Studiem, reports/M2/SHAPE-CROSS-CHECK.md)",
                     "reason": ("neznama hodnota enum %d; tvar se neodhaduje"
                                % raw),
                     "value": None,
