@@ -78,3 +78,45 @@ Rozptyl **7.44 % > 5 %** → `calibrate()` vrací **BLOCKED** („nekonzistentn�
 - M2 vlna 1 je poctivá práce: testy 313/0/4 PENDING, adversarial sada 8/8, nezávislý přepočet souhlasí s producentem (BLOCKED při 7.44 %), propagace BLOCKED ověřena end-to-end.
 - Jediné věcné nálezy (N1/MSB-first, zastaralý důvod) jsou zdokumentované, fail-safe a mimo kritickou cestu kol; proto **CONDITIONAL PASS**, ne FAIL.
 - **M3 neotevírat.** Další krok: vlastník parseru rozhodne N1 → poté re-verifikace a nová kalibrační data.
+
+---
+# Dodatek: re-konfirmace na finálním HEAD 32dd690 (2026-11-19)
+
+**HEAD:** `32dd690` · **diff `8b30447..HEAD`:** pouze N1 fix + 2 reporty
+(`src/Inspection/rbxm_parser.py`, `tests/test_m2_rbxm_parser.py`,
+`tests/test_m2_rbxm_inspector.py`, `reports/M2/SHAPE-CROSS-CHECK.md`,
+tento soubor). Žádný jiný kód ani test se nezměnil. Strom čistý
+(`git status` prázdný). **Kód neměněn, testy neměněny** (QA read-only,
+měněn pouze tento soubor).
+**M3 stále bez kódu:** `src/Geometry/` ani `geometry_target.json` neexistují.
+
+## Plný běh (živě, sériově)
+- `python tests/run_all.py`: **319 běhů, PASS=315, FAIL=0, ERROR=0,
+  PENDING=4** (4 PENDING očekávané — Studio/Fáze 5/Fáze 9-10, žádný se
+  nezapočítává do PASS). Nárůst 317→319 = 2 nové N1 testy.
+- Cílené M2 sady (parser + inspector + wheel_detect + scale_calibration):
+  **115/115 OK** (původně 113 + 2 nové: `test_shape_census_msb_first`,
+  `test_synthetic_shape_nonzero_roundtrip`).
+
+## Podmínky CONDITIONAL PASS — kontrola
+1. **N1 MSB-first: SPLNĚNA.** `_decode_enum_lanes` dekóduje lane 0 na MSB;
+   syntetický round-trip Block/Cylinder přesně; reálná kopie nově
+   4× Ball + 104× Block + 1× Cylinder, **0 nepřečtených shape-enumů**
+   (dříve 105 unread `16777216`/`33554432`). Důkaz Studiem v
+   `SHAPE-CROSS-CHECK.md`, commitnut v tomto HEAD. Omezení
+   „nevěřit non-Ball tvarům" tímto **padá**.
+2. **`float_decode_unverified`: PONECHÁN se souhlasem koordinátora.**
+   Kalibrace na reálných datech je stále BLOCKED (rozptyl 7.44 %,
+   deformovaný JeepTemplate) — důvod je pravdivý, držení inspekce
+   v BLOCKED je konzervativní a správné. Rozhodnutí koordinátora,
+   nikoli opomenutí.
+3. **Sériové re-běhy: ZELENÉ** (viz výše). **Strom bez balastu:**
+   čistý, M3 bez kódu.
+
+## Verdikt M2: CONDITIONAL PASS — POTVRZEN (N1 uzavřena)
+N1 je vyřešena s důkazem; zbývající podmíněnost váže výhradně
+koordinátorem vědomě ponechaný důvod `float_decode_unverified`
+(do kalibrační vlny s VERIFIED daty). Na FAIL není důvod.
+## Brána M3: NEOTEVÍRAT — POTVRZENO
+Reálná data stále `BLOCKED` (inspekce i kalibrace); M3 správně jen návrh.
+Fáze B až po GEOMETRY_OK/VERIFIED na datech.
