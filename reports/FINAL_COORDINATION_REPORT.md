@@ -42,3 +42,11 @@ reportů + benchmark + doc-sync + ground-truth checklist. RBXM hashe `dc8747e0�
 
 Docstring `__init__.py` + hash-překlep opraveny v tomto commitu; merge message musí nést
 „PENDING≠PASS, není RUNTIME, M3 NOT IMPLEMENTED". Kód bez výhrad (3× nezávislé QA PASS).
+
+## Dodatek — duální pin (externí audit 2026-11-19, HEAD `f3223cd`)
+
+- Poslední commit se změnou kódu: `ff4a9d6`.
+- Finální HEAD včetně dokumentační synchronizace: `f3223cd` (tento stav).
+- Aktuální stav: 279 běhů / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING.
+- CI 4/4 zelené. Merge message: „279/275 + 4 PENDING, CODE-VERIFIED≠RUNTIME,
+  M3 NOT IMPLEMENTED, 1 distinctní RBXM". Předchozí sekce ponechány (historie).

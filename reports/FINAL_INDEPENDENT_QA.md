@@ -212,3 +212,150 @@ Kód M1+M2 @ `36cbbdb` ověřen nezávisle (268 PASS, 12/12 sond, 0 crashů,
    CODE-VERIFIED není RUNTIME, M3 NOT IMPLEMENTED, 1 distinctní RBXM
    (LIMIT přiznán)".
 3. Nemergovat nic nad rámec diffu `main...36cbbdb` (34 souborů, +6352/−60).
+
+---
+# Dodatek 2 — finální QA k HEAD `ff4a9d6` (2026-11-19, čistý strom)
+
+Výše (§1–§10 + Dodatek k `36cbbdb`) = historie — NEMAZÁNO. Níže nový stav:
+HEAD pin `ff4a9d6d3b4c15390f59c87ae480aff17fb115fe` (PR #2 OPEN, nemergováno),
+pracovní strom čistý (`git status`: jen větev `feat/m1-m2-foundation`,
+bez dirty změn). Rozsah: `main...ff4a9d6` = 5 commitů nad `86b04f2`,
+samotné `ff4a9d6` = 5 souborů (+212/−21); celý diff `main...HEAD` =
+**37 souborů, +6683/−63**. Žádná git operace nad rámec read-only
+(`log`/`diff`/`show`/`status`); kód/testy/reporty (cizí) neměněny.
+
+## E1. Verdikt: MERGE WITH CONDITIONS (docs-hygiena, ne kód)
+
+Kód M1+M2 @ `ff4a9d6` ověřen nezávisle: **279 běhů / 275 PASS / 0 FAIL /
+0 ERROR / 4 PENDING** (`python tests/run_all.py`, ~desítky s, shoda
+s tvrzením commit message `ff4a9d6` „Lokal 279/275/0/4“), **11/11
+adversarial sond PASS, 0 crashů**, žádný P0/P1, M3 nepřítomna.
+Podmínky jsou kosmetika v docs + merge-message disciplína:
+
+1. Merge message / PR popis musí nést: „279 běhů / 275 PASS + 4 PENDING
+   (PENDING≠PASS), CODE-VERIFIED není RUNTIME, M3 NOT IMPLEMENTED,
+   1 distinctní RBXM (LIMIT přiznán)“. Důvod: kanonické číslo HEAD je
+   279/275 (ne 272/268 z `FINAL_DOCUMENTATION_SYNC.md` — viz E5).
+2. (docs-only, lze follow-up po mergi) `reports/FINAL_DOCUMENTATION_SYNC.md:14`
+   uvádí 272/268/0/4 — na HEAD zastaralé o +7 (5× `test_reference_loader_root`
+   + netto portability). Aktualizovat na 279/275/0/4.
+3. (docs-only, lze follow-up) `reports/STUDIO_RUNTIME.md:8` hlavička uvádí
+   HEAD `86b04f2` — obsahově kryto stejnou session-metodou, jen pin zastaral.
+4. Nemergovat nic nad rámec diffu `main...ff4a9d6` (37 souborů, +6683/−63);
+   M3 zůstává BLOCKED/NOT IMPLEMENTED.
+
+## E2. Diff `main...ff4a9d6` — prošlo vše (37 souborů)
+
+- `src/Reference/loader.py` (+7/−3): `project_root()` = `parents[2]`
+  `loader.py` (tj. `src/Reference/loader.py` → root), env `AUTOENGINEERAI_ROOT`
+  jen explicitní override. Jediný nový hardcoded-řetězec nikde; ověřeno
+  grepem (žádný `[A-Za-z]:[\\/]` v loaderu). Správné a minimální.
+- `tests/test_reference_loader_root.py` (NEW, 78 ř., 5 testů): default
+  z umístění souboru, references uvnitř repa, env override, schema + load_all
+  bez env. Cílené, bez side-effectů (`mock.patch.dict`, žádný zápis do env
+  na úrovni modulu).
+- `tests/test_ci_portability.py` (+82/−cca): 8 → **11 testů**
+  (1 repo-relative cesty + 5 loader + 1 fixture + 2 skip + 2 runner).
+  Změna = posílení, ne oslabení: odstraněn import-time `os.environ[...] = ...`,
+  slabý test `test_mustang_test_unifies_root_via_env` (kontroloval jen přítomnost
+  `AUTOENGINEERAI_ROOT` v mustang testu) nahrazen 3 tvrdšími
+  (žádný top-level `os.environ` zápis / fixture bez env / žádný hardcoded
+  default ve zdroji loaderu). Mutace prokázána:
+  (a) nový zdrojový test padne na starém loaderu
+  (`r"C:/.DATA/AutoEngineerAI"` matchuje `ABSOLUTE_PATH_RE` — ověřeno proti
+  `86b04f2:src/Reference/loader.py:24`);
+  (b) starý mustang test měl top-level `os.environ[...] = ROOT`
+  (`86b04f2:tests/test_m1_mustang_profile.py:26`), na HEAD žádný top-level
+  `os.environ` (grep prázdný) — maskování odstraněno.
+- `tests/test_m1_mustang_profile.py` (+7/−7 v rámci `ff4a9d6`): odstranění
+  import-time env sjednocení (korektní směr — viz výše).
+- `reports/STUDIO_RUNTIME.md` (NEW, 59 ř.): A-Chassis Tune read-only
+  (Edit režim): `FSusStiffness/RSusStiffness = 20000`,
+  `FSusDamping/RSusDamping = 500`, `Initialize` mapování na SpringConstraint
+  (L261–274 + L344–357), Rojo 7.7.1 sync OK; Play kroky PENDING s postupem.
+  Žádný runtime důkaz netvrzen — kázeň držena.
+
+## E3. PENDING≠PASS a CODE≠RUNTIME: čisté ✓
+
+- Runner: `tests/run_all.py:7–8,36,42` — „PENDING není PASS“, souhrn
+  `279/275/0/4`, `VÝSLEDEK: PASS (s 4 PENDING)`. PENDING totožné 4
+  (Studio odečet, schema Fáze 5, 2× regresní baseline) — vyjmenovány, žádná
+  není vydávána za důkaz.
+- `STUDIO_RUNTIME.md:3,45` — Play věci výslovně PENDING; §2 hodnoty Tune
+  označeny jako Studio-přečtené (ne parser-výstup), runtime efekt PENDING (§3).
+- `FINAL_DOCUMENTATION_SYNC.md:15,56,60–61,64` — PENDING≠PASS na stejném
+  řádku jako číslo; „IMPLEMENTED + CODE-VERIFIED, **není RUNTIME**“; M3 NOT
+  IMPLEMENTED; merge-message disciplína vyžadována.
+- `docs/PROJECT_STATUS.md:3–4,51,60–63,67` — M1/M2-C05 CODE-VERIFIED
+  (není RUNTIME), kalibrace NOT IMPLEMENTED, M3 NOT IMPLEMENTED.
+- Zbytkové riziko jediné: holá citace „275 PASS / zelená“ bez druhé věty —
+  kryto podmínkou E1.1 (merge message).
+
+## E4. RBXM hash před/po: shodný ✓ (1 model, 2 kopie — LIMIT přiznán)
+
+- `sha256sum`: `JeepTemplate.rbxm` i `chasis-work-copy.rbxm` =
+  `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`,
+  230 421 B — shoda s kanonickým hashem v commit message, SPIKE, BENCHMARK
+  i testu (`EXPECTED_SHA256`/`EXPECTED_SIZE` v `test_ci_portability.py:41–43`
+  — test zelený). Parser čte fixture (815 instancí přes `parse_rbxm`,
+  ověřeno vlastním během), žádný zápis.
+- LIMIT dál platí: 1 distinctní model ve 2 kopiích; generalizace za hranici
+  1 modelu není tvrzena.
+
+## E5. M3 nespustitelná: potvrzeno ✓
+
+- `git diff --stat main...ff4a9d6 -- src/Physics src/Sim src/Chassis
+  src/Optimizer` = prázdný. Jediná měněná `src/` = `Reference/loader.py`
+  + `Reference/validate.py` (M1.9, fáze B) + `Inspection/*` (C05).
+- `calibrate_studs_per_meter` dál NOT IMPLEMENTED stub; `STUDIO_RUNTIME`
+  runtime efekt PENDING; žádná runtime jízda, žádné simulační číslo jako důkaz.
+
+## E6. Testy: plný běh na HEAD zelený ✓
+
+- `python tests/run_all.py` @ `ff4a9d6` (čistý strom):
+  **behů=279 PASS=275 FAIL=0 ERROR=0 PENDING=4** — shoda s tvrzením commitu.
+  Delta 272→279 = nové loader-root testy (5) + netto portability (+2):
+  dokumentováno v E1.2 jako docs-staleness, ne kódová vada.
+- CI workflow (`.github/workflows`, `run: python tests/run_all.py`) =
+  kanonický runner; test `test_workflow_runs_run_all` zelený.
+- Portability sada: 11/11 PASS v rámci plného běhu; oslabení žádné (E2).
+
+## E7. Adversarial sondy: 11/11 PASS, 0 crashů (vlastní běhy 2026-11-19)
+
+(Pozn.: první průchod měl 2× FAIL vinou harnessu — špatná očekávaná cesta
+`parents[2]` u cizí kopie a špatný typ argumentu `_check_hierarchy`;
+po opravě harnessu obojí PASS — chyba byla v sondě, ne v kódu.)
+
+- P1 loader bez env na cizí cestě: kopie `loader.py` do `TMP/x/y/src/Reference`,
+  bez env → `project_root()` = `parents[2]` té kopie (nikoli repo),
+  `references_dir()` neexistuje (žádný hardcoded default) ✓; s env →
+  přesně override ✓.
+- P2 OSError kontrakt: neexistující soubor i adresář → `RbxmCorruptError`,
+  žádný leak `FileNotFoundError`/`IsADirectoryError`/`OSError` ✓
+  (kontrakt v `rbxm_parser.py:1039–1045`).
+- P3 prázdný vstup + useknutá hlavička → `RbxmCorruptError` ✓.
+- P4 fuzz 5×64 B (seed `20261119`) → vždy „špatné magic“, 0 crashů ✓.
+- P5 `MAX_FILE_BYTES+1` → odmítnuto před kopií ✓.
+- P6 parent cyklus A↔B (`{0:1, 1:0}`) → `RbxmHierarchyError` ✓;
+  missing parent → `detect_wheels` BLOCKED ✓.
+- P7 size `inf` → `detect_wheels` BLOCKED (`is_blocked`) ✓.
+- Reálná fixture: `parse_rbxm` → 815 instancí, bez výjimky ✓.
+
+## E8. Proč ne čisté MERGE / proč ne DO NOT MERGE
+
+- Proti čistému MERGE: 2 zastaralé docs-piny (272/268 číslo, `86b04f2`
+  v hlavičce STUDIO_RUNTIME) + citovatelnost holého „PASS“ — vše kosmetika,
+  nic neblokuje kód; kryto podmínkami E1.1–E1.3.
+- Proti DO NOT MERGE: není P0/P1 v kódu, plná sada zelená nezávisle,
+  11/11 sond bez crashů, loader-fix i OSError-kontrakt prokázány chováním
+  (ne jen čtením), portability testy posíleny (mutace chytají původní chybu),
+  PENDING/RUNTIME kázeň držena, M3 poctivě NOT IMPLEMENTED.
+  Není co vracet k přepracování kódu.
+
+## Dodatek 3 — duální pin (externí audit 2026-11-19, HEAD `f3223cd`)
+
+- Poslední commit se změnou kódu: `ff4a9d6` (loader, portability, Studio runtime).
+- Finální HEAD včetně dokumentační synchronizace: `f3223cd` (tento stav).
+- Aktuální ověřené počty: 279 běhů / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING.
+- Podmínky E1.1–E1.3 splněny v diffu; verdikt MERGE WITH CONDITIONS trvá.
+- Historické sekce výše (§1–§10, Dodatky 1–2) ponechány NEMAZÁNY.
