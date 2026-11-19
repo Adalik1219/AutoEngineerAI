@@ -105,3 +105,139 @@ literály, offset u16 LE, překrývající se match-copy). Ověřeno na datech k
 - [N] `PROP 928 vs 927` — přepočet v produkčním parseru.
 - [N] `Tune.StAxisOffset` a bug `Velocity.magnitude` (audit §17) — ověřit
   prvním spuštěním ve Studiu; mimo rozsah M2.
+
+---
+
+# C05-C — hardening parseru: referenty, limity, validace (M2, hotovo)
+
+**Datum:** 2026-11-19 · **Vstup (pouze čtení):** pracovní kopie
+`assets/chassis-original/chasis-work-copy.rbxm` + druhý soubor
+`testgame/src/ServerStorage/VehicleTemplates/JeepTemplate.rbxm`.
+**LIMIT (výslovně):** oba soubory mají stejný SHA-256
+`dc8747e0…fedf` (230 421 B) — v repu je **jeden distinctní model**,
+třetí různý RBXM neexistuje. Testuje se na těchto dvou + syntetických
+fixturech (vlastní builder v `tests/test_m2_rbxm_parser.py`).
+
+## A. Referenty: mapování skutečný referent→instance
+
+- Instance se indexují **skutečným referentem** (`id` = referent, výstup
+  řazený), žádný předpoklad souvislosti `0..n`: PRNT kids se validují
+  jako **množina** proti množině referentů INST (pořadí i rozsah libovolné).
+- Duplicitní kid v PRNT = `RbxmCorruptError`; parent mimo referenty
+  (i kdyby byl číselně „v rozsahu") = `RbxmHierarchyError` (BLOCKED).
+- Duplicitní referent napříč INST = corrupt (beze změny); nově i
+  duplicitní INST `type_id` = corrupt.
+- Test `test_noncontiguous_referents`: syntetické referenty `[5, 7, 9]`,
+  PRNT `[(5,None),(7,5),(9,7)]` projde se správnou mapou parentů.
+
+## B. Limity (kontrola před alokací, bezpečné odmítnutí)
+
+| Limit | Hodnota | Kde se hlídá |
+|---|---|---|
+| `MAX_FILE_BYTES` | 8 MiB | `parse_rbxm` (getsize) + `parse_bytes` před parsováním |
+| `MAX_TOTAL_UNCOMPRESSED` | 256 MiB | `_read_chunks` průběžně před každou dekompresí/alokací |
+| `MAX_UNCOMPRESSED_BYTES` (1 chunk) | 256 MiB | hlavička chunku (beze změny) |
+| `MAX_CHUNKS` | 100 000 | před appendem (beze změny, zpřísněno) |
+| `MAX_INSTANCES` | 10 000 000 | hlavička + INST county (beze změny) |
+| `MAX_META_ENTRIES` | 100 000 | `_parse_meta` |
+
+Reálná kopie (230 kB, ~1 MB dekomprimovaně) je hluboko pod stropy.
+Test `test_limits_refused_before_alloc`: 8 MiB+ blob a chunk
+s `uncomp_len` 300 MiB se odmítnou bez alokace.
+
+## C. Validace Name↔INST, META/SSTR/INST/PRNT/END, corrupt vs unsupported
+
+- **Name↔INST:** PROP pro neznámý `type_id` = corrupt; počet jmen musí
+  sedět s počtem instancí typu; **chybějící celé Name PROP → `name: None`,
+  `name_status: "missing"`** (evidováno `missing_name_count`/`unnamed_ids`);
+  chybějící jméno **nikdy** neznamená rozpoznaný objekt (assess → BLOCKED).
+- **META:** duplicitní klíč = corrupt (místo tichého přepsání).
+- **INST:** `is_service` musí být 0/1 (reálná kopie: všude 0), jinak corrupt.
+- **PRNT:** právě jeden chunk; `version != 0` = **unsupported** (dřív corrupt);
+  `prnt_count != num_instances`, špatná délka dat = corrupt.
+- **END:** špatné tělo / data za END = corrupt (beze změny).
+- **Nepodporované PROP** (všechny typy mimo Name/shape/size/CFrame/CFrame0/
+  PivotOffset): přeskočeny, ale **evidovány se `status: "unread"`**
+  ve `skipped_props` — není to tichý průchod (reálná kopie: stovky takových,
+  např. `BoolValue`, `Color3`, `UDim2`; `Name` s jiným typem = corrupt,
+  protože by zamlčel identitu).
+- **Rozlišení poškozený vs nepodporovaný:** nová `RbxmUnsupportedError`
+  (podtřída `RbxmError`) pro dobře formovaný, ale nepodporovaný obsah:
+  jiná verze souboru, neprázdná SSTR tabulka, PRNT verze ≠ 0.
+  Vše strukturální = `RbxmCorruptError`; hierarchie = `RbxmHierarchyError`.
+- **Fuzz** (`test_fuzz_never_unsafe`, seed `20261119`): **200 mutací**
+  (1–3 náhodné byty) + **5 trunkací** (1, 32, 1000, polovina, len−10).
+  Výsledek: jen `RbxmError`, nebo strukturálně platný model (stejné počty,
+  parenty v množině id, tvary ze známé množiny). Mutace v řetězcích
+  zůstává detekovatelná jen hashem (formát nemá checksum) — viz test 12.
+
+# C05-D — geometrie: dekódování shape/size/CFrame + provenience (M2, hotovo)
+
+## Lane-kódování (vlastní reverzní inženýrství, ověřeno křížově níže)
+
+- **Enum/int PROP** (`shape` 0x12): 4 lane, **LSB lane první**, bez zigzagu
+  a delt. Důkaz: Part `shape` → `{0: 4, 1: 104, 2: 1}` = 4× Ball (kola),
+  104× Block, 1× Cylinder — kola = Ball dle auditu §10.
+- **Floaty** (`size` 0x0E, pozice CFrame): **component-major** (X/Y/Z pole
+  za sebou, každé 4 lane), **MSB lane první**, u32 transformováno
+  **ror1** (`bits = (w >> 1) | ((w & 1) << 31)`). Důkaz: 327/327 kladných,
+  kola `(2.7, 2.7, 2.7)`, 4 středy symetrické (níže); `VehicleSeat.size`
+  (N=1) = `(2, 1, 2)` = defaultní seat.
+- **CFrame** (0x10): nejprve **orientační bloky** instancí
+  (`u8 id` + pro `id 0` matice 9× f32 **plain LE**, bez lane/rotace),
+  pak **pozice jako float lane** výše. Důkaz: Part 5341 = 109×(1+36) +
+  12×109; matice 109/109 ortonormální, det +1.
+- Orientační id: `0` = vlastní matice; `2` = identita bez dat (všechny
+  PivotOffset = samé `2`, pozice přesně `(0,0,0)`); **jiné id = neověřená
+  preseta → orientace `unread`** (Attachment: 56× id `32`, poctivě
+  neinterpretováno — tabulka preset bez ground-truth).
+
+## Provenience u každé vlastnosti (D)
+
+Každá instance nese `props[vlastnost] = {status, trusted, how, …}`:
+`status` = `read`/`missing`/`unread`; `trusted=True` jen u tvaru (enum,
+křížově ověřen); floaty vždy `trusted=False` (bez Studio ground-truth).
+Geometrie se **nikdy neodvozuje z názvů** — jen z PROP (test E3: samotné
+jméno FL bez PROP → `bad_shape`/`missing_*` + BLOCKED).
+`model["geometry"] = PARTIAL` + `calibration: NOT_IMPLEMENTED`.
+
+## Výsledky kol na reálné kopii (E)
+
+| Kolo | id | tvar | size (studs) | střed (studs) |
+|---|---|---|---|---|
+| FL | 3 | Ball | (2.7, 2.7, 2.7) | (−45.19, 23.62, −203.25) |
+| FR | 52 | Ball | (2.7, 2.7, 2.7) | (−51.18, 23.62, −203.25) |
+| RL | 101 | Ball | (2.7, 2.7, 2.7) | (−45.19, 23.62, −213.77) |
+| RR | 150 | Ball | (2.7, 2.7, 2.7) | (−51.18, 23.62, −213.77) |
+
+Rozchod ≈ 5.99, rozvor ≈ 10.52, stejné Y; matice všech Partů ortonormální
+(109/109, det +1); Union/WeldC/Seat CFrame též 100 % (40/40, 108/108, 1/1).
+
+## (E) Geometrické posouzení: `assess_wheel_geometry` (nové, v parseru)
+
+`wheel_detect.py` se **neměnil**. Nová vrstva zrcadlí pravidlo (a)+(b)+(c)
+a přidává: sféricitu (≤ 1 %), shodu rozměrů (≤ 1 %), obdélník středů
+(2 shluky X × 2 shluky Z, tolerance 0.06; stejné Y ± 0.05) a evidenci
+floatů. Na reálné kopii: 4× `GEOMETRY_OK` se středy/rozměry, ale
+**BLOCKED** — (1) 44 dílů podvozku (ramena, huby, pružiny) parentovaných
+ve stromě `Wheels` = identitně UNKNOWN (pravidlo M2.2, geometrií vyloučeny
+jako Block, ale BLOCKED trvá — žádné tiché překlasifikování); (2) níže (F).
+Syntetika: konzistentní 4 kola → jediný důvod BLOCKED je kalibrace;
+ne-obdélník → `rectangular` důvod; chybějící PROP → `bad_shape`/
+`missing_size`/`missing_position`.
+
+## (F) Kalibrace studs/m: PŘIPRAVENA, ale NOT IMPLEMENTED
+
+`calibrate_studs_per_meter()` existuje jako rozhraní + provenience, ale
+**vždy vrací `NOT_IMPLEMENTED`** (i s argumenty — ty eviduje jako
+`inputs_ignored`). Důvod: bez Studio ground-truth (kalibrační díl známé
+velikosti odečtený ve Studiu) nelze ověřit dekódování floatů ani měřítko;
+strukturální důkazy (ortonormalita, symetrie, defaultní seat) nejsou
+prohlášení za ověřené. Ověření = úkol M3. Hodnota `studs_per_meter`
+nikde v M2 nevystupuje jako číslo.
+
+## Hash po práci (G-01)
+
+`sha256sum` obou pracovních kopií po všech sondách a testech:
+`dc8747e0…fedf` — shodné se stavem před prací; čtení proběhlo vždy
+`open(rb).read()`, žádný soubor nebyl otevřen k zápisu.

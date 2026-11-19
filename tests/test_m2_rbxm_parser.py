@@ -1,16 +1,23 @@
-"""Testy produkcniho RBXM parseru (M2, milnik C05-A/B): header, chunky,
-LZ4, INST, PRNT + bezpecnostni pripady. Pouze stdlib (unittest).
+"""Testy produkcniho RBXM parseru (M2, milnik C05-A/B/C/D): header, chunky,
+LZ4, INST, PRNT, geometrie (shape/size/CFrame) + hardening.
 
-Vstup: skutecna pracovni kopie
-  assets/chassis-original/chasis-work-copy.rbxm (POUZE CTENI, nikdy zapis;
-  test_hash_before_after overuje SHA-256 pred/po + shodu s dokumentovanou
-  hodnotou). Synteticke poskozene varianty se stavi v pameti (builder nize,
-  raw chunky bez komprese + rucne skladane LZ4 bloky), zadny zapis na disk.
+Vstup: skutecne pracovni kopie
+  assets/chassis-original/chasis-work-copy.rbxm a
+  testgame/src/ServerStorage/VehicleTemplates/JeepTemplate.rbxm
+(POUZE CTENI, nikdy zapis; test_hash_before_after overuje SHA-256
+pred/po + shodu s dokumentovanou hodnotou). Oba soubory maji stejny
+hash dc8747e0 (230421 B) — v repu je jediny distinctni model; jako
+LIMIT je to vyslovne zaznamenano a druhy soubor se testuje zvlast.
+Synteticke poskozene varianty se stavi v pameti (builder nize,
+raw chunky bez komprese + rucne skladane LZ4 bloky), zadny zapis na disk.
 
 Ocekavany integracni vysledek (poctivy castecny): hierarchie se dekoduje
-uplne (815 instanci, 37 typu, koren, Model:Wheels + FL/FR/RL/RR), ale
-geometrie je BLOCKED (shape=None, PROP hodnoty se v C05 neinterpretuji) —
-wheel_detect proto hlasi UNKNOWN/bad_shape a BLOCKED, nikdy falesna kola.
+uplne (815 instanci, 37 typu, koren, Model:Wheels + FL/FR/RL/RR), tvary
+Ball/Block/Cylinder se ctou (kola = Ball), size/CFrame strukturalne
+(2.7 kostky, symetricky obdelnik stredu); wheel_detect hlasi 4x WHEEL,
+ale BLOCKED (44 dilu podvozku ve strome Wheels); geometricke posouzeni
+vraci stredy/rozmery, ale BLOCKED (neunavena kalibrace NOT IMPLEMENTED).
+Zadne falesne geometrie z nazvu, nikdy.
 """
 import hashlib
 import os
@@ -25,9 +32,13 @@ if ROOT not in sys.path:
 
 from src.Inspection.rbxm_parser import (
     NULL_PARENT,
+    PART_TYPE_NAMES,
     RbxmCorruptError,
     RbxmError,
     RbxmHierarchyError,
+    RbxmUnsupportedError,
+    assess_wheel_geometry,
+    calibrate_studs_per_meter,
     lz4_decompress,
     parse_bytes,
     parse_rbxm,
@@ -36,9 +47,18 @@ from src.Inspection.wheel_detect import detect_wheels, is_blocked
 
 WORK_COPY = os.path.join(ROOT, "assets", "chassis-original",
                          "chasis-work-copy.rbxm")
-# Dokumentovany hash pracovni kopie (reports/RBXM-SPIKE.md §2, audit §1).
+JEEP_COPY = os.path.join(ROOT, "testgame", "src", "ServerStorage",
+                         "VehicleTemplates", "JeepTemplate.rbxm")
+# Dokumentovany hash obou praconich kopii (reports/RBXM-SPIKE.md §2).
+# LIMIT: oba soubory maji stejny hash = jediny distinctni model v repu;
+# treti ruzny RBXM neexistuje (overeno hashem).
 EXPECTED_SHA256 = ("dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd"
                    "7c070c2c1fefdf")
+
+# Fuzz: reprodukovatelny, pevny seed, hlaseny pocet pripadu.
+FUZZ_SEED = 20261119
+FUZZ_MUT_TRIALS = 200
+FUZZ_TRUNC_CASES = (1, 32, 1000)
 
 MAGIC = b"<roblox!"
 SIGNATURE = bytes((0x89, 0xFF, 0x0D, 0x0A, 0x1A, 0x0A))
@@ -126,17 +146,88 @@ def _header(num_types, num_instances):
             + _u32(num_instances) + b"\x00" * 8)
 
 
-def build_model(inst_specs, links, extra_chunks=(), compress_names=False):
+def _rol32(value, bits):
+    """Rotace u32 vlevo (inverze k _ror1 v parseru; jen pro fixture)."""
+    value &= 0xFFFFFFFF
+    return ((value << bits) | (value >> (32 - bits))) & 0xFFFFFFFF
+
+
+def _encode_enum(values):
+    """Zakoduje enum/int PROP: 4 lane, LSB lane prvni (viz parser)."""
+    count = len(values)
+    lanes = [bytearray(count) for _ in range(4)]
+    for i, value in enumerate(values):
+        lanes[0][i] = value & 0xFF
+        lanes[1][i] = (value >> 8) & 0xFF
+        lanes[2][i] = (value >> 16) & 0xFF
+        lanes[3][i] = (value >> 24) & 0xFF
+    return b"".join(bytes(lane) for lane in lanes)
+
+
+def _encode_floats_comps(comps):
+    """Zakoduje 3 float slozky: component-major, MSB lane prvni, rol1."""
+    count = len(comps[0])
+    out = bytearray()
+    for comp in comps:
+        words = []
+        for value in comp:
+            bits = struct.unpack("<I", struct.pack("<f", value))[0]
+            words.append(_rol32(bits, 1))
+        for lane in range(4):
+            shift = 24 - 8 * lane
+            out += bytes((word >> shift) & 0xFF for word in words)
+    return bytes(out)
+
+
+def _geom_prop(type_id, prop_name, value_type, payload):
+    """Telo PROP chunku pro geometrickou vlastnost (synteticke fixture)."""
+    return (_u32(type_id & 0xFFFFFFFF) + _string(prop_name)
+            + bytes((value_type,)) + payload)
+
+
+def _shape_prop(type_id, values):
+    return _geom_prop(type_id, "shape", 0x12, _encode_enum(values))
+
+
+def _size_prop(type_id, triples):
+    comps = [[t[d] for t in triples] for d in range(3)]
+    return _geom_prop(type_id, "size", 0x0E, _encode_floats_comps(comps))
+
+
+def _cframe_prop(type_id, prop_name, positions, orient_ids, matrices):
+    """CFrame PROP: orientacni bloky + pozicni lane (viz parser).
+
+    orient_ids: list u8 (0 = vlastni matice, 2 = identita, jine = preseta);
+    matrices: list 9-tic (jen pro id 0, jinak None).
+    """
+    blocks = bytearray()
+    for oid, mat in zip(orient_ids, matrices):
+        blocks.append(oid)
+        if oid == 0:
+            blocks += struct.pack("<9f", *mat)
+    comps = [[p[d] for p in positions] for d in range(3)]
+    return _geom_prop(type_id, prop_name, 0x10,
+                       bytes(blocks) + _encode_floats_comps(comps))
+
+
+def build_model(inst_specs, links, extra_chunks=(), compress_names=False,
+                ref_lists=None):
     """Minimalni platny RBXM v pameti.
 
     inst_specs: [(type_id, class_name, [jmena...])] v poradi referentu;
     links: [(child, parent)] (parent None = koren).
+    ref_lists: volitelne explicitni referenty [[r...], ...] pro kazdy typ
+      (nesouvisle referenty pro test A); jinak souvisle od 0.
     """
     referents = []
     cursor = 0
     chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr())]
-    for type_id, class_name, names in inst_specs:
-        refs = list(range(cursor, cursor + len(names)))
+    for idx, (type_id, class_name, names) in enumerate(inst_specs):
+        if ref_lists is not None:
+            refs = list(ref_lists[idx])
+            assert len(refs) == len(names), "ref_lists/names mismatch"
+        else:
+            refs = list(range(cursor, cursor + len(names)))
         referents.extend(refs)
         cursor += len(names)
         chunks.append(_chunk("INST", _inst(type_id, class_name, refs)))
@@ -190,21 +281,34 @@ class TestRbxmParser(unittest.TestCase):
         wheels = [i for i in model["instances"]
                   if i["class_name"] == "Model" and i["name"] == "Wheels"]
         self.assertEqual(len(wheels), 1)
-        # Vsechny instance maji jmeno; zadna geometrie (C05-C/D).
+        # Vsechny instance maji jmeno; geometrie PARTIAL s provenienci.
         self.assertEqual(model["missing_name_count"], 0)
-        for inst in model["instances"]:
-            self.assertIsNone(inst["shape"])
-        self.assertEqual(model["geometry"]["status"], "BLOCKED")
+        self.assertEqual(model["unnamed_ids"], [])
+        self.assertEqual(model["geometry"]["status"], "PARTIAL")
+        self.assertEqual(model["geometry"]["calibration"]["status"],
+                         "NOT_IMPLEMENTED")
+        for name in ("shape", "size", "CFrame"):
+            # Model:Wheels nema vlastni geometrii — zadny zaznam, ne odhad.
+            self.assertNotIn(name, by_id[2]["props"])
+        self.assertEqual(by_id[3]["props"]["shape"],
+                         {"status": "read", "trusted": True,
+                          "how": ("PROP shape enum u32 lane LSB-prvni; "
+                                  "mapovano PartType Ball/Block/Cylinder"),
+                          "value": "Ball"})
 
     def test_corrupt_header(self):
-        """2. Poskozena hlavicka (magic / signatura / verze) = odmitnout."""
+        """2. Poskozena hlavicka (magic / signatura) = odmitnout;
+        jina verze = nepodporovano (rozliseni poskozeny/nepodporovany)."""
         good = mini_tree()
-        for pos, bad in ((0, b"X"), (8, b"\x00"), (14, b"\x01")):
+        for pos, bad in ((0, b"X"), (8, b"\x00")):
             broken = good[:pos] + bad + good[pos + 1:]
             with self.assertRaises(RbxmCorruptError):
                 parse_bytes(broken)
         with self.assertRaises(RbxmCorruptError):
             parse_bytes(mini_tree()[:16])  # useknuta hlavicka
+        broken = good[:14] + b"\x01" + good[15:]
+        with self.assertRaises(RbxmUnsupportedError):
+            parse_bytes(broken)
 
     def test_bad_chunk_length(self):
         """3. Spatna delka chunku (useknuti / prestreleny ramec) = odmitnout."""
@@ -256,14 +360,17 @@ class TestRbxmParser(unittest.TestCase):
         self.assertEqual(len(model["instances"]), 1)
         self.assertIn("XXXX", model["skipped_chunks"])
         # Neznamy typ hodnoty u bezne PROP (vtype 0xFF) = preskocit, ne
-        # interpretovat; geometrie zustava BLOCKED.
+        # interpretovat; geometrie zustava PARTIAL, zaznam ma status unread.
         weird = (_u32(0) + _string("Shape") + b"\xFF" + b"\x00" * 8)
         model2 = parse_bytes(build_model(
             [(0, "Model", ["Root"])], [(0, None)],
             extra_chunks=[("PROP", weird)]))
-        self.assertEqual(model2["geometry"]["status"], "BLOCKED")
-        self.assertTrue(any(p["prop_name"] == "Shape"
-                            for p in model2["skipped_props"]))
+        self.assertEqual(model2["geometry"]["status"], "PARTIAL")
+        shape_skipped = [p for p in model2["skipped_props"]
+                         if p["prop_name"] == "Shape"]
+        self.assertTrue(shape_skipped)
+        for entry in shape_skipped:
+            self.assertEqual(entry["status"], "unread")
         # Name s ne-retezcovym typem by zamlcela identitu = odmitnout.
         bad_name = _u32(0) + _string("Name") + b"\x02" + b"\x00" * 4
         with self.assertRaises(RbxmCorruptError):
@@ -307,8 +414,10 @@ class TestRbxmParser(unittest.TestCase):
                             for r in result["blocked_reasons"]))
 
     def test_four_wheels_honest_partial(self):
-        """10. Realna kopie: hierarchie kompletni, geometrie BLOCKED —
-        zadna falesna kola (vse UNKNOWN/bad_shape), oznaceni pritomna."""
+        """10. Realna kopie: hierarchie kompletni, tvary Ball (kola),
+        size/CFrame strukturalne; wheel_detect 4x WHEEL, ale BLOCKED
+        (44 dilu podvozku ve strome Wheels); geometrie se nikdy
+        neodvozuje z nazvu (jen z PROP)."""
         model = parse_rbxm(WORK_COPY)
         by_id = {i["id"]: i for i in model["instances"]}
         self.assertEqual(by_id[2]["name"], "Wheels")
@@ -317,14 +426,37 @@ class TestRbxmParser(unittest.TestCase):
         self.assertEqual(found, ["FL", "FR", "RL", "RR"])
         for iid in (3, 52, 101, 150):
             self.assertEqual(by_id[iid]["class_name"], "Part")
-            self.assertIsNone(by_id[iid]["shape"])
+            self.assertEqual(by_id[iid]["shape"], "Ball")
+            size = by_id[iid]["size"]
+            self.assertTrue(all(abs(v - 2.7) < 1e-4 for v in size))
+            self.assertEqual(by_id[iid]["props"]["size"]["status"], "read")
+            self.assertFalse(by_id[iid]["props"]["size"]["trusted"])
+            self.assertEqual(by_id[iid]["props"]["CFrame"]["status"],
+                             "read")
+        # Stredy kol: symetricky obdelnik (rozvor x rozchod), stejne Y.
+        pos = {iid: by_id[iid]["position"] for iid in (3, 52, 101, 150)}
+        xs = sorted(p[0] for p in pos.values())
+        zs = sorted(p[2] for p in pos.values())
+        self.assertEqual(len(set(round(v, 2) for v in xs)), 2)
+        self.assertEqual(len(set(round(v, 2) for v in zs)), 2)
+        self.assertTrue(max(p[1] for p in pos.values())
+                        - min(p[1] for p in pos.values()) < 0.05)
         result = detect_wheels(model["instances"])
         self.assertTrue(is_blocked(result))
-        self.assertFalse(any(w.get("status") == "WHEEL"
-                             for w in result["wheels"].values()))
-        recs = {r["instance_id"]: r for r in result["unidentified"]}
-        for iid in (3, 52, 101, 150):
-            self.assertIn("bad_shape", recs[iid]["failed_checks"])
+        self.assertTrue(all(w["status"] == "WHEEL"
+                            for w in result["wheels"].values()))
+        self.assertTrue(any("UNKNOWN candidate(s) inside Model:Wheels" in r
+                            for r in result["blocked_reasons"]))
+        # Geometricke posouzeni: 4x GEOMETRY_OK se stredy/rozmery, ale
+        # BLOCKED (neoverena kalibrace + UNKNOWN dilci ve strome Wheels).
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        for des in ("FL", "FR", "RL", "RR"):
+            self.assertEqual(geo["wheels"][des]["status"], "GEOMETRY_OK")
+        self.assertEqual(geo["calibration"]["status"], "NOT_IMPLEMENTED")
+        self.assertTrue(
+            any("float_decode_unverified" in r
+                for r in geo["blocked_reasons"]))
 
     def test_unknown_designation(self):
         """11. Nezname oznaceni kola = UNKNOWN se zaznamem + BLOCKED."""
@@ -347,17 +479,38 @@ class TestRbxmParser(unittest.TestCase):
         self.assertEqual(before, after)
         self.assertEqual(after, EXPECTED_SHA256)
 
+    def test_second_file_same_model(self):
+        """12b. Druhy soubor (JeepTemplate.rbxm): stejny hash = LIMIT
+        (jediny distinctni model v repu), parsuje se identicky, cteni
+        nemeni hash."""
+        self.assertTrue(os.path.exists(JEEP_COPY))
+        before = sha256_of(JEEP_COPY)
+        self.assertEqual(before, EXPECTED_SHA256)  # LIMIT: stejny model
+        model = parse_rbxm(JEEP_COPY)
+        after = sha256_of(JEEP_COPY)
+        self.assertEqual(before, after)
+        self.assertEqual(model["num_types"], 37)
+        self.assertEqual(model["num_instances"], 815)
+        self.assertEqual(len(model["instances"]), 815)
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(by_id[2]["name"], "Wheels")
+        for iid in (3, 52, 101, 150):
+            self.assertEqual(by_id[iid]["shape"], "Ball")
+
     def test_fuzz_never_unsafe(self):
-        """13. Fuzz (Agent D): nahodne mutace/trunkace realne kopie nikdy
+        """13. Fuzz: nahodne mutace/trunkace realne kopie nikdy
         nezpusobi neocekavanou vyjimku ani tichy pruchod se spatnou
-        strukturou — jen RbxmError, nebo platny model se stejnymi pocty
-        a platnymi parenty. Mutace uvnitr retezcovych dat (\"Mesh\"->\"Me8h\")
-        zustava detekovatelna jen hashem (test 12), format nema checksum."""
+        strukturou — jen RbxmError, nebo platny model se stejnymi pocty,
+        platnymi parenty a tvary ze zname mnoziny. Reprodukovatelne:
+        seed FUZZ_SEED, FUZZ_MUT_TRIALS mutaci + trunkace.
+        Mutace uvnitr retezcovych dat ("Mesh"->"Me8h") zustava
+        detekovatelna jen hashem (test 12), format nema checksum."""
         import random
         with open(WORK_COPY, "rb") as handle:
             raw = handle.read()
-        rng = random.Random(20261119)
-        for trial in range(120):
+        rng = random.Random(FUZZ_SEED)
+        accepted = 0
+        for trial in range(FUZZ_MUT_TRIALS):
             blob = bytearray(raw)
             for _ in range(rng.randint(1, 3)):
                 blob[rng.randrange(len(blob))] = rng.randrange(256)
@@ -365,6 +518,7 @@ class TestRbxmParser(unittest.TestCase):
                 model = parse_bytes(bytes(blob))
             except RbxmError:
                 continue
+            accepted += 1
             self.assertEqual(model["num_instances"], 815,
                              "fuzz trial %d" % trial)
             self.assertEqual(len(model["instances"]), 815)
@@ -373,10 +527,337 @@ class TestRbxmParser(unittest.TestCase):
                 parent = inst["parent_id"]
                 if parent is not None:
                     self.assertIn(parent, by_id, "fuzz trial %d" % trial)
-                self.assertIsNone(inst["shape"], "fuzz trial %d" % trial)
-        for cut in (1, 32, 1000, len(raw) // 2, len(raw) - 10):
+                self.assertTrue(
+                    inst["shape"] is None
+                    or inst["shape"] in PART_TYPE_NAMES.values(),
+                    "fuzz trial %d" % trial)
+        for cut in FUZZ_TRUNC_CASES + (len(raw) // 2, len(raw) - 10):
             with self.assertRaises(RbxmError):
                 parse_bytes(raw[:cut])
+
+    def test_noncontiguous_referents(self):
+        """A1. Nesouvisle referenty: mapovani skutecny referent->instance,
+        PRNT jen na existujici, zadny predpoklad souvislosti."""
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL"])],
+            [(5, None), (7, 5), (9, 7)],
+            ref_lists=[[5, 7], [9]]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertEqual(sorted(by_id), [5, 7, 9])
+        self.assertIsNone(by_id[5]["parent_id"])
+        self.assertEqual(by_id[7]["parent_id"], 5)
+        self.assertEqual(by_id[9]["parent_id"], 7)
+        self.assertEqual(by_id[7]["name"], "Wheels")
+
+    def test_prnt_subset_rejected(self):
+        """A2. PRNT dite mimo referenty INST (i kdyz v rozsahu) = chyba;
+        duplicitni dite v PRNT = poskozeny soubor."""
+        # Dite 99 neni v INST (referenty jen 0, 1) — mnozina deti
+        # neodpovida mnozine referentu: odmitnout.
+        data = build_model([(0, "Model", ["Root", "Orphan"])],
+                           [(0, None), (99, 0)])
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(data)
+        # Duplicitni dite: kids [0, 0] — mnozina nesedi.
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                  _chunk("INST", _inst(0, "Model", [0, 1])),
+                  _chunk("PROP", _name_prop(0, ["A", "B"])),
+                  _chunk("PRNT", _prnt([0, 0], [None, 0])),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(_header(1, 2) + b"".join(chunks))
+
+    def test_limits_refused_before_alloc(self):
+        """B. Limity: soubor nad MAX_FILE_BYTES a chunk nad
+        MAX_TOTAL_UNCOMPRESSED se odmitnou pred alokaci."""
+        tiny = mini_tree()
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(tiny + b"\x00" * (8 * 1024 * 1024))
+        # Obri uncomp_len v hlavicce chunku: odmitnuti bez dekomprese.
+        broken = bytearray(mini_tree())
+        struct.pack_into("<I", broken, 32 + 8, 300 * 1024 * 1024)
+        with self.assertRaises(RbxmError):
+            parse_bytes(bytes(broken))
+
+    def test_meta_duplicate_key(self):
+        """C1. Duplicitni META klic = poskozeny soubor."""
+        body = (_u32(2) + _string("A") + _string("1")
+                + _string("A") + _string("2"))
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(build_model(
+                [(0, "Model", ["Root"])], [(0, None)],
+                extra_chunks=[("META", body)]))
+
+    def test_sstr_shared_unsupported(self):
+        """C2. Neprazdna SSTR tabulka = nepodporovano (ne poskozeno)."""
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _u32(1)),
+                  _chunk("INST", _inst(0, "Model", [0])),
+                  _chunk("PROP", _name_prop(0, ["Root"])),
+                  _chunk("PRNT", _prnt([0], [None])),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        with self.assertRaises(RbxmUnsupportedError):
+            parse_bytes(_header(1, 1) + b"".join(chunks))
+
+    def test_inst_validation(self):
+        """C3. Duplicitni INST typ, is_service mimo 0/1, PROP pro neznamy
+        typ a duplicitni geometricky PROP = poskozeny soubor."""
+        good = build_model([(0, "Model", ["Root"])], [(0, None)])
+        # Duplicitni INST typ: pridat druhy INST se stejnym type_id.
+        dup = (_u32(0) + _string("Model") + b"\x00" + _u32(1)
+               + _encode_referents([5]))
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                  _chunk("INST", _inst(0, "Model", [0])),
+                  _chunk("INST", dup),
+                  _chunk("PROP", _name_prop(0, ["Root"])),
+                  _chunk("PRNT", _prnt([0], [None])),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(_header(2, 2) + b"".join(chunks))
+        # is_service = 2.
+        bad_svc = (_u32(0) + _string("Model") + b"\x02" + _u32(1)
+                   + _encode_referents([0]))
+        chunks2 = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                   _chunk("INST", bad_svc),
+                   _chunk("PROP", _name_prop(0, ["Root"])),
+                   _chunk("PRNT", _prnt([0], [None])),
+                   b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                   + b"</roblox>"]
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(_header(1, 1) + b"".join(chunks2))
+        # PROP pro neznamy typ.
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(build_model(
+                [(0, "Model", ["Root"])], [(0, None)],
+                extra_chunks=[("PROP", _name_prop(7, ["X"]))]))
+        # Duplicitni geometricky PROP.
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(build_model(
+                [(0, "Model", ["Root"])], [(0, None)],
+                extra_chunks=[("PROP", _shape_prop(0, [1])),
+                              ("PROP", _shape_prop(0, [1]))]))
+        self.assertTrue(good)  # zakladni builder porad plati
+
+    def test_prnt_version_unsupported(self):
+        """C4. PRNT verze != 0 = nepodporovano (ne poskozeno)."""
+        body = b"\x01" + _prnt([0], [None])[1:]
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                  _chunk("INST", _inst(0, "Model", [0])),
+                  _chunk("PROP", _name_prop(0, ["Root"])),
+                  _chunk("PRNT", body),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        with self.assertRaises(RbxmUnsupportedError):
+            parse_bytes(_header(1, 1) + b"".join(chunks))
+
+    def test_missing_name_is_not_recognized(self):
+        """C5. Chybejici Name PROP: name None + name_status missing;
+        takova instance neni rozpoznany objekt (assess -> BLOCKED)."""
+        chunks = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                  _chunk("INST", _inst(0, "Model", [0, 1])),
+                  _chunk("PROP", _name_prop(0, ["Wheels"])),
+                  _chunk("PRNT", _prnt([0, 1], [None, 0])),
+                  b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                  + b"</roblox>"]
+        # Name PROP ma jen 1 jmeno pro 2 instance -> Corrupt (pocet musi
+        # sedet); chybejici cela Name PROP -> name None.
+        with self.assertRaises(RbxmCorruptError):
+            parse_bytes(_header(1, 2) + b"".join(chunks))
+        chunks2 = [_chunk("META", _meta()), _chunk("SSTR", _sstr()),
+                   _chunk("INST", _inst(0, "Model", [0])),
+                   _chunk("PRNT", _prnt([0], [None])),
+                   b"END\x00" + _u32(0) + _u32(9) + b"\x00" * 4
+                   + b"</roblox>"]
+        model = parse_bytes(_header(1, 1) + b"".join(chunks2))
+        self.assertIsNone(model["instances"][0]["name"])
+        self.assertEqual(model["instances"][0]["name_status"], "missing")
+        self.assertEqual(model["missing_name_count"], 1)
+        self.assertEqual(model["unnamed_ids"], [0])
+
+    def test_geometry_roundtrip_synthetic(self):
+        """D. Synteticky shape/size/CFrame: kodovani tam a zpet presne;
+        provenience u kazde vlastnosti."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0])),
+                ("PROP", _size_prop(1, [(2.7, 2.7, 2.7),
+                                        (2.7, 2.7, 2.7)])),
+                ("PROP", _cframe_prop(1, "CFrame", [(1.0, 2.0, 3.0),
+                                                    (4.0, 5.0, 6.0)],
+                                       [0, 0], [ident, ident])),
+            ]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        for iid in (2, 3):
+            inst = by_id[iid]
+            self.assertEqual(inst["shape"], "Ball")
+            self.assertTrue(all(abs(v - 2.7) < 1e-6 for v in inst["size"]))
+            self.assertEqual(inst["props"]["shape"]["status"], "read")
+            self.assertTrue(inst["props"]["shape"]["trusted"])
+            self.assertFalse(inst["props"]["size"]["trusted"])
+            self.assertEqual(inst["props"]["CFrame"]["status"], "read")
+            self.assertEqual(inst["props"]["CFrame"]["rotation_status"],
+                             "matrix")
+        self.assertEqual(by_id[2]["position"], (1.0, 2.0, 3.0))
+        self.assertEqual(by_id[2]["rotation"], ident)
+
+    def test_cframe_unknown_preset_unread(self):
+        """D2. CFrame s neoverenou presetou: pozice prectena, orientace
+        unread (provenience), soubor neni odmitnut."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Part", ["P"])], [(0, None)],
+            extra_chunks=[
+                ("PROP", _cframe_prop(0, "CFrame", [(1.0, 2.0, 3.0)],
+                                       [7], [None])),
+            ]))
+        inst = model["instances"][0]
+        self.assertEqual(inst["position"], (1.0, 2.0, 3.0))
+        self.assertIsNone(inst["rotation"])
+        self.assertEqual(inst["props"]["CFrame"]["rotation_status"],
+                         "unread-preset-7")
+        self.assertTrue(ident)  # fixture pomocna, matice se nepouzila
+
+    def test_assess_consistent_geometry_blocked_only_by_calibration(self):
+        """E1. Synteticka konzistentni 4 kola: GEOMETRY_OK + jediny duvod
+        BLOCKED je neoverena kalibrace."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                                       [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        geo = assess_wheel_geometry(model["instances"])
+        for des in ("FL", "FR", "RL", "RR"):
+            self.assertEqual(geo["wheels"][des]["status"], "GEOMETRY_OK")
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertEqual(len(geo["blocked_reasons"]), 1)
+        self.assertIn("float_decode_unverified", geo["blocked_reasons"][0])
+        self.assertEqual(geo["calibration"]["status"], "NOT_IMPLEMENTED")
+
+    def test_assess_asymmetric_layout_blocked(self):
+        """E2. Asymetricke rozmisteni stredu (ne-obdelnik) = BLOCKED
+        s duvodem layoutu, ne tichy pruchod."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(2.0, 2.0, 2.0)] * 4)),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0),
+                                        (2.0, 0.0, 0.0), (3.0, 0.0, 0.0)],
+                                       [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertTrue(any("rectangular" in r
+                            for r in geo["blocked_reasons"]))
+
+    def test_assess_missing_geometry_blocked(self):
+        """E3. Kolo bez geometrie (zadny shape/size/CFrame PROP):
+        bad_shape/missing_* + BLOCKED; jmeno samotne nestaci."""
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)]))
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertIn("bad_shape", geo["wheels"]["FL"]["failed_checks"])
+        self.assertIn("missing_size", geo["wheels"]["FL"]["failed_checks"])
+        self.assertIn("missing_position",
+                      geo["wheels"]["FL"]["failed_checks"])
+
+    def test_adversarial_swapped_lanes_blocked(self):
+        """E4. Adversarial: prohozene float lane (LSB prvni misto MSB) jsou
+        strukturalne validni, ale hodnoty se zmeni (ne ticha geometrie);
+        trusted zustava False a assess zustava BLOCKED (kalibrace)."""
+        count = 4
+        triples = [(2.7, 2.7, 2.7)] * count
+        comps = [[t[d] for t in triples] for d in range(3)]
+        out = bytearray()
+        for comp in comps:
+            words = []
+            for value in comp:
+                bits = struct.unpack("<I", struct.pack("<f", value))[0]
+                words.append(_rol32(bits, 1))
+            for lane in range(4):  # PROHOZENO: LSB lane prvni
+                shift = 8 * lane
+                out += bytes((word >> shift) & 0xFF for word in words)
+        swapped = _geom_prop(1, "size", 0x0E, bytes(out))
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [0, 0, 0, 0])),
+                ("PROP", swapped),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                                       [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertNotEqual(by_id[2]["size"], (2.7, 2.7, 2.7))
+        self.assertFalse(by_id[2]["props"]["size"]["trusted"])
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertNotEqual(geo["status"], "OK")
+        self.assertTrue(any("float_decode_unverified" in r
+                            for r in geo["blocked_reasons"]))
+
+    def test_adversarial_unknown_shape_unread(self):
+        """E5. Adversarial: neznama hodnota shape enum (9) u kola = tvar
+        unread (None, zadny odhad), kolo UNKNOWN s bad_shape, BLOCKED."""
+        ident = (1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0)
+        model = parse_bytes(build_model(
+            [(0, "Model", ["Root", "Wheels"]),
+             (1, "Part", ["FL", "FR", "RL", "RR"])],
+            [(0, None), (1, 0), (2, 1), (3, 1), (4, 1), (5, 1)],
+            extra_chunks=[
+                ("PROP", _shape_prop(1, [9, 0, 0, 0])),
+                ("PROP", _size_prop(1, [(2.7, 2.7, 2.7)] * 4)),
+                ("PROP", _cframe_prop(1, "CFrame",
+                                       [(0.0, 1.0, 0.0), (6.0, 1.0, 0.0),
+                                        (0.0, 1.0, 10.0), (6.0, 1.0, 10.0)],
+                                       [0, 0, 0, 0], [ident] * 4)),
+            ]))
+        by_id = {i["id"]: i for i in model["instances"]}
+        self.assertIsNone(by_id[2]["shape"])
+        self.assertEqual(by_id[2]["props"]["shape"]["status"], "unread")
+        geo = assess_wheel_geometry(model["instances"])
+        self.assertEqual(geo["status"], "BLOCKED")
+        self.assertEqual(geo["wheels"]["FL"]["status"], "UNKNOWN")
+        self.assertIn("bad_shape", geo["wheels"]["FL"]["failed_checks"])
+
+    def test_calibration_not_implemented(self):
+        """F. Kalibrace studs/m: pripraveno rozhrani, vzdy NOT
+        IMPLEMENTED (chybi Studio ground-truth) — neprohlasuje se
+        za overenou."""
+        cal = calibrate_studs_per_meter()
+        self.assertEqual(cal["status"], "NOT_IMPLEMENTED")
+        self.assertIsNone(cal["studs_per_meter"])
+        cal2 = calibrate_studs_per_meter(known_meters=2.0,
+                                         measured_studs=7.0)
+        self.assertEqual(cal2["status"], "NOT_IMPLEMENTED")
+        self.assertIsNone(cal2["studs_per_meter"])
+        self.assertTrue(cal2["inputs_ignored"])
 
 
 if __name__ == "__main__":
