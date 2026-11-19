@@ -150,3 +150,55 @@ Zbývá: nic v rozsahu Agenta A.
 10. **Zbývá:** nic v rozsahu Agenta A. Otevřené body: kalibrační vlna
     s VERIFIED měřítkem; `float_decode_unverified` text až po kalibrační vlně;
     3. distinctní RBXM; Play/runtime důkazy.
+
+---
+
+## Vlna 2026-11-19, HEAD `626c258` (Agent A, formát bod 1–10; PR #2 OPEN, nemergováno, žádné git operace)
+
+1. **Identifikace:** větev `feat/m2-m3-geometry`; auditní základ
+   `a7e89e5c6a35245f72b5bb3e141dd33da41f09d5`; sync
+   `dfb2e55a032e863a784ea9ddaaaa44926d9212af`; předchozí finální
+   `66c27e963dd62deb2b07967b820a96644ff71dcd`. TATO vlna: výchozí
+   `626c25859cbd143662013930123611c82be4c00f`, finální = nový
+   docs-only commit (hash doplní koordinátor). Nikdy netvrdit, že
+   finální = starší commit.
+2. **Režim a rozsah:** pouze dokumentace + audit. Vlastněné soubory této vlny:
+   `reports/M2-M3/FINAL-CLOSEOUT-REPORT.md` (oprava: §1, §3, §4, §4b, §5)
+   a tento report (nová sekce). Kód ani testy neměněny; žádný merge,
+   žádná M3, `main` netknut (`5b67315`).
+3. **Zdroj pravdy (beze změny z předchozích vln):** engine
+   `src/Inspection/scale_calibration.py` IMPLEMENTED + CODE-VERIFIED (31 testů);
+   stub `rbxm_parser.py:1378 calibrate_studs_per_meter` trvale NOT IMPLEMENTED;
+   4× VALID_WHEEL + 44× KNOWN_NON_WHEEL, 0 unidentified; celek BLOCKED
+   (assess `float_decode_unverified` + kalibrace BLOCKED 7,44 % > 5 %,
+   JeepTemplate = jiné vozidlo).
+4. **Opravy této vlny ve `FINAL-CLOSEOUT-REPORT.md`:** (a) §1 → plný řetězec
+   auditní základ `a7e89e5` / sync `dfb2e55` / předchozí finální `66c27e9` /
+   TATO vlna výchozí `626c258` + finální docs-only commit (koordinátor);
+   (b) CI sekce → historický run `44617147977` k `a7e89e5` +
+   run `44618988364` k `66c27e9` (4/4, push, ověřeno koordinátorem) +
+   nový run k finálnímu commitu doplní koordinátor;
+   (c) nová §4b tabulka souborů (ZMĚNĚN vs NE);
+   (d) §3 testovací souhrn tabulkou s příkazy/SHA/výsledky;
+   (e) §5 + §7 verdikt: M2 CONDITIONAL PASS, kalibrace BLOCKED, M3 NEOTEVŘENA.
+5. **`docs/` a ostatní reporty v této vlně:** NE — neměněny. Opravy z předchozích
+   synců drží (§0.2/§0.5/§10 + ROADMAP M2: engine vs stub vs BLOCKED 7,44 %;
+   WHEEL §4/§6; INTEGRATION I-1 + 161/168; proposal §4/§9).
+   `git status --short` před editací čistý (HEAD `626c258`).
+6. **Testy (vlastní živé běhy na `626c258`, sériově, exit 0):**
+   `python tests/run_all.py` → **372/368/0/0/4, exit 0**;
+   `python -m unittest tests.test_m2_rbxm_parser tests.test_m2_rbxm_inspector tests.test_m2_wheel_detect tests.test_m2_scale_calibration tests.test_m2_integration` → **Ran 168 tests, OK** (57+7+53+31+20);
+   `python tools/validate_contracts.py` → **24 kontrol, 0 chyb, exit 0**.
+   PENDING=4 očekávané, PENDING≠PASS.
+7. **CI:** historický `44617147977` = `a7e89e5`; `44618988364` =
+   `66c27e9` (push, `feat/m2-m3-geometry`, 4/4 — ověřeno koordinátorem).
+   Nový run k finálnímu commitu této vlny (docs-only, na `626c258`)
+   doplní koordinátor po pushi. Docs-only delta, testy nedotčeny.
+8. **G-brány:** G-01–G-07 + G-10 PASS (důkazy viz QA §9: hash RBXM, jednotky 24/0,
+   provenance, null≠odhad, PENDING≠PASS, CODE≠RUNTIME, simulace≠runtime,
+   determinismus); G-08/G-09 mimo rozsah.
+9. **Verdikt:** M2 CONDITIONAL PASS (pošesté v řadě); kalibrace BLOCKED
+   (7,44 % > 5 % + stub NOT IMPLEMENTED); brána M3 NEOTEVŘENA.
+10. **Zbývá:** nic v rozsahu Agenta A. Otevřené body: kalibrační vlna
+    s VERIFIED měřítkem; `float_decode_unverified` text až po kalibrační vlně;
+    3. distinctní RBXM; Play/runtime důkazy.

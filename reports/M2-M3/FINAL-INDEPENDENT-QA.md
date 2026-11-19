@@ -314,3 +314,39 @@ NEOVĚŘENO (mimo dosah, beze změny z §6/§8/§9): Studio side, reálný Musta
 
 - **M2: CONDITIONAL PASS** (potvrzeno na HEAD `66c27e9`, popáté v řadě). Kód drží všechna pravidla: identita (a)+(b)+(c), 4-tier, hierarchie, NaN/CFrame stropy, kalibrační prahy 5 %/2 % + pravidlo 2 rodin, I-1 propagace assess→report. Otevřené podmínky nejsou v kódu: uklidit 1 baseline-deltu ve stromě (§10.6); `float_decode_unverified` aktualizovat po kalibrační vlně (§10.5). Na FAIL není důvod.
 - **Brána M3: NEOTEVÍRAT.** Vstupy BLOCKED/BLOCKED (assess-důvod + kalibrace 7.44 %), přísná VERIFIED-brána + I-1 propagace drží; M3 zůstává návrh bez kódu — správně. Otevření až po: Studio ground-truth + VERIFIED kalibrace + GEOMETRY_OK report.
+
+---
+
+## 11. FINAL CLOSEOUT — finální nezávislé QA (Agent D, 2026-11-19 ~21:52 UTC, HEAD `626c258`)
+
+**Režim:** READ-ONLY vůči kódu i testům (měněn pouze tento soubor, append; žádné mutující git operace, žádný vlastní běh testů). Historické sekce §1–§10 nemazány, neměněny.
+**Větev:** `feat/m2-m3-geometry` · **HEAD:** `626c25859cbd143662013930123611c82be4c00f` (= `origin/feat/m2-m3-geometry`, ověřeno `rev-parse`) · **Strom:** čistý (`status --short` prázdný) · **PR #2:** OPEN, nemergován (`feat/m1-m2-foundation` @ `ab840a9`, base `main`).
+**Diff `66c27e9..HEAD`:** pouze dokumentace, 8 souborů (`AGENT-A/C/D` reporty, `FINAL-CLOSEOUT-BASELINE.md`, `FINAL-CLOSEOUT-REPORT.md`, `FINAL-DOCUMENTATION-WAVE-REPORT.md`, tento soubor, `reports/M3/GEOMETRY-ENGINE-PROPOSAL.md`). `diff src tests tools contracts '*.rbxm' main` = prázdný — M2-only potvrzeno, kód/testy od `a7e89e5` bitově nezměněny.
+**M3 bez kódu:** `src/Geometry/`, `geometry_target.json`, `geometry_diff.json` neexistují (ověřeno `ls`) — M3 zůstává návrh, správně.
+**CI k HEAD (živě `gh run view`):** run `44623140872` → headSha `626c258…`, branch `feat/m2-m3-geometry`, event push, conclusion success. Starší řetěz zelený: `66c27e9`→`44618988364`, `dfb2e55`→`44618936864`, `a7e89e5`→`44617147977` (vše success).
+**Pozn. k běhům:** Agent D v této closeout-vlně testy neexekuuje (read-only); body Q-09/Q-11/Q-12 se opírají o běhy §10 na `66c27e9` (přenositelné — kód/testy nezměněny, D-25/D-26) + křížovou konzistenci a aritmetiku; chybějící exekuce na finálním HEAD je explicitně vedena jako NOT VERIFIED (Q-10), nikoli zamlčena.
+
+| # | Kontrolní bod | Verdikt | Důkaz (živě ověřeno na `626c258`, není-li uvedeno jinak) |
+|---|---|---|---|
+| Q-01 | HEAD pin + branch/origin + čistý strom | **PASS** | `626c258…` = `origin/feat/m2-m3-geometry`; `status --short` prázdný. Podmínka „uklizený strom“ z §7.5/§8.6/§9.6/§10.6 je tímto **CLOSED** (oba baseline-soubory trackovány, žádná delta). |
+| Q-02 | Diff `66c27e9..626c258` docs-only | **PASS** | 8 souborů, vše `reports/`; žádný funkční kód ani test. |
+| Q-03 | Zákazový diff (`src/tests/tools/contracts/RBXM/main`) | **PASS** | Prázdný (vč. trackovaného `JeepTemplate.rbxm`); `main` = `5b67315` netknut; PR #2 OPEN na jiné větvi (`ab840a9`). |
+| Q-04 | CI run k finálnímu HEAD | **PASS** | `44623140872` → `626c258`, success (realita zelená). Dodatek: žádný dokument ho zatím neuvádí — vedeno jako Q-14 (FAIL-minor dokumentu, ne reality). |
+| Q-05 | PR #2 nemergován, M2 vlna mimo PR | **PASS** | OPEN, head `feat/m1-m2-foundation` @ `ab840a9`; M2 commity (`a7e89e5`…`626c258`) v PR nejsou. |
+| Q-06 | M3 bez kódu, brána drží | **PASS** | Bez kódu (Q-03); proposal NÁVRH v1 s BLOKACÍ produkce; vstupy BLOCKED/BLOCKED (assess-důvod + kalibrace 7.44 %), VERIFIED-only brána + I-1 propagace (kód nezměněn, evidence §10.3/§10.4 platí). **M3 NEOTEVÍRAT.** |
+| Q-07 | RBXM G-01 originál nedotčen | **PASS** | `sha256sum` obou kopií `dc8747e0…2c1fefdf`, 230 421 B — shoda s baseline i §10.2. Jediný distinctní model = LIMIT, ne FAIL. |
+| Q-08 | Počty sad 168 vs 161 | **PASS** | `def test`: 57+7+53+31+20 = **168**; 161 = součet 4 sad bez inspectora — vysvětlení konzistentní (§8.1/§9.1/§10.1). |
+| Q-09 | Plná sada 372/368/0/0/4 + 24/0 | **PASS (křížově)** | 372 = 168+204, 372−4 PENDING = 368; PENDING taxativní, žádný v PASS; `validate_contracts` 24/0. Identické napříč Agent-A re-syncem, Agent-C, §10.1, closeout §3. Bez vlastní exekuce v této vlně (viz Q-10). |
+| Q-10 | Vlastní živý běh na `626c258` | **NOT VERIFIED** | Neproběhl (read-only režim). Přenositelnost z §10 dána neměnností kódu/testů, formální běh na finálním HEAD chybí. Podmínka sériového `run_all.py` před mergem trvá (flaky historie z paralelní vlny). |
+| Q-11 | G-02–G-07 + G-10 + BLOCKED propagace | **PASS (přenositelně)** | Kód nezměněn od `a7e89e5` → živá evidence §10.2/§10.4 v platnosti: jednotky, provenance, null≠odhad, PENDING≠PASS, CODE≠RUNTIME, simulace≠runtime, reprodukovatelnost, M3 ZAVŘENA oběma nohama. |
+| Q-12 | I-1 assess→report BLOCKED | **PASS (přenositelně)** | Oprava z `34a4994` v kódu (nezměněn); pin-test `test_assess_blocked_propagates_to_report` kryje kanonickou cestu (sada 5: 20/20 v §10.1); potvrzeno na pěti HEAD v řadě. **I-1 CLOSED.** |
+| Q-13 | Poctivost příznaků (grep kontrola) | **PASS** | `NOT IMPLEMENTED` (stub `calibrate_studs_per_meter` odlišen od enginu `scale_calibration.py`), `CONDITIONAL`, `BLOCKED`, `GEOMETRY_OK`, `float_decode_unverified` (`rbxm_parser.py:1372`, přiznané konzervativní rozhodnutí), `TÉMĚŘ` jen v historických §8.6/§9.6/§10.6. Žádné PENDING→PASS, BLOCKED→VERIFIED, engine↔stub záměna. |
+| Q-14 | Dokumentační piny vs HEAD + CI dodatek | **FAIL (minor)** | `626c258` se v repu nevyskytuje 0×; hlavičky: `PROJECT_STATUS`/`WHEEL`/Agent-B @ `a7e89e5`, Agent-A/Agent-C @ `64be2c6`, QA §10 @ `66c27e9`, baseline §0 @ `a7e89e5` + sekce @ `66c27e9`, closeout §1 bez explicitního finálního SHA, doc-wave „vždy `66c27e9`“ nepravdivé, CI dodatek k `44623140872` chybí (run přitom zelený). Pouze docs, nikoli funkční vada. |
+| Q-15 | M2 verdikt | **PASS** | **M2: CONDITIONAL PASS** (pošesté v řadě). Pravidla drží: identita (a)+(b)+(c), 4-tier, hierarchie, NaN/CFrame stropy, prahy 5 %/2 % + 2 rodiny, I-1. Otevřené podmínky nejsou v kódu: (1) sériový `run_all.py` před mergem (Q-10); (2) `float_decode` text po kalibrační vlně. Na FAIL není důvod. |
+
+### Verdikt §11
+
+- **M2: CONDITIONAL PASS** (podmínky Q-15(1)(2)).
+- **Brána M3: NEOTEVÍRAT** (Q-06).
+- **Closeout jako CLOSED: NE — CONDITIONAL.** Nesplněno pravidlo „CLOSED jen když vše sedí“: Q-14 FAIL (minor), Q-10 NOT VERIFIED. Funkčně je vlna CLOSED (Q-01–Q-09, Q-11–Q-13, Q-15 PASS); dokumentačně zbývá 1-commit sync dluh (pin `626c258` + CI dodatek `44623140872`). Doporučení Agentu D: sjednotit v příští vlně jedním docs-committem s větou „docs-only delta beze změny výroků“.
+- NEOVĚŘENO (beze změny z §6/§8/§9/§10): Studio side, reálný Mustang, Play/Runtime nároky.

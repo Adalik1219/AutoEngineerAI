@@ -5,9 +5,14 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 
 ## 1. Identifikace
 
-- Výchozí SHA: `66c27e963dd62deb2b07967b820a96644ff71dcd`
-- Finální SHA: viz commit této vlny níže (docs-only).
-- Předchozí: `a7e89e5` (auditní základ), `dfb2e55` (sync) — historie.
+- Auditní základ: `a7e89e5c6a35245f72b5bb3e141dd33da41f09d5`
+- Sync: `dfb2e55a032e863a784ea9ddaaaa44926d9212af`
+- Předchozí finální: `66c27e963dd62deb2b07967b820a96644ff71dcd`
+- TATO vlna (Agent A, docs-only): výchozí
+  `626c25859cbd143662013930123611c82be4c00f`; finální = nový
+  docs-only commit (hash doplní koordinátor při commitu).
+- Větev `feat/m2-m3-geometry`, PR #2 OPEN, NEMERGOVAT. Kód ani testy
+  neměněny, žádné git operace agentem, `main` netknut.
 
 ## 2. Agenti
 
@@ -18,24 +23,38 @@ Větev `feat/m2-m3-geometry`. PR #2 OPEN, NEMERGOVAT. M3 NEOTEVŘENA.
 - D (finální QA): M2 CONDITIONAL PASS, M3 NEOTEVŘENA; float_decode ponechán
   záměrně; Play/runtime NEOVĚŘENO.
 
-## 3. Testy (koordinátor, sériově, exit 0)
+## 3. Testy (Agent A, živé běhy na `626c258`, sériově, exit 0)
 
-`tests/run_all.py` → 372 běhů / 368 PASS / 0 FAIL / 0 ERROR / 4 PENDING.
-Cílené M2: 57+7+53+31+20 = 168. `validate_contracts` 24/0 (nekryje M2 freeze —
-mezera přiznána, kryjí testy klíčů).
+| # | Příkaz | Výsledek |
+|---|---|---|
+| 1 | `python tests/run_all.py` | 372 běhů / 368 PASS / 0 FAIL / 0 ERROR / 4 PENDING, exit 0 (PENDING očekávané, PENDING≠PASS) |
+| 2 | `python -m unittest tests.test_m2_rbxm_parser tests.test_m2_rbxm_inspector tests.test_m2_wheel_detect tests.test_m2_scale_calibration tests.test_m2_integration` | Ran 168 tests, OK (rozpad 57+7+53+31+20), exit 0 |
+| 3 | `python tools/validate_contracts.py` | 24 kontrol, 0 chyb, exit 0 (nekryje M2 freeze — mezera přiznána, kryjí testy klíčů) |
 
 ## 4. CI
 
 - Run `44617147977` → přesně `a7e89e5` (historie), 4/4 success.
-- Run `44618988364` → přesně `66c27e9` (výchozí HEAD této vlny),
+- Run `44618988364` → přesně `66c27e9` (předchozí finální),
   větev `feat/m2-m3-geometry`, event push, 4/4 success (3.11–3.14) —
   ověřeno koordinátorem přes GitHub API (head_sha, branch, joby).
-- Nový run k finálnímu commitu: viz dodatek po pushi (docs-only).
+- Nový run k finálnímu commitu této vlny (docs-only, na `626c258`):
+  doplní koordinátor po pushi (run ID + head_sha + joby).
+
+## 4b. Soubory této vlny (Agent A, docs-only)
+
+| Soubor | Stav této vlny |
+|---|---|
+| `reports/M2-M3/FINAL-CLOSEOUT-REPORT.md` | ZMĚNĚN (tato oprava: §1, §3, §4, §4b) |
+| `reports/M2-M3/AGENT-A-DOCUMENTATION-REPORT.md` | ZMĚNĚN (nová sekce vlny, formát 1–10) |
+| `docs/PROJECT_STATUS.md`, `docs/IMPLEMENTATION_ROADMAP.md` | NE (opravy z předchozích synců drží) |
+| Kód (`src/`), testy (`tests/`), `contracts/` | NE (beze změny) |
 
 ## 5. Dokumentační konzistence
 
 PROJECT_STATUS, ROADMAP, WHEEL/SCALE/INTEGRATION reporty, QA verze —
-vše na `66c27e9`, počty 372/368, M2 CONDITIONAL PASS, M3 NEOTEVŘENA.
+konzistentní (docs obsah beze změny od `66c27e9`; tato vlna na `626c258`
+je docs-only, delta beze změny významu), počty 372/368, M2 CONDITIONAL
+PASS, kalibrace BLOCKED, M3 NEOTEVŘENA.
 Historie append-only, nic nemazáno. Rámec: x=lateral/y=up/z=long (WHEEL §3);
 proposal §4/§9 opraveny (VERIFIED-only brána, engine existuje, stub odlišen).
 

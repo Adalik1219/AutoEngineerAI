@@ -107,5 +107,18 @@ věta, „109 testů") jsou vlastníkem opraveny, bez akce.
   proposal `ab840a9`) jsou starší než zadaný `66c27e9`; bez git operací nelze
   ověřit mezilehlé diffy, proto hlavičky ponechány vlastníkům (F-3, bez akce zde).
 - M3: návrh only, žádná implementace — M3-T01…T09 není co exekuovat.
-- V tomto auditu: žádné změny `src/`/`tests/` ani 4 reportů (vše již opraveno
-  vlastníky nebo patří jim); změněn pouze tento audit (§7–§9 + hlavička).
+
+## 10. Re-verifikace na HEAD `626c258` (Agent C, 2026-11-19, sériově)
+
+Rozdíl `64be2c6..626c258` = pouze docs/reporty (`git diff --name-only`: žádná změna v `src/`, `tests/`, `tools/`) — engine beze změny. Čerstvé běhy na aktuálním HEAD:
+
+| Příkaz | Výsledek |
+|---|---|
+| `python -m unittest tests.test_m2_integration` | **20/20 OK** (I-1 pin-test PASS) |
+| `python -m unittest tests.test_m2_scale_calibration` | **31/31 OK** |
+| M2 pětice (parser+inspektor+wheel+scale+integrace) | **168/168 OK** (57+7+53+31+20; 161 = starší součet bez inspektor-sady) |
+| `python tests/run_all.py` | **běhů=372 PASS=368 FAIL=0 ERROR=0 PENDING=4** (4 očekávané) |
+| `python tools/validate_contracts.py` | **24 kontrol, 0 chyb, exit 0** |
+| RBXM hash (čteno) | `dc8747e0…fefdf`, 230 421 B, obě kopie shodné → G-01 PASS |
+
+Stub-vs-engine potvrzeno čtením: parser `calibrate_studs_per_meter` = STUB (vždy `NOT_IMPLEMENTED`, `studs_per_meter: None`); engine `usable_for_m3()` STRICT `== VERIFIED`, `require_verified_for_m3()` vyhazuje → M3 ZAVŘENA. M3 proposal §4/§7 (JEN čteno, neměněno): VERIFIED-only brána drží; **F-1 OPRAVEN** vlastníkem (rámec nyní `COORDINATE_FRAME_ACTUAL`: x=lateral, y=up, z=longitudinal) a **F-2 OPRAVEN** (§9 nyní „hodnota měřítka nestanovena — kalibrace JeepTemplate BLOCKED; engine existuje"). G-01–G-07, G-10 všechny PASS. Kód neměněn (read-only dodrženo); měněny jen 3 vlastněné reporty.

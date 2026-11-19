@@ -102,3 +102,17 @@ Rozdíl `c1a138b..64be2c6` = pouze docs commity (`e2a56ef`, `64be2c6`); `src/Ins
 | 4 | `python tools/validate_contracts.py` | **24 kontrol, 0 chyb, exit 0** (mezery krytí viz §6) |
 
 G-brány na `64be2c6`: **G-01–G-07, G-10 všechny PASS; BLOCKED propagace M2→M3 PASS** (assess BLOCKED → report BLOCKED; kalibrace BLOCKED 7.44 % + `require_verified_for_m3` vyhazuje → M3 ZAVŘENA oběma nohama). Determinismus: integrační sada (dvojí běh, bitová shoda) PASS v běhu č. 1. Moduly A/B neměněny.
+
+## 10. Re-verifikace na HEAD `626c258` (Agent C, 2026-11-19, sériově)
+
+Rozdíl `64be2c6..626c258` = pouze docs/reporty (ověřeno `git diff --name-only`: žádná změna v `src/`, `tests/`, `tools/`); engine beze změny → níže čerstvý běh na aktuálním HEAD:
+
+| # | Příkaz | Výsledek |
+|---|---|---|
+| 1 | `python -m unittest tests.test_m2_integration` | **20 testů, OK** — vč. `test_assess_blocked_propagates_to_report` PASS (I-1 uzavřena, netrvá) |
+| 2 | `python -m unittest tests.test_m2_rbxm_parser tests.test_m2_rbxm_inspector tests.test_m2_wheel_detect tests.test_m2_scale_calibration tests.test_m2_integration` | **168 testů, OK** — rozpad 57+7+53+31+20 (161 = starší součet bez 7 inspektor-testů) |
+| 3 | `python tests/run_all.py` (plná sada) | **běhů=372 PASS=368 FAIL=0 ERROR=0 PENDING=4** (PENDING očekávané: Studio-měření, Fáze 5 schema-conformance, 2× Fáze 9/10 baseline/VariantStore) |
+| 4 | `python tools/validate_contracts.py` | **24 kontrol, 0 chyb, exit 0** (mezery krytí viz §6) |
+| 5 | RBXM hash (čteno, žádný zápis) | `dc8747e0…fefdf`, 230 421 B, obě kopie shodné (JeepTemplate + work-copy) |
+
+G-brány na `626c258`: **G-01–G-07, G-10 všechny PASS; BLOCKED propagace M2→M3 PASS** (M3 ZAVŘENA oběma nohama). M3 proposal §4/§7 (JEN čteno, neměněno): VERIFIED-only brána drží; nálezy auditu F-1 (rámec) a F-2 (§9 NOT IMPLEMENTED) vlastník Agent E mezitím opravil — viz audit §10. Kód neměněn (read-only dodrženo).

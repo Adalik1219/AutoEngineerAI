@@ -138,3 +138,7 @@ NEMĚNĚNO: `docs/*.md` (sync dělá koordinátor), cizí moduly, návrh M3.
 - Brána M3: V→projde; E/U/B→neprojdou (vč. konzistentní ESTIMATED z plné sady a non-dict odmítnut) — kryto `TestM3Gate` (4 testy), ověřeno živým během.
 - Návrh M3 §4/§7: NÁLEZ z §4 tohoto reportu je VYŘEŠEN — proposal nyní STRICT `overall_status == VERIFIED` (§4: "pouze VERIFIED; ESTIMATED STOP"; §7: `!= VERIFIED` → BLOCKED vč. ESTIMATED). Zbývající výskyty ESTIMATED v proposal jsou statusy per-hodnota/outputů (M3.5, schémata, M3-T02), ne díra v bráně.
 - Testy: `python -m unittest tests.test_m2_scale_calibration` → **31/31 OK** (6 tříd: UnitConversions 4, Shape 4, Blocked 7, M3Gate 4, JeepTemplate 2, EdgeCases 10 — viz `grep def test` = 31).
+
+## 10. Re-verifikace na HEAD `626c258` (Agent C, 2026-11-19, sériově)
+
+Rozdíl `64be2c6..626c258` = pouze docs/reporty (`git diff --name-only`: žádná změna v `src/`, `tests/`, `tools/`); engine beze změny. Čerstvé běhy: `tests.test_m2_scale_calibration` **31/31 OK** · M2 pětice **168/168 OK** (57+7+53+31+20) · `tests/run_all.py` **372 běhů / PASS=368 / FAIL=0 / ERROR=0 / PENDING=4** · `tools/validate_contracts.py` **24/0, exit 0**. M3 proposal §4/§7 (JEN čteno): VERIFIED-only brána drží; F-1 (rámec → `COORDINATE_FRAME_ACTUAL`) i F-2 (§9 přeformulováno na „engine existuje, hodnota nestanovena") vlastník Agent E opravil — dřívější nálezy uzavřeny bez akce zde. Kalibrace BLOCKED 7.44 %, M3 NOT READY trvá. Kód neměněn.

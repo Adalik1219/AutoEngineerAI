@@ -2,7 +2,8 @@
 
 **Aktuální stav:** M1 CODE-VERIFIED; M2 CONDITIONAL PASS (parser C05 + 4-tier
 detekce CODE-VERIFIED, kalibrace BLOCKED 7,44 %, M3 brána VERIFIED-only, M3
-NEOTEVŘENA) — větev `feat/m2-m3-geometry` @ `a7e89e5` (navazuje na PR #2
+NEOTEVŘENA) — větev `feat/m2-m3-geometry` @ `626c258` (closeout sync;
+technický kód beze změny od `a7e89e5`; navazuje na PR #2
 `ab840a9`; nemergováno); testy
 **372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING** (`python tests/run_all.py`,
 ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
@@ -71,7 +72,9 @@ ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
 - M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
   auditu §1 (stav před implementací této větve).
 
-### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `a7e89e5`, větev feat/m2-m3-geometry)
+### 0.4 Testy a RBXM integrita (technická verifikace @ `a7e89e5`; potvrzeno
+během 2026-11-19 na stromě `626c258` — `src/`+`tests/` od `a7e89e5` beze změny;
+větev feat/m2-m3-geometry)
 - `python tests/run_all.py` → **372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING**
   (vlastní běh 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
   260/256 @ `ff6f266`; PENDING totožné, PENDING≠PASS).
@@ -246,3 +249,6 @@ C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commi
 - Studio: rozchod 5,9907 / rozvor 10,5228 potvrzeny bit-přesně (Edit, read-only).
 - QA verdikt: M2 CONDITIONAL PASS; brána M3 NEOTEVŘENA.
 - M3 zůstává návrh bez kódu. Detail: `reports/M2-M3/REMEDIATION-WAVE-FINAL-REPORT.md`.
+- Finální closeout (tato větev): `reports/M2-M3/FINAL-CLOSEOUT-REPORT.md`,
+  `reports/M2-M3/FINAL-INDEPENDENT-QA.md` (M2 CONDITIONAL PASS, M3 NEOTEVŘENA,
+  runtime NOT VERIFIED).
