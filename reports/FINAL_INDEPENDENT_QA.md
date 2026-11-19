@@ -135,3 +135,80 @@ Studio runtime důkaz.
 - Proti DO NOT MERGE: není P0/P1 v kódu, testy zelené nezávisle, sondy bez
   crashů, dokumentace opravena rozsahem, PENDING/RUNTIME kázeň držena,
   M3 poctivě NOT IMPLEMENTED. Není co vracet k přepracování kódu.
+
+---
+# Dodatek — re-QA @ `36cbbdb` + dirty docs-sync (2026-11-19, pracovní strom)
+
+Výše (§1–§10) je verdikt k `2bde563` — NEMAZÁNO, ponecháno jako historické.
+Níže nový stav: HEAD pin `36cbbdbd3466184532c811589190d02ae1d1aea3`
+(PR #2 OPEN, nemergováno — ověřeno `gh pr view`), pracovní strom dirty
+(3 docs soubory: `PROJECT_STATUS.md`, `IMPLEMENTATION_ROADMAP.md`,
+`FINAL_DOCUMENTATION_SYNC.md` — sync na `36cbbdb`, čísla 272/268/0/4).
+
+## A. Metodika AUDIT2-qa-plan: odchylka A4 (není docs-only)
+
+- A1: `git rev-parse HEAD` = `36cbbdb` (plán pinoval `6cedbe1` — posun o 2
+  commity + dirty strom; pin tohoto dodatku je `36cbbdb`).
+- A4 NEPLATÍ: `6cedbe1..HEAD` obsahuje **kód** (`src/Inspection/rbxm_parser.py`:
+  OSError→`RbxmCorruptError` kontrakt; `tools/validate_contracts.py`: M1.9
+  výjimka; `tests/`: T21/T22 + CI-portability + repo-relative fixture).
+  Proto níže nová re-QA kódu, ne jen docs-kontrola.
+- Diff `main...HEAD`: **34 souborů, +6352/−60** (proti 22/+5355/−53 v §2 —
+  delta = fáze B kód + AUDIT2-* + CI testy + dirty docs-sync; nic nad rámec
+  diffu se nemerguje; M3 adresáře `src/Physics|Sim|Chassis|Optimizer`
+  nedotčeny — ověřen prázdný `git diff --stat` na těchto cestách).
+
+## B. Dispozice podmínek z §2 (opraveno / trvá)
+
+1. Stale docstring `src/Inspection/__init__.py:1–4` — OPRAVENO (nový text
+   popisuje `wheel_detect.py` + `rbxm_parser.py` s provenancí; C05 přiznán).
+2. Hash-překlep `reports/AUDIT-geometry.md:8` — OPRAVENO (`…2c1fefdf`,
+   kanonický hash `dc8747e0…fedf` / 230 421 B sedí všude; viz C).
+3. Merge-message disciplína — TRVÁ (podmínka níže přeformulována na 268/4).
+4. Rozsah diffu — TRVÁ s novým číslem (34 souborů, +6352/−60 @ `36cbbdb`).
+
+## C. Ověřeno na tomto stavu (vlastní běhy 2026-11-19)
+
+- Testy `python tests/run_all.py` na pracovním stromě: **272 běhů / 268 PASS /
+  0 FAIL / 0 ERROR / 4 PENDING** (PENDING totožné: Studio odečet, schema
+  Fáze 5, 2× regresní baseline; PENDING≠PASS). Tvrzení dirty docs-syncu
+  (272/268/0/4 @ `36cbbdb`) POTVRZENO vlastním během (~19 s).
+- `tools/validate_contracts.py`: **24 kontrol / 0 chyb, ÚSPĚCH** (M1.9 výjimka
+  v obou validátorech konzistentní; T21 přijme prázdnou UNKNOWN křivku,
+  T22 zamítne 1-bodový bypass — kryto sadou).
+- RBXM hash před/po: `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`,
+  230 421 B — shodný (fixture `JeepTemplate.rbxm` čtena, žádný zápis).
+  LIMIT 1 distinctní model ve 2 kopiích dál přiznán.
+- `10–60×`: v `src/tests/tools` žádný výskyt; v docs jen benchmark-rámec
+  (hotspoty 5–240×, end-to-end ~2×) + citace commit message — čisté.
+- M3 nespustitelná: potvrzeno (žádný `src/Physics|Sim|Chassis|Optimizer`
+  v diffu; `calibrate_studs_per_meter` dál NOT IMPLEMENTED stub;
+  Studio ground-truth DONE potvrzuje hodnoty kol, stupeň dál CODE-VERIFIED).
+- Fáze B kód (36cbbdb): OSError→`RbxmCorruptError` (soubor/adresář/neexistující
+  → kontrakt, nikdy ven); lane-order MSB-první + Ball=0 doloženy v hlavičce
+  parseru (`rbxm_parser.py:21–26`); CI-portability (repo-relative fixture,
+  SKIP místo ERROR). Žádný P0/P1.
+
+## D. Adversarial sondy (12 běhů, seed `20261119` ≠ repo F8, 0 crashů)
+
+D1a prázdný vstup → `RbxmCorruptError` ✓ · D1b useknutá hlavička →
+`RbxmCorruptError` ✓ · D2 magic fuzz 5×64 B → vždy špatné magic, 0 crashů ✓ ·
+D3 `MAX_FILE_BYTES+1` → odmítnuto před kopií ✓ · D4a neexistující soubor →
+`RbxmCorruptError` (nový kontrakt fáze B) ✓ · D4b adresář → `RbxmCorruptError` ✓ ·
+D5a size `inf` / D5b negativní / D5c `str` → `nonfinite/bad_size`, UNKNOWN+BLOCKED ✓ ·
+D6a 4 kola stejný střed → agregát BLOCKED ✓ · D6b `[]` → BLOCKED ✓ ·
+D7 reálná kopie (815 instancí) → per-kolo OK, celek BLOCKED ✓.
+**12/12 PASS**, invarianty I1/I2/I4/I5 drží (I3 kryta sadou — cykly/missing/les,
+I6 = 268+4=272 výše).
+
+## Verdikt dodatku: MERGE WITH CONDITIONS (podmínky níže)
+
+Kód M1+M2 @ `36cbbdb` ověřen nezávisle (268 PASS, 12/12 sond, 0 crashů,
+žádný P0/P1, M3 nepřítomna). Podmínky jsou docs-commit hygiena, ne kód:
+
+1. Commitnout dirty docs-sync (3 soubory) před mergem — nemergovat
+   s neměřeným stromem; čísla v něm (272/268/0/4) jsou tímto během kryta.
+2. Merge message / PR popis: „268 PASS + 4 PENDING (PENDING≠PASS),
+   CODE-VERIFIED není RUNTIME, M3 NOT IMPLEMENTED, 1 distinctní RBXM
+   (LIMIT přiznán)".
+3. Nemergovat nic nad rámec diffu `main...36cbbdb` (34 souborů, +6352/−60).

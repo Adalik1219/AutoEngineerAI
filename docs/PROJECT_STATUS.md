@@ -2,9 +2,12 @@
 
 **Aktuální stav:** M1 CODE-VERIFIED; M2 parser C05 CODE-VERIFIED (není RUNTIME),
 geometrie/měření BLOCKED, kalibrace NOT IMPLEMENTED; M3 NOT IMPLEMENTED —
-vše na této větvi @ `ff6f266` (PR #2, OPEN, NEMERGOVAT); testy
-**260 běhů, 256 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `ff6f266`,
-ověřeno během 2026-11-19; PENDING beze změny).
+kód i docs na této větvi @ `36cbbdb` (PR #2, OPEN, NEMERGOVAT; dvouúrovňový pin
+z inventury `reports/AUDIT2-docs-inventory.md` D1 je tímto uzavřen — kód se od
+`ff6f266` změnil fázemi 53c2e23 + 36cbbdb, nový pin je jednotný `36cbbdb`); testy
+**272 běhů, 268 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `36cbbdb`,
+ověřeno vlastním během 2026-11-19; historické: 260/256/0/4 @ `ff6f266` —
+viz §0.4; PENDING beze změny, PENDING≠PASS).
 **RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
 
 > **§1–§8 = HISTORICKÝ audit před implementací** (stav k `dd9efdf`, 162 PASS).
@@ -26,18 +29,28 @@ ověřeno během 2026-11-19; PENDING beze změny).
 - Detail: §9 níže (kontroly Agenta D + opakování po povýšení M1.5).
 
 ### 0.2 M2 – parser C05 hotov (CODE-VERIFIED); měření/kalibrace BLOCKED / NOT IMPLEMENTED
-- Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`); produkční parser **C05**
-  (`src/Inspection/rbxm_parser.py`, 1345 řádků @ `ff6f266`): chunk reader +
+- Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`, fáze B 36cbbdb: lane-order
+  MSB-první doložen, Ball=0 invariantní); produkční parser **C05**
+  (`src/Inspection/rbxm_parser.py`, 1352 řádků @ `36cbbdb`; fáze B: `parse_rbxm`
+  OSError → `RbxmCorruptError` kontrakt + test, F8 hash přes reál): chunk reader +
   INST + PRNT + SSTR/META/Name + Shape/Size/CFrame s provenancí
   (`read/missing/unread`; floaty vždy `trusted=False`). P0 oprava: cyklus
   v parent hierarchii, chybějící parent ID i duplicitní instance ID →
   vždy BLOCKED, nikdy validní (`parent_cycle` / `missing parent id` /
   `duplicate instance id` v blocked_reasons).
 - Důkazy: `reports/AUDIT-parser-security.md` (P0: 0; 5× P1 + 2× P2 vše
-  OPRAVENO s regresními testy) + `reports/AUDIT-format-compat.md` +
-  `reports/AUDIT-geometry.md` + `reports/AUDIT-qa-final.md`
-  (7 vlastních adversarial sond vše fail-closed; verdikt MERGE, podmínky docs-only).
-  Stupeň: **CODE-VERIFIED, není RUNTIME** (žádné Studio měření — viz §0.5/4).
+  OPRAVENO s regresními testy) + `reports/AUDIT-format-compat.md` (+
+  `reports/AUDIT2-format-compat.md` fáze B, 36cbbdb) + `reports/AUDIT-geometry.md`
+  (+ `reports/AUDIT2-geometry.md`, `AUDIT2-parser-security.md`,
+  `AUDIT2-performance.md`, `AUDIT2-qa-plan.md` — 53c2e23) +
+  `reports/AUDIT-qa-final.md` (7 vlastních adversarial sond vše fail-closed;
+  verdikt MERGE, podmínky docs-only) + `reports/FINAL_INDEPENDENT_QA.md`
+  (MERGE WITH CONDITIONS docs-only) + `reports/FINAL_COORDINATION_REPORT.md` +
+  `reports/FINAL_PERFORMANCE_BENCHMARK.md` (opraveno rozsahem: hotspoty
+  5–240× dle operace, end-to-end na chassis kopii ~2×, paměť beze změny).
+  Stupeň: **CODE-VERIFIED, není RUNTIME** (Studio ground-truth
+  `reports/STUDIO_GROUND_TRUTH.md` DONE 2026-11-19 potvrzuje pozice/Size/Shape
+  kol parseru vs. Studio — viz §0.5/4; runtime jízda žádná).
 - Presety CFrame **ověřené vs. unread odděleně**: id 0 = vlastní matice
   (čtena), id 2 = identita; ostatní id → `unread-preset-N` (pozice čtena,
   orientace `None`, nikdy odhad) — kryto `test_f6_cframe_preset_sweep`,
@@ -54,10 +67,20 @@ ověřeno během 2026-11-19; PENDING beze změny).
 - M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
   auditu §1 (stav před implementací této větve).
 
-### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `ff6f266`)
-- `python tests/run_all.py` → **260 běhů, 256 PASS, 0 FAIL, 4 PENDING**
-  (historické: 199/195/0/4 před M2 hardeningem — viz §9 níže;
-  192/188/0/4 stav k Agentu D — viz §9; PENDING totožné).
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `36cbbdb`)
+- `python tests/run_all.py` → **272 běhů, 268 PASS, 0 FAIL, 4 PENDING**
+  (vlastní běh 2026-11-19 @ `36cbbdb`; předchozí: 260/256/0/4 @ `ff6f266`
+  — viz `reports/FINAL_DOCUMENTATION_SYNC.md` historie; 199/195/0/4 před M2
+  hardeningem a 192/188/0/4 stav k Agentu D — viz §9 níže;
+  PENDING totožné, PENDING≠PASS).
+- Sady: `test_m2_rbxm_parser.py` 54 testů (`grep "def test"` @ `36cbbdb`;
+  +1 fáze B: OSError → RbxmCorruptError), `test_m2_wheel_detect.py` 21 testů,
+  `test_m1_mustang_profile.py` 22 testů (T01–T22; +T21/T22 fáze B 36cbbdb:
+  contracts-validátor M1.9 výjimka).
+- `tools/validate_contracts.py` → 24/0 ÚSPĚCH (@ `36cbbdb`, commit message;
+  M1.9 výjimka i v contracts validátoru).
+- CI: `53c2e23` fix (repo-relative fixture, SKIP místo ERROR, portability testy
+  `tests/test_ci_portability.py`).
 - RBXM: `assets/chassis-original/chasis-work-copy.rbxm` —
   `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`
   (před/po shodné, pouze čteno). Druhý soubor v repu
@@ -70,7 +93,10 @@ ověřeno během 2026-11-19; PENDING beze změny).
 3. Rozhodnuto a uzavřeno: final drive ZŮSTÁVÁ UNKNOWN (kandidáti 3.15/3.55 jen v notes,
    rozhodnutí uživatele); trvale UNKNOWN bez nového zdroje: momentová křivka, rozložení
    hmotnosti + těžiště, brzdový bias, Cd/plocha.
-4. 4× PENDING není PASS (Roblox Studio odečet, schema conformance Fáze 5, 2× regresní baseline).
+4. 4× PENDING není PASS (Roblox Studio odečet, schema conformance Fáze 5, 2× regresní baseline);
+   Studio ground-truth kol `reports/STUDIO_GROUND_TRUTH.md` = DONE 2026-11-19
+   (rozvor ≈10.52 / rozchod ≈5.99 / Ball 2.7³ potvrzeny vs. parser — hodnoty
+   potvrzeny, ale stupeň zůstává CODE-VERIFIED, není RUNTIME; runtime jízda žádná).
 
 ---
 
