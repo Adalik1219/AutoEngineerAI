@@ -15,7 +15,7 @@
 | 3. Vypočti geometrické rozdíly | stroj (M3) | `geometry_diff.json` |
 | 4. Vypočti fyzikální cíle | stroj (M4) | `physics_target.json` |
 | 5. Namapuj cíle na A-Chassis Tune | stroj (M5) | `achassis_changes.json` (s důvody) |
-| 6. Vygeneruj konfiguraci + rollback | stroj (M6) | `output/<vozidlo>/iteration_NNN/` |
+| 6. Vygeneruj konfiguraci + rollback | stroj (M6) | `vehicle-data/runs/<vozidlo>/iteration_NNN/` |
 | 7. Vygeneruj testovací protokol | stroj (M7) | `test_protocol.md` + formulář měření |
 | 8. **Aplikuj konfiguraci ve Studiu** | **člověk** | upravená pracovní kopie |
 | 9. **Proveď předepsané jízdy** | **člověk** | vyplněný formulář + telemetrie |

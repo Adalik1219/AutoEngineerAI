@@ -15,26 +15,26 @@
 | Karoserie | Fastback |
 | Převodovka | 6stupňový manuál |
 | Výbava | Standardní GT, **bez Performance Packu** |
-| `vehicle_id` (návrh) | `ford_mustang_gt_2024_eu_manual_standard` |
+| `vehicle_id` (návrh) | `ford-mustang-gt-2024-eu-manual-standard` |
 
 ## 2. Technické údaje (před použitím ověřit proti zdrojům)
 
 | Parametr | Hodnota | Stav |
 |---|---|---|
-| Motor | 5.0 Ti-VCT V8 | VERIFIED (zdroj [1]) |
-| Zdvihový objem | 5 038 cm³ | VERIFIED (zdroj [1]) |
-| Max. výkon | 328 kW / 446 PS při 7 250 rpm | VERIFIED (zdroj [1]) |
-| Max. moment | 540 Nm při 5 100 rpm | VERIFIED (zdroj [1]) |
-| Rozvor | 2 719 mm | VERIFIED (zdroj [1]) |
-| Přední rozchod | 1 585 mm | VERIFIED (zdroj [1]) |
-| Zadní rozchod | 1 642 mm | VERIFIED (zdroj [1]) |
-| Délka | 4 810 mm | VERIFIED (zdroj [1]) |
-| Šířka bez zrcátek | 1 916 mm | VERIFIED (zdroj [1]) |
-| Výška Fastback | 1 394–1 414 mm | VERIFIED (rozmezí, zdroj [1]) |
+| Motor | 5.0 Ti-VCT V8 | Dle zadání (M1.5 ověří proti [1]) |
+| Zdvihový objem | 5 038 cm³ | Dle zadání (M1.5 ověří proti [1]) |
+| Max. výkon | 328 kW / 446 PS při 7 250 rpm | Dle zadání (M1.5 ověří proti [1]) |
+| Max. moment | 540 Nm při 5 100 rpm | Dle zadání (M1.5 ověří proti [1]) |
+| Rozvor | 2 719 mm | Dle zadání (M1.5 ověří proti [1]) |
+| Přední rozchod | 1 585 mm | Dle zadání (M1.5 ověří proti [1]) |
+| Zadní rozchod | 1 642 mm | Dle zadání (M1.5 ověří proti [1]) |
+| Délka | 4 810 mm | Dle zadání (M1.5 ověří proti [1]) |
+| Šířka bez zrcátek | 1 916 mm | Dle zadání (M1.5 ověří proti [1]) |
+| Výška Fastback | 1 394–1 414 mm | Dle zadání — rozmezí (M1.5 ověří proti [1]) |
 | Pohotovostní hmotnost (manuál) | cca 1 808 kg, odhad výrobce | ESTIMATED |
-| Přední pneumatiky | 255/40 R19 | VERIFIED (zdroj [1]) |
-| Zadní pneumatiky | 275/40 R19 | VERIFIED (zdroj [1]) |
-| Pohon | zadní kola | VERIFIED |
+| Přední pneumatiky | 255/40 R19 | Dle zadání (M1.5 ověří proti [1]) |
+| Zadní pneumatiky | 275/40 R19 | Dle zadání (M1.5 ověří proti [1]) |
+| Pohon | zadní kola | Dle zadání (M1.5 ověří proti [1]) |
 | Převodové poměry 1–6 + stálý převod | — | **UNKNOWN** (nevymýšlet) |
 | Průběh momentové křivky (body rpm–Nm) | — | **UNKNOWN** (nevymýšlet; max. výkon/moment ≠ křivka) |
 | Rozložení hmotnosti P/Z, výška těžiště | — | **UNKNOWN** |
@@ -44,6 +44,14 @@
 
 Nominální (nevýpočtové, nezatížené) průměry z označení pneumatik — geometrický výpočet, ne měření:
 přední 255/40 R19 = **686,6 mm**, zadní 275/40 R19 = **702,6 mm** (`D = 19·25,4 + 2·W·A/100`).
+
+## 2a. Co znamená „Dle zadání"
+
+„Dle zadání" = hodnota převzatá z uzamčeného zadání projektu, **nikoli nezávisle ověřený fakt**.
+Status `VERIFIED` smí přidělit až úkol M1.5 po kontrole proti PDF [1] (a [2]/[3] při rozporu).
+Do té doby se s hodnotami pracuje jako s `ESTIMATED` (použitelné pro výpočty M3/M4, ne pro
+tvrzení o shodě se skutečným vozem). Konzistence maxima již zkontrolována:
+540 Nm @ 5 100 rpm → 288,4 kW < 328 kW maxima (maximum při 7 250 rpm, moment ≈ 432 Nm) — bez rozporu.
 
 ## 3. Zdroje
 

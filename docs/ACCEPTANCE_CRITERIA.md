@@ -28,9 +28,12 @@ Každé kritérium má jasný PASS/FAIL a měřitelný důkaz. Vzor: F7.2 AC1–
 - **M3:** M3-T01…M3-T09 (studs přepočty; 686,6/702,6 mm; symetrie; odmítnutí záměny náprav; BLOCKED propagace).
 - **M4:** M4-T01…M4-T10 (jednotky; `P=T·RPM`; rychlost kola; 6 stupňů; žádné vymyšlené body; monotónnost brzd; energetická bilance; simulace ≠ runtime).
 - **M5:** 7 pravidel (neznámý/READ-Only/mimo-rozsah/konflikt → odmítnuto; struktura oddělená; důvod + původní hodnota; žádná neověřená VERIFIED).
-- **M6:** 7 pravidel (determinismus; dohledatelnost; rollback; odmítnutí nevalidní; hash originálu; unikátní ID; žádná auto-aplikace).
-- **M7:** každý test = postup + očekávané hodnoty + jednotky + tolerance + vyhodnocení; minima opakování z `HYBRID_WORKFLOW.md` §3.
-- **M8:** 8 pravidel (správné statistiky; nekompletní sada ≠ PASS; outlier s evidencí; opakovatelnost ≠ přesnost; důvod doporučení; rollback).
+- **M6:** 7 pravidel + atomicita M6.10 (kopie+swap, kill-test, last-known-good s nulovým diffem); hash originálu; unikátní ID; žádná auto-aplikace.
+- **M7:** každý test = postup + cíl s číselnou tolerancí + `verdict_rule` (explicitní nerovnost) +
+  jednotky + vyhodnocení; protokol bez čísel se zamítá; minima opakování z `HYBRID_WORKFLOW.md` §3;
+  `environment.mode` musí být `roblox-runtime`, jinak výsledek není runtime důkaz (G-07).
+- **M8:** 8 pravidel + `n < 3 → INSUFFICIENT` (nikdy PASS); opakovatelnost `R` vs. přesnost
+  `|x̄−target|/|target|` odděleně; outlier flagnut (|odchylka| > 3s), nikdy tiše smazán.
 - **M9:** 9 pravidel (workflow s testovacím RBXM i Mustangem; 2 iterace; import výsledků; rollback; hash; žádné runtime PASS bez Studia).
 
 ## 3. Brána F7.2 (převzatá, neměnná)
