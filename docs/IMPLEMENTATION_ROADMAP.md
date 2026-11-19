@@ -19,7 +19,8 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
 
 ---
 
-## M1 – Vehicle Specification Foundation · priorita P0 · stav: PARTIAL
+## M1 – Vehicle Specification Foundation · priorita P0 · stav: CODE-VERIFIED (viz §0.1;
+následující body 1–14 jsou schválená specifikace, aktuální stav drží `docs/PROJECT_STATUS.md` §0)
 
 1. **Cíl:** spolehlivá databáze reálných vozidel; první profil Mustang GT 2024 EU manuál standard.
 2. **Odpovědnosti:** datový model specifikace; evidence zdrojů a důvěryhodnosti; validace variant a neznámých údajů; export/import profilu.
@@ -34,25 +35,34 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
    chybějící údaj `notes: "CHYBÍ: … + postup doplnění"`; `value: null` + `confidence > 0.5` je chyba;
    `source_type: factory` vyžaduje `confidence ≥ 0.8`.
 7. **Závislosti:** žádné (paralelně s M2).
-8. **Úkoly:** M1.1 model `VehicleSpecification` · M1.2 oddělené modely motor/převodovka/pneu/geometrie · M1.3 metadata zdrojů (URL, datum, jednotky, autorita) · M1.4 stavy VERIFIED/ESTIMATED/UNKNOWN · M1.5 profil Mustangu · M1.6 oddělení standard GT vs. Performance Pack · M1.7 kontrola kompatibility variant (EU≠US, GT≠Pack) · M1.8 export/import specifikace · **M1.9 výjimka torque_curve: `VEHICLE-DATA.md` §2.3 žádá ≥2 tovární kotvy, pro Mustang existuje 0 — profil proto nese prázdnou křivku se statusem UNKNOWN a zdůvodněním v `notes` (`CHYBÍ: …`); `validate.py` je null-safe (`or {}`), výjimku explicitně zdokumentovat a nesmí se stát precedentem pro domýšlení bodů**.
-9. **Unit testy:** načtení Mustangu; chybějící povinné pole → odmítnuto; neplatná převodovka → odmítnuto; záměna EU/US → odmítnuto; neznámá křivka **a neznámé převodové poměry** zůstávají UNKNOWN; VERIFIED bez zdroje → odmítnuto; smíchání GT/Pack → odmítnuto.
+8. **Úkoly:** M1.1 model `VehicleSpecification` · M1.2 oddělené modely motor/převodovka/pneu/geometrie · M1.3 metadata zdrojů (URL, datum, jednotky, autorita) · M1.4 stavy VERIFIED/ESTIMATED/UNKNOWN · M1.5 profil Mustangu · M1.6 přejmenování na EU factory standard (Pack je standardem EU GT) · M1.7 kontrola kompatibility variant (EU≠US; odmítnutí US komponent v EU profilu) · M1.8 export/import specifikace · **M1.9 výjimka torque_curve: `VEHICLE-DATA.md` §2.3 žádá ≥2 tovární kotvy, pro Mustang existuje 0 — profil proto nese prázdnou křivku se statusem UNKNOWN a zdůvodněním v `notes` (`CHYBÍ: …`); `validate.py` je null-safe (`or {}`), výjimku explicitně zdokumentovat a nesmí se stát precedentem pro domýšlení bodů**.
+9. **Unit testy:** načtení Mustangu; chybějící povinné pole → odmítnuto; neplatná převodovka → odmítnuto; záměna EU/US → odmítnuto; neznámá křivka, final drive a bias zůstávají UNKNOWN; VERIFIED bez zdroje → odmítnuto; Brembo/LSD povoleny (EU standard), záměna EU/US komponent → odmítnuta.
 10. **Integration testy:** profil projde `tools/validate_contracts.py`; `source_vehicle_id` linkuje DB záznam s pipeline profilem.
 11. **Akceptační kritéria:** M1-T01…M1-T07 dle zadání (vše PASS); každá známá hodnota má zdroj, každá neznámá zůstává neznámá.
 12. **Definition of Done:** Mustang se načte jako validní verzovaný profil; zdroje dohledatelné.
-13. **Omezení/rizika:** převody, křivka, rozložení hmotnosti, brzdy, aero jsou UNKNOWN — M4 s nimi musí počítat; riziko záměny EU/US a GT/Pack dat.
-14. **Stav:** PARTIAL — schémata a 2 referenční vozy existují (civic, gr86), mustang profil chybí.
+13. **Omezení/rizika:** křivka, rozložení hmotnosti, bias, Cd/čelní plocha, stálý převod (kandidáti 3.15:1/3.55:1 bez přiřazení), zpátečka a kompresní poměr jsou UNKNOWN — M4 s nimi musí počítat; převody 1–6, brzdy Brembo 390/355, kola, 0–100 5,3 s a V-max 250 km/h jsou VERIFIED (M1.5, 2026-11-19); riziko záměny EU/US a GT/Dark Horse dat.
+14. **Stav:** CODE-VERIFIED — schémata a 3 referenční vozy existují (civic, gr86, mustang GT 2024 EU factory standard); profil Mustangu validuje 0/0, 22 testů M1-T01…M1-T22 PASS (T21/T22 fáze B 36cbbdb: M1.9 výjimka i v `tools/validate_contracts.py`; `validate_contracts` 24/0 @ `36cbbdb`). (M1 nemá runtime složku; vyšší stupeň neexistuje.)
 
-## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: NOT IMPLEMENTED
+## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: ČÁSTEČNĚ
+(parser C05 + detekce kol M2.1/M2.2 CODE-VERIFIED @ `36cbbdb`, není RUNTIME;
+měření M2.4–M2.8 BLOCKED kalibrační bránou; kalibrace M2.9/M2.10 NOT IMPLEMENTED;
+aktuální stav drží `docs/PROJECT_STATUS.md` §0; body 1–14 níže jsou schválená specifikace)
 
 1. **Cíl:** read-only změřit existující RBXM (kola, nápravy, rozměry) a určit měřítko studs/m.
 2. **Odpovědnosti:** parsování RBXM bez zápisu; identifikace 4 kol + náprav; výpočet rozvoru/rozchodů/průměrů; inventář dílů a hmotností; čtení Tune/Script/Structure parametrů; kalibrace `studs_per_meter`.
 3. **Vstupy:** pracovní kopie RBXM (nikdy originál).
 4. **Výstupy:** `inspection_report.json` + `studs_per_meter` s nejistotou, nebo `BLOCKED` s důvodem.
 5. **Vztah:** `k = W_studs / 2.719`, kde `W_studs` je naměřený rozvor; konzistence ověřena přes ≥2 nezávislé rozměry (rozvor + rozchod + průměr kola).
-6. **Navržené soubory:** `src/autoengineer/inspection/{rbxm_inspector,geometry_reader,part_inventory,achassis_reader,inspection_report}.py`; `src/autoengineer/units/{conversions,scale_calibration}.py` — ověřit proti `src/common/units.py` (existuje, rozšířit místo duplikace).
+6. **Navržené soubory:** `src/autoengineer/inspection/{rbxm_inspector,geometry_reader,part_inventory,achassis_reader,inspection_report}.py`; `src/autoengineer/units/{conversions,scale_calibration}.py` — ověřit proti `src/common/units.py` (existuje, rozšířit místo duplikace). (Mapování návrh→realita k @ `36cbbdb`: `rbxm_inspector` ≈ `src/Inspection/rbxm_parser.py` (1352 řádků) + `geometry_reader` ≈ `wheel_detect.py` (21 testů) + `src/Inspection/__init__.py`; `src/autoengineer/` jako adresář neexistuje — viz inventura D3.)
 7. **Závislosti:** žádné (paralelně s M1).
-8. **Úkoly:** M2.1 spike formátu RBXM: v repu **žádná čtečka neexistuje** — nejdřív ověřit,
-   čím binární RBXM číst (stdlib vs. existující nástroj), read-only na kopii s hash-kontrolou ·
+8. **Úkoly:** M2.1 spike formátu RBXM: HOTOVO (read-only sonda na kopii
+   s hash-kontrolou; výstupem spike je pouze rozhodnutí o čtecí metodě; fáze B
+   36cbbdb doložila lane-order MSB-první + Ball=0 invariant) ·
+   **C05 produkční parser: HOTOVO, CODE-VERIFIED** (`src/Inspection/rbxm_parser.py`
+   @ `36cbbdb`: chunk reader + INST + PRNT + SSTR/META/Name + Shape/Size/CFrame
+   s provenancí; důkazy `reports/AUDIT-parser-security.md`,
+   `AUDIT-format-compat.md`, `AUDIT2-format-compat.md`, `AUDIT-qa-final.md`,
+   `FINAL_INDEPENDENT_QA.md`) — přebírá pravidlo kol doslovně ·
    M2.2 identifikace 4 kol a středů **heuristikou z `docs/A-CHASSIS-AUDIT.md` (§Model:Wheels → díly
    FL/FR/RL/RR; kola tvar Ball; `wDia` se odvozuje ze `Size.x` největšího hnacího kola)** ·
    M2.3 identifikace náprav · M2.4 rozvor · M2.5 rozchody · M2.6 průměry pneu **s křížovou kontrolou
@@ -64,14 +74,29 @@ Výstupní rozložení konfiguračního balíčku (M6, kořen v existujícím `v
    Ball-součástí). Při porušení libovolné podmínky: kandidát → `UNKNOWN` se záznamem, který
    bod selhal. **Analýza se zastaví s `BLOCKED` při:** chybějícím `Model:Wheels`; počtu
    identifikovaných kol ≠ 4; nekonzistentním měřítku z ≥2 rozměrů; jakémkoli `UNKNOWN` u kola.
+   **Presety CFrame (ověřené vs. unread odděleně):** id 0 = vlastní matice
+   (čtena), id 2 = identita; ostatní id → `unread-preset-N` (pozice čtena,
+   orientace `None`, nikdy odhad) — plné ověření tabulky presetů mimo M2
+   (follow-up, neblokuje; viz `AUDIT-qa-final.md` §4/3).
    **Spike (M2.1) vs. produkce:** výstupem spike je pouze rozhodnutí o čtecí metodě + read-only
-   sonda na kopii; produkční parser (C05/C06) vzniká až po něm a přebírá toto pravidlo doslovně.
+   sonda na kopii; produkční parser C05 po něm vznikl a převzal toto pravidlo doslovně
+   (C06/kalibrace vzniká až po M3 Studio ground-truth).
 9. **Unit testy:** determinismus (2× stejný RBXM = identický výstup); všechna 4 kola rozpoznána; nápravy určeny; rozvor/rozchod shodné s referencí.
 10. **Integration testy:** report proti ručnímu měření ve Studiu; nekonzistentní měřítko → WARNING/BLOCKED; nejednoznačné označení kola → UNKNOWN.
 11. **Akceptační kritéria:** M2-T01…M2-T08 (včetně **zápis do originálu RBXM se nesmí stát** — hash vstupu se po běhu nemění).
 12. **Definition of Done:** modul změří model a určí měřítko, nebo prokazatelně oznámí, že to nelze.
-13. **Omezení/rizika:** žádný RBXM parser v repu zatím neexistuje (největší riziko plánu); float/CFrame rozměry A-Chassis dosud neověřeny ve Studiu (otevřený bod ze STATUS).
-14. **Stav:** NOT IMPLEMENTED.
+13. **Omezení/rizika:** parser C05 existuje a je CODE-VERIFIED (viz bod 8);
+   Studio ground-truth kol DONE (`reports/STUDIO_GROUND_TRUTH.md` 2026-11-19:
+   rozvor ≈10.52 / rozchod ≈5.99 / Ball 2.7³ potvrzeny) — kalibrační brána pro
+   měření M2.4–M2.8 proto dál drží BLOCKED; největším zbývajícím
+   rizikem zůstává kalibrace `studs_per_meter` (M2.9/M2.10, až po Studio ground-truth).
+14. **Stav:** ČÁSTEČNĚ — C05 parser + detekce kol CODE-VERIFIED
+   (`src/Inspection/rbxm_parser.py` + `wheel_detect.py` @ `36cbbdb`;
+   důkazy `reports/AUDIT-qa-final.md`, `FINAL_INDEPENDENT_QA.md`,
+   `FINAL_COORDINATION_REPORT.md`); měření M2.4–M2.8 BLOCKED kalibrační
+   bránou; kalibrace M2.9/M2.10 NOT IMPLEMENTED. Není RUNTIME
+   (Studio ground-truth kol DONE — `reports/STUDIO_GROUND_TRUTH.md` —
+   potvrzuje hodnoty, nemění stupeň).
 
 ## M3 – Geometry Engine · priorita P0 · stav: NOT IMPLEMENTED
 

@@ -113,6 +113,27 @@ def validate_against_schema(data: Any, schema: dict, root_schema: dict | None = 
     return errors
 
 
+def _is_m19_empty_torque_curve(profile: dict) -> bool:
+    """M1.9 výjimka (IMPLEMENTATION_ROADMAP.md §M1.8): pro Mustang GT 2024 EU
+    existuje 0 továrních kotev momentové křivky, profil proto nese prázdnou
+    křivku se statusem UNKNOWN. Podmínky: points == [], interpolation "none",
+    curve_source estimate s confidence <= 0.5 a notes "CHYBÍ: ...".
+    Výjimka se nesmí stát precedentem pro domýšlení bodů — jakýkoli
+    neprázdný seznam bodů prochází standardní validací (minItems 2)."""
+    tc = profile.get("torque_curve")
+    if not isinstance(tc, dict):
+        return False
+    if tc.get("points") != [] or tc.get("interpolation") != "none":
+        return False
+    curve = tc.get("curve_source")
+    if not isinstance(curve, dict):
+        return False
+    conf = curve.get("confidence")
+    return (curve.get("source_type") == "estimate"
+            and isinstance(conf, (int, float)) and conf <= 0.5
+            and str(curve.get("notes") or "").startswith("CHYBÍ:"))
+
+
 def _walk_envelopes(node: Any, path: str = "$") -> list[tuple[str, dict]]:
     """Najde všechny obálky {value, unit, source, source_type, confidence}."""
     found: list[tuple[str, dict]] = []
@@ -154,6 +175,14 @@ def check_envelope_rules(profile: dict) -> tuple[list[str], list[str]]:
                 warnings.append(f"{path}: null estimate s confidence {conf} > 0.5")
         if stype == "factory" and value is not None and isinstance(conf, (int, float)) and conf < 0.8:
             warnings.append(f"{path}: factory údaj s nízkou confidence {conf}")
+        if stype == "factory" and value is not None:
+            # VEHICLE-SPECIFICATIONS.md §4: každá hodnota VERIFIED (factory)
+            # musí mít zdroj; bez zdroje je hodnota ESTIMATED nebo UNKNOWN.
+            src = env.get("source") or ""
+            if (not src.strip() or src.strip().lower().startswith(
+                    ("neznám", "neznam", "unknown", "chybí", "chybí:", "chybi"))):
+                errors.append(f"{path}: factory údaj bez zdroje — bez zdroje "
+                              f"je hodnota ESTIMATED nebo UNKNOWN")
     # torque_curve: každý bod point_type; interpolované body mají mít nízkou důvěru křivky
     tc = profile.get("torque_curve") or {}
     for i, pt in enumerate(tc.get("points", [])):
@@ -161,7 +190,10 @@ def check_envelope_rules(profile: dict) -> tuple[list[str], list[str]]:
             errors.append(f"$.torque_curve.points[{i}]: neznámý point_type")
     curve = tc.get("curve_source") or {}
     if curve.get("source_type") == "estimate" and not str(curve.get("notes") or "").startswith("ODHAD:"):
-        errors.append("$.torque_curve.curve_source: estimate bez notes 'ODHAD:...'")
+        # M1.9 výjimka: prázdná křivka (points [], interpolation "none")
+        # smí nést "CHYBÍ: ..." místo "ODHAD: ..." — UNKNOWN se nevymýšlí.
+        if not _is_m19_empty_torque_curve(profile):
+            errors.append("$.torque_curve.curve_source: estimate bez notes 'ODHAD:...'")
     return errors, warnings
 
 
@@ -245,6 +277,11 @@ def check_consistency(profile: dict) -> tuple[list[str], list[str]]:
 def validate_profile(profile: dict, schema: dict) -> tuple[list[str], list[str]]:
     """Plná validace: schéma + obálky + konzistence. Vrací (errors, warnings)."""
     errors = validate_against_schema(profile, schema)
+    if _is_m19_empty_torque_curve(profile):
+        # M1.9 výjimka: prázdná křivka UNKNOWN je záměr — minItems chyba
+        # pro $.torque_curve.points se potlačí (jen při splnění podmínek).
+        errors = [e for e in errors
+                  if e != "$.torque_curve.points: minItems 2, nalezeno 0"]
     env_errors, env_warnings = check_envelope_rules(profile)
     con_errors, con_warnings = check_consistency(profile)
     return errors + env_errors + con_errors, env_warnings + con_warnings

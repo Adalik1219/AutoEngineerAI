@@ -44,7 +44,10 @@ SCENARIO = "straight_accel"
 BRAKE_SCENARIO = "straight_brake_100_0"
 SEED = 7
 
-ORIGINAL_RBXM = "C:/Users/adamr/Downloads/chasis.rbxm"
+ORIGINAL_RBXM = os.path.join(
+    ROOT, "testgame", "src", "ServerStorage", "VehicleTemplates",
+    "JeepTemplate.rbxm")
+ORIGINAL_RBXM_SIZE = 230421
 ORIGINAL_RBXM_SHA256 = (
     "dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf"
 )
@@ -372,7 +375,15 @@ class TestF4Integration(unittest.TestCase):
               % (sim_file == sim_cfg, sim_file != config))
 
     def test_original_rbxm_sha256_untouched(self):
-        """READ-ONLY zásada: originál rbxm beze změny (jen sha kontrola)."""
+        """READ-ONLY zásada: verzovaná fixture beze změny (jen sha kontrola).
+
+        Chybí-li fixture, SKIP s důvodem (PENDING), nikdy ERROR.
+        """
+        if not os.path.exists(ORIGINAL_RBXM):
+            self.skipTest(
+                "PENDING: verzovaná fixture JeepTemplate.rbxm není "
+                "v tomto prostředí k dispozici")
+        before = os.stat(ORIGINAL_RBXM)
         digest = hashlib.sha256()
         with open(ORIGINAL_RBXM, "rb") as fh:
             for chunk in iter(lambda: fh.read(1 << 20), b""):
@@ -380,6 +391,10 @@ class TestF4Integration(unittest.TestCase):
         actual = digest.hexdigest()
         print("RAW original rbxm sha256: %s" % actual)
         self.assertEqual(actual, ORIGINAL_RBXM_SHA256)
+        self.assertEqual(before.st_size, ORIGINAL_RBXM_SIZE)
+        after = os.stat(ORIGINAL_RBXM)
+        self.assertEqual((before.st_mtime_ns, before.st_size),
+                         (after.st_mtime_ns, after.st_size))
 
     def test_sim_supported_paths_are_canonical_caps_source(self):
         """backend_caps = Sim-podpora -> tune_key (dokumentace kanonickeho zdroje)."""

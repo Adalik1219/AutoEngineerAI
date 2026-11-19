@@ -33,7 +33,10 @@ from src.Chassis.mapping_engine import (  # noqa: E402
 )
 
 CATALOG_PATH = os.path.join(ROOT, "src", "Chassis", "catalog", "parameters.json")
-RBXM_ORIG = "C:/Users/adamr/Downloads/chasis.rbxm"
+#: Verzovaná fixture (stejný model jako původní chasis.rbxm, hash níže).
+RBXM_ORIG = os.path.join(ROOT, "testgame", "src", "ServerStorage",
+                         "VehicleTemplates", "JeepTemplate.rbxm")
+RBXM_SIZE = 230421
 RBXM_SHA256 = "dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf"
 
 # Audit §5/§6/§12 – doslovné hodnoty Tune (vlastní opis z auditu, ne z Agenta A).
@@ -482,15 +485,16 @@ class TestF4Integration(unittest.TestCase):
 
 class TestF4Safety(unittest.TestCase):
     def test_f4_11_rbxm_hash_a_readonly(self):
-        """F4-11: sha256 originálu; velikost 230 421 B; mtime beze změny
-        během běhu testů (žádný zápis)."""
+        """F4-11: sha256 verzované fixture; velikost 230 421 B; mtime beze
+        změny během běhu testů (žádný zápis). Chybí-li fixture, SKIP."""
         if not os.path.exists(RBXM_ORIG):
-            self.skipTest("originál rbxm nedostupný mimo toto prostředí")
+            self.skipTest("PENDING: verzovaná fixture JeepTemplate.rbxm "
+                          "není v tomto prostředí k dispozici")
         before = os.stat(RBXM_ORIG)
         with open(RBXM_ORIG, "rb") as fh:
             digest = hashlib.sha256(fh.read()).hexdigest()
         self.assertEqual(digest, RBXM_SHA256)
-        self.assertEqual(before.st_size, 230421)
+        self.assertEqual(before.st_size, RBXM_SIZE)
         after = os.stat(RBXM_ORIG)
         self.assertEqual((before.st_mtime_ns, before.st_size),
                          (after.st_mtime_ns, after.st_size))

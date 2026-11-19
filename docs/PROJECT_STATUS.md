@@ -1,16 +1,109 @@
-# Project Status – stav k 2026-11-19 (audit pro hybridní plán)
+# Project Status – stav k 2026-11-19 (větev `feat/m1-m2-foundation`, PR #2)
 
-**Stav:** audit v1 na branchi `docs/hybrid-workflow-spec-m1-m9` (ke schválení).
-**Metoda:** čtení repozitáře (file listing, klíčové dokumenty, katalog, testy), běh `python tests/run_all.py`.
-**HEAD mainu při auditu:** `dd9efdf`. Testy: **162 PASS, 0 FAIL, 4 PENDING** (PENDING není PASS).
+**Aktuální stav:** M1 CODE-VERIFIED; M2 parser C05 CODE-VERIFIED (není RUNTIME),
+geometrie/měření BLOCKED, kalibrace NOT IMPLEMENTED; M3 NOT IMPLEMENTED —
+kód i docs na této větvi @ `ff4a9d6` (PR #2, OPEN, NEMERGOVAT; pin sjednocen:
+`36cbbdb` + fáze loader/CI/Studio → `ff4a9d6`); testy
+**279 běhů, 275 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `ff4a9d6`,
+ověřeno vlastním během 2026-11-19; historické: 260/256/0/4 @ `ff6f266` —
+viz §0.4; PENDING beze změny, PENDING≠PASS).
+**RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
+
+> **§1–§8 = HISTORICKÝ audit před implementací** (stav k `dd9efdf`, 162 PASS).
+> Ponecháno NEMAZAT jako stopa; aktuální stav je pouze §0 (+ §9 kontroly M1/M2).
 
 ---
 
-## 1. Stav modulů M1–M9
+## 0. Aktuální stav po M1+M2 (tato větev)
+
+### 0.1 M1 – profil + validace (hotovo)
+- Profil Mustangu: EUROPEAN FACTORY STANDARD SPECIFICATION, `vehicle_id` beze změny;
+  VERIFIED (factory, confidence ≥ 0.85, zdroj Ford EU PDF/mirror + datum): poměry 1–6
+  (3.237/2.104/1.422/1.000/0.814/0.622), 0–100 5,3 s, V-max 250 km/h, kotouče
+  390x36/355x28 + Brembo six-piston, LSD obecně, kola 19x9.0J/19x9.5J +
+  pneu 255/40–275/40 R19.
+- UNKNOWN zůstává (křivka, rozložení, bias, Cd, stálý převod s kandidáty
+  3.15/3.55 v notes) + GUARD test T17 (final_drive jako definitivní hodnota → chyba).
+- Validace: profil 0 errors / 0 warnings; sada M1-T01…M1-T20 20/20 PASS.
+- Detail: §9 níže (kontroly Agenta D + opakování po povýšení M1.5).
+
+### 0.2 M2 – parser C05 hotov (CODE-VERIFIED); měření/kalibrace BLOCKED / NOT IMPLEMENTED
+- Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`, fáze B 36cbbdb: lane-order
+  MSB-první doložen, Ball=0 invariantní); produkční parser **C05**
+  (`src/Inspection/rbxm_parser.py`, 1352 řádků @ `36cbbdb`; fáze B: `parse_rbxm`
+  OSError → `RbxmCorruptError` kontrakt + test, F8 hash přes reál): chunk reader +
+  INST + PRNT + SSTR/META/Name + Shape/Size/CFrame s provenancí
+  (`read/missing/unread`; floaty vždy `trusted=False`). P0 oprava: cyklus
+  v parent hierarchii, chybějící parent ID i duplicitní instance ID →
+  vždy BLOCKED, nikdy validní (`parent_cycle` / `missing parent id` /
+  `duplicate instance id` v blocked_reasons).
+- Důkazy: `reports/AUDIT-parser-security.md` (P0: 0; 5× P1 + 2× P2 vše
+  OPRAVENO s regresními testy) + `reports/AUDIT-format-compat.md` (+
+  `reports/AUDIT2-format-compat.md` fáze B, 36cbbdb) + `reports/AUDIT-geometry.md`
+  (+ `reports/AUDIT2-geometry.md`, `AUDIT2-parser-security.md`,
+  `AUDIT2-performance.md`, `AUDIT2-qa-plan.md` — 53c2e23) +
+  `reports/AUDIT-qa-final.md` (7 vlastních adversarial sond vše fail-closed;
+  verdikt MERGE, podmínky docs-only) + `reports/FINAL_INDEPENDENT_QA.md`
+  (MERGE WITH CONDITIONS docs-only) + `reports/FINAL_COORDINATION_REPORT.md` +
+  `reports/FINAL_PERFORMANCE_BENCHMARK.md` (opraveno rozsahem: hotspoty
+  5–240× dle operace, end-to-end na chassis kopii ~2×, paměť beze změny).
+  Stupeň: **CODE-VERIFIED, není RUNTIME** (Studio ground-truth
+  `reports/STUDIO_GROUND_TRUTH.md` DONE 2026-11-19 potvrzuje pozice/Size/Shape
+  kol parseru vs. Studio — viz §0.5/4; runtime jízda žádná).
+- Presety CFrame **ověřené vs. unread odděleně**: id 0 = vlastní matice
+  (čtena), id 2 = identita; ostatní id → `unread-preset-N` (pozice čtena,
+  orientace `None`, nikdy odhad) — kryto `test_f6_cframe_preset_sweep`,
+  `test_cframe_unknown_preset_unread`, `test_assess_unread_rotation_blocked`.
+- Detekce kol: rozhodovací pravidlo `(a) v Model:Wheels + (b) FL/FR/RL/RR +
+  (c) tvar Ball` v `src/Inspection/wheel_detect.py` (21 testů, vše PASS).
+- BLOCKED / NOT IMPLEMENTED: geometrie z měření (M2.4–M2.6 rozvor/rozchody/
+  průměry) — kalibrační brána drží **BLOCKED** (`float_decode_unverified`;
+  reálná kopie: 44 dílů → BLOCKED, ověřeno během); kalibrace `studs_per_meter`
+  (M2.9/M2.10, C06) **NOT IMPLEMENTED** — až po M3 Studio ground-truth.
+  Žádné měření se neodhaduje, vše UNKNOWN/BLOCKED.
+
+### 0.3 M3–M9 (beze změny)
+- M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
+  auditu §1 (stav před implementací této větve).
+
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `ff4a9d6`)
+- `python tests/run_all.py` → **279 běhů, 275 PASS, 0 FAIL, 4 PENDING**
+  (vlastní běh 2026-11-19 @ `36cbbdb`; předchozí: 260/256/0/4 @ `ff6f266`
+  — viz `reports/FINAL_DOCUMENTATION_SYNC.md` historie; 199/195/0/4 před M2
+  hardeningem a 192/188/0/4 stav k Agentu D — viz §9 níže;
+  PENDING totožné, PENDING≠PASS).
+- Sady: `test_m2_rbxm_parser.py` 54 testů (`grep "def test"` @ `36cbbdb`;
+  +1 fáze B: OSError → RbxmCorruptError), `test_m2_wheel_detect.py` 21 testů,
+  `test_m1_mustang_profile.py` 22 testů (T01–T22; +T21/T22 fáze B 36cbbdb:
+  contracts-validátor M1.9 výjimka).
+- `tools/validate_contracts.py` → 24/0 ÚSPĚCH (@ `36cbbdb`, commit message;
+  M1.9 výjimka i v contracts validátoru).
+- CI: `53c2e23` fix (repo-relative fixture, SKIP místo ERROR, portability testy
+  `tests/test_ci_portability.py`).
+- RBXM: `assets/chassis-original/chasis-work-copy.rbxm` —
+  `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`
+  (před/po shodné, pouze čteno). Druhý soubor v repu
+  (`testgame/.../JeepTemplate.rbxm`) má stejný hash, rovněž beze změny.
+
+### 0.5 Otevřené body
+1. Kalibrace měřítka (M2.9/M2.10, C06) + měření rozvoru/rozchodů — NOT IMPLEMENTED /
+   BLOCKED, největší riziko plánu. Parser C05 je hotov (CODE-VERIFIED, viz §0.2).
+2. M3 Geometry Engine NOT IMPLEMENTED — blokováno bodem 1 (bez kalibrace žádné cíle).
+3. Rozhodnuto a uzavřeno: final drive ZŮSTÁVÁ UNKNOWN (kandidáti 3.15/3.55 jen v notes,
+   rozhodnutí uživatele); trvale UNKNOWN bez nového zdroje: momentová křivka, rozložení
+   hmotnosti + těžiště, brzdový bias, Cd/plocha.
+4. 4× PENDING není PASS (Roblox Studio odečet, schema conformance Fáze 5, 2× regresní baseline);
+   Studio ground-truth kol `reports/STUDIO_GROUND_TRUTH.md` = DONE 2026-11-19
+   (rozvor ≈10.52 / rozchod ≈5.99 / Ball 2.7³ potvrzeny vs. parser — hodnoty
+   potvrzeny, ale stupeň zůstává CODE-VERIFIED, není RUNTIME; runtime jízda žádná).
+
+---
+
+## 1. Stav modulů M1–M9 — HISTORICKÉ (audit před implementací, NEMAZAT)
 
 | Modul | Stav | Důkaz |
 |---|---|---|
-| M1 Vehicle Specs | PARTIAL | `_schema.json` + `loader/validate/compare` + vozy civic, gr86; **mustang profil chybí** |
+| M1 Vehicle Specs | PARTIAL | `_schema.json` + `loader/validate/compare` + vozy civic, gr86, mustang GT 2024 EU factory standard (20 testů M1-T01…M1-T20 PASS) |
 | M2 RBXM Inspector | NOT IMPLEMENTED | žádný RBXM parser v `src/` ani `tools/` (pouze zmínky v docs) |
 | M3 Geometry Engine | NOT IMPLEMENTED | žádný modul; `src/common/units.py` existuje (rozšířit) |
 | M4 Physics v2 | PARTIAL | `src/Physics/` 10 modulů + selftesty; chybí torque_curve s UNKNOWN, cíle Mustangu, nejistoty |
@@ -45,8 +138,8 @@ formulář (M7) · loader měření + advisor (M8) · orchestrace M9.
 
 ## 5. Neověřené údaje Mustangu (z `VEHICLE-SPECIFICATIONS.md`)
 
-Převodové poměry 1–6 + stálý převod · momentová křivka · rozložení hmotnosti a těžiště ·
-brzdy standardního GT · 0–100 km/h a V-max pro EU manuál · aerodynamika. Vše UNKNOWN do M1.
+Stálý převod (kandidáti 3.15:1/3.55:1 bez přiřazení) · momentová křivka · rozložení hmotnosti a těžiště ·
+bias · Cd/čelní plocha. Vše UNKNOWN (převody 1–6, brzdy Brembo, kola, 0–100 5,3 s, V-max 250 km/h jsou od M1.5 VERIFIED).
 
 ## 6. Konzistence dokumentace (kontrola této branche)
 
@@ -87,3 +180,43 @@ C01 schema · C02 mustang profil · C03 validace zdrojů · C04 jednotky · C05 
 C06 kalibrace měřítka · C07 geometry engine · C08 fyzikální modely · C09 A-Chassis registry integrace ·
 C10 mapování a validace · C11 generátor konfigurací · C12 rollback a manifesty · C13 testovací protokol ·
 C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commit = kód + testy + výsledek.
+
+## 9. Nezávislá kontrola M1+M2 + M1.5 (Agent D, 2026-11-19)
+
+- **Profil vs. validátor:** všechny pokusy o obejití M1.9 odmítnuty (1 bod → minItems;
+  body bez point_type → schéma+point_type; estimate bez 'ODHAD:' → chyba;
+  factory bez zdroje → chyba; prázdná křivka s interpolation≠none / confidence 0.9 →
+  výjimka neplatí, minItems chyba). Žádná vada validátoru nenalezena.
+- **M1.5 provedeno** dle `reports/MUSTANG-SOURCE-CHECK.md`: 22 obálek povýšeno na
+  factory (motor vč. vrtání/zdvihu, rozměry vč. nové šířky se zrcátky 2080 mm,
+  pneu P/Z); hmotnost 1808 kg ponechána ESTIMATED (Ford sám uvádí „Est.");
+  UNKNOWN zůstává (křivka, rozložení, bias, Cd, stálý převod) + kandidáti v notes
+  (převody 6MT, final drive 3.15/3.55, 0–100 5,3 s, V-max 250, brzdy 390/355 mm —
+  jako VERIFIED nepřidáno). Profil validuje 0 chyb / 0 varování.
+- **Kola:** rozhodovací pravidlo drží (Ball mimo Wheels nikdy kolo; duplicita / 3 kola /
+  2×Wheels → BLOCKED). Doplněny 2 testy (2×Wheels, cyklus v parents).
+- **SPEC:** opraven překlep ADAC URL (`rund-ums-fahrzeug`) + doplněn mirror [1b].
+- **Testy:** `tests/run_all.py` → 192 běhů, **188 PASS, 0 FAIL, 4 PENDING** (PENDING beze změny).
+- **Otevřené body pro uživatele:** (1) varianta „standard GT bez Packu" vs. EU realita
+  (Performance Pack zřejmě standardem EU GT — brzdy/LSD z [1b] proto nezamčeny);
+  (2) kandidáti M1.5 (převody, final drive, 0–100, V-max, brzdy) ke schválení jako VERIFIED.
+
+### Kontrolní opakování po povýšení M1.5 (Agent D, 2026-11-19, rozhodnutí uživatele)
+- **Rozhodnutí zapracováno:** varianta přejmenována na EUROPEAN FACTORY STANDARD
+  SPECIFICATION, `vehicle_id` beze změny; povýšeno na VERIFIED: poměry 1–6
+  (3.237/2.104/1.422/1.000/0.814/0.622), 0–100 5,3 s, V-max 250 km/h, kotouče
+  390x36/355x28 + Brembo six-piston, LSD obecně, kola 19x9.0J/19x9.5J + pneu
+  255/40–275/40 R19 — vše factory, confidence ≥ 0.85, zdroj s URL [1]/[1b] + datem.
+- **Zdroje:** každé VERIFIED má URL Ford EU PDF/mirror + datum 2026-11-19,
+  confidence ≥ 0.8; žádné US hodnoty (Torsen/Tremec/Dark Horse/453 PS jen
+  v notes-negacích a GT-vs-Dark-Horse rozlišení sloupců, nikoli jako hodnoty).
+- **Stavy:** final_drive UNKNOWN s oběma kandidáty v notes + GUARD test T17
+  (použití jako definitivní hodnota → chyba); křivka/rozložení/bias/Cd UNKNOWN s `CHYBÍ:`.
+- **Validace:** profil 0 errors / 0 warnings; M1 sada 20/20 PASS;
+  `tests/run_all.py` → 199 běhů, **195 PASS, 0 FAIL, 4 PENDING** (PENDING beze změny).
+- **Návaznost M1→M2:** `contracts/` nedotčeny (jen 4 soubory M1 v diffu),
+  inspection_report kontrakt beze změny; profil použitelný pro M3/M4 cíle
+  (6 poměrů, Pmax/Mmax, pneu, rozměry), final_drive blokován GUARDem.
+- **Opraveno touto kontrolou:** ROADMAP M1.13 (stale „převody, brzdy UNKNOWN") +
+  M1.14 („profil chybí"); PROJECT_STATUS §1 a §5 (stale UNKNOWN výčty).
+  Verdikt: **PASS** (otevřené body z 9. odstavce uzavřeny rozhodnutím uživatele).
