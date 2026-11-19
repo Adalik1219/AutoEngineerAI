@@ -87,3 +87,23 @@ C01 schema · C02 mustang profil · C03 validace zdrojů · C04 jednotky · C05 
 C06 kalibrace měřítka · C07 geometry engine · C08 fyzikální modely · C09 A-Chassis registry integrace ·
 C10 mapování a validace · C11 generátor konfigurací · C12 rollback a manifesty · C13 testovací protokol ·
 C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commit = kód + testy + výsledek.
+
+## 9. Nezávislá kontrola M1+M2 + M1.5 (Agent D, 2026-11-19)
+
+- **Profil vs. validátor:** všechny pokusy o obejití M1.9 odmítnuty (1 bod → minItems;
+  body bez point_type → schéma+point_type; estimate bez 'ODHAD:' → chyba;
+  factory bez zdroje → chyba; prázdná křivka s interpolation≠none / confidence 0.9 →
+  výjimka neplatí, minItems chyba). Žádná vada validátoru nenalezena.
+- **M1.5 provedeno** dle `reports/MUSTANG-SOURCE-CHECK.md`: 22 obálek povýšeno na
+  factory (motor vč. vrtání/zdvihu, rozměry vč. nové šířky se zrcátky 2080 mm,
+  pneu P/Z); hmotnost 1808 kg ponechána ESTIMATED (Ford sám uvádí „Est.");
+  UNKNOWN zůstává (křivka, rozložení, bias, Cd, stálý převod) + kandidáti v notes
+  (převody 6MT, final drive 3.15/3.55, 0–100 5,3 s, V-max 250, brzdy 390/355 mm —
+  jako VERIFIED nepřidáno). Profil validuje 0 chyb / 0 varování.
+- **Kola:** rozhodovací pravidlo drží (Ball mimo Wheels nikdy kolo; duplicita / 3 kola /
+  2×Wheels → BLOCKED). Doplněny 2 testy (2×Wheels, cyklus v parents).
+- **SPEC:** opraven překlep ADAC URL (`rund-ums-fahrzeug`) + doplněn mirror [1b].
+- **Testy:** `tests/run_all.py` → 192 běhů, **188 PASS, 0 FAIL, 4 PENDING** (PENDING beze změny).
+- **Otevřené body pro uživatele:** (1) varianta „standard GT bez Packu" vs. EU realita
+  (Performance Pack zřejmě standardem EU GT — brzdy/LSD z [1b] proto nezamčeny);
+  (2) kandidáti M1.5 (převody, final drive, 0–100, V-max, brzdy) ke schválení jako VERIFIED.

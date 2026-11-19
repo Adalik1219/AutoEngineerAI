@@ -56,8 +56,9 @@ tvrzení o shodě se skutečným vozem). Konzistence maxima již zkontrolována:
 ## 3. Zdroje
 
 1. Ford – 2024 Mustang EU Technical Specifications (PDF): `https://media.ford.com/content/dam/fordmedia/Europe/en/2024/01/NewMustang/2024_Ford_Mustang_technical_specification_EU.pdf`
+   (mirror [1b], ověřeno 2026-11-19: `https://www.fromtheroad.ford.com/content/dam/fordmediasite/eur/en/library/2024/tech-specs/2024_Ford_Mustang_tech_spec_EU.pdf`)
 2. Ford – New Ford Mustang is an Icon Reborn: `https://www.fromtheroad.ford.com/eur/en/articles/2024/new-ford-mustang-is-an-icon-reborn`
-3. ADAC – Mustang GT Fastback 5.0 V8, manuál: `https://www.adac.de/rund-um-fahrzeug/autokatalog/marken-modelle/ford/mustang/2generation/332370/`
+3. ADAC – Mustang GT Fastback 5.0 V8, manuál: `https://www.adac.de/rund-ums-fahrzeug/autokatalog/marken-modelle/ford/mustang/2generation/332370/`
 
 ## 4. Pravidla variant
 
