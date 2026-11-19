@@ -13,6 +13,9 @@
 #   - chybejici Model:Wheels,
 #   - pocet identifikovanych kol != 4 (vcetne duplicitniho oznaceni),
 #   - jakekoli UNKNOWN u kola,
+#   - poskozena parent hierarchie: cyklus (duvod parent_cycle) nebo
+#     odkaz na neexistujici parent ID — takovou hierarchii nelze
+#     klasifikovat jako validni, vysledek je vzdy BLOCKED,
 #   - nekonzistentni meritko z >=2 rozmeru (M2.9/M2.10 — kontrola mimo
 #     tento modul; vysledek se pripojuje pres blocked_reasons).
 #
@@ -59,7 +62,9 @@ INSPECTION_REPORT_SCHEMA = {
                         "shape": {"type": ["string", "null"]},
                         "failed_checks": {"type": "array", "items": {
                             "enum": ["not_in_wheels", "bad_designation",
-                                     "bad_shape", "duplicate_designation"]}},
+                                     "bad_shape", "duplicate_designation",
+                                     "parent_cycle", "missing_parent",
+                                     "missing_wheel"]}},
                     },
                 },
             },
@@ -80,6 +85,18 @@ INSPECTION_REPORT_SCHEMA = {
 }
 
 
+class HierarchyError(ValueError):
+    """Poskozena parent hierarchie — nelze klasifikovat jako validni."""
+
+
+class ParentCycleError(HierarchyError):
+    """Cyklus v parent retezci (duvod parent_cycle -> vzdy BLOCKED)."""
+
+
+class MissingParentError(HierarchyError):
+    """Odkaz na neexistujici parent ID (vzdy BLOCKED)."""
+
+
 def _by_id(instances):
     """Index instanci dle id (duplicitni id = poskozeny vstup)."""
     index = {}
@@ -98,18 +115,52 @@ def find_wheels_models(instances):
             and i.get("name") == WHEELS_MODEL_NAME]
 
 
-def is_in_wheels(instance, wheels_id, index):
-    """Ancestor-walk: lezi instance v podstrome Model:Wheels?"""
-    seen = set()
-    node = instance
+def _ancestor_ids(instance, index):
+    """Id predku od primeho rodice ke koreni (poradi vystupu).
+
+    Sleduje navstivena id: pri opakovani hlasi ParentCycleError
+    s duvodem parent_cycle, pri odkazu mimo index MissingParentError.
+    Cyklus se nikdy tise nepreskakuje — poskozena hierarchie nesmi
+    projit jako validni.
+    """
+    chain = []
+    seen = {instance.get("id")}
+    parent_id = instance.get("parent_id")
+    if parent_id is None:
+        return chain
+    node = index.get(parent_id)
+    if node is None:
+        raise MissingParentError(
+            "missing parent id: instance %r odkazuje na neexistujici "
+            "parent %r" % (instance.get("id"), parent_id))
     while node is not None:
-        if node.get("id") in seen:
-            return False  # cyklus v rodicich -> povazuj za mimo
-        seen.add(node.get("id"))
-        if node.get("id") == wheels_id:
-            return True
-        node = index.get(node.get("parent_id"))
-    return False
+        nid = node.get("id")
+        if nid in seen:
+            raise ParentCycleError(
+                "parent_cycle: cyklus v parent hierarchii u instance "
+                "%r (retezec %r)" % (instance.get("id"), chain + [nid]))
+        seen.add(nid)
+        chain.append(nid)
+        parent_id = node.get("parent_id")
+        if parent_id is None:
+            break
+        node = index.get(parent_id)
+        if node is None:
+            raise MissingParentError(
+                "missing parent id: instance %r odkazuje na neexistujici "
+                "parent %r" % (nid, parent_id))
+    return chain
+
+
+def is_in_wheels(instance, wheels_id, index):
+    """Ancestor-walk: lezi instance v podstrome Model:Wheels?
+
+    Pri cyklu nebo chybejicim parent ID vyhodi ParentCycleError /
+    MissingParentError — volajici musi vysledek oznacit BLOCKED.
+    """
+    if instance.get("id") == wheels_id:
+        return True
+    return wheels_id in _ancestor_ids(instance, index)
 
 
 def classify_candidate(instance, in_wheels):
@@ -134,8 +185,9 @@ def detect_wheels(instances):
 
     Vraci dict: {wheels, unidentified, blocked, blocked_reasons, status}.
     Deterministicke: stejny vstup = stejny vystup.
+    Poskozena hierarchie (duplicitni id, cyklus, chybejici parent)
+    vzdy BLOCKED — nikdy se neklasifikuje jako validni.
     """
-    index = _by_id(instances)
     result = {"wheels": {}, "unidentified": [],
               "blocked": False, "blocked_reasons": [], "status": "OK"}
 
@@ -145,6 +197,12 @@ def detect_wheels(instances):
         result["blocked"] = True
         result["status"] = "BLOCKED"
 
+    try:
+        index = _by_id(instances)
+    except ValueError as exc:
+        block("duplicate instance id: %s" % exc)
+        return result
+
     wheels_models = find_wheels_models(instances)
     if not wheels_models:
         block("missing Model:Wheels")
@@ -153,6 +211,13 @@ def detect_wheels(instances):
         block("ambiguous Model:Wheels: found %d" % len(wheels_models))
         return result
     wheels_id = wheels_models[0].get("id")
+    # Retez samotneho Model:Wheels musi byt zdravy — cyklus zasahujici
+    # primo Wheels (i cyklus jinde, kudy prochazi jeho retez) blokuje.
+    try:
+        _ancestor_ids(wheels_models[0], index)
+    except HierarchyError as exc:
+        block(str(exc))
+        return result
 
     hits = {des: [] for des in WHEEL_DESIGNATIONS}
     for inst in instances:
@@ -163,7 +228,27 @@ def detect_wheels(instances):
             # Modely/Constrainty/Attachmenty uvnitr Wheels nejsou kola
             # ani UNKNOWN — jen by otravily vysledek).
             continue
-        in_w = is_in_wheels(inst, wheels_id, index)
+        try:
+            in_w = is_in_wheels(inst, wheels_id, index)
+        except ParentCycleError as exc:
+            # Poskozeny retez: kandidat je UNKNOWN, analyza BLOCKED.
+            result["unidentified"].append({
+                "instance_id": inst.get("id"),
+                "name": inst.get("name"),
+                "shape": inst.get("shape"),
+                "failed_checks": ["parent_cycle"],
+            })
+            block(str(exc))
+            continue
+        except MissingParentError as exc:
+            result["unidentified"].append({
+                "instance_id": inst.get("id"),
+                "name": inst.get("name"),
+                "shape": inst.get("shape"),
+                "failed_checks": ["missing_parent"],
+            })
+            block(str(exc))
+            continue
         status, failed = classify_candidate(inst, in_w)
         if status == "WHEEL":
             hits[inst.get("name")].append(inst)

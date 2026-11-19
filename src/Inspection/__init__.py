@@ -10,9 +10,13 @@ from src.Inspection.wheel_detect import (
     WHEEL_DESIGNATIONS,
     WHEEL_SHAPE,
     WHEELS_MODEL_NAME,
+    HierarchyError,
+    MissingParentError,
+    ParentCycleError,
     classify_candidate,
     detect_wheels,
     is_blocked,
+    is_in_wheels,
 )
 
 __all__ = [
@@ -20,7 +24,11 @@ __all__ = [
     "WHEEL_DESIGNATIONS",
     "WHEEL_SHAPE",
     "WHEELS_MODEL_NAME",
+    "HierarchyError",
+    "MissingParentError",
+    "ParentCycleError",
     "classify_candidate",
     "detect_wheels",
     "is_blocked",
+    "is_in_wheels",
 ]

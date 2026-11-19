@@ -159,12 +159,101 @@ class TestInspectionReportSchema(unittest.TestCase):
         self.assertTrue(any("ambiguous Model:Wheels" in r
                             for r in res["blocked_reasons"]))
 
-    def test_cycle_in_parents_does_not_crash(self):
-        # Cyklus v parent_id: kandidat se povazuje za mimo Wheels, bez padu.
+    def test_cycle_in_parents_is_blocked(self):
+        # P0: cyklus v parent_id je poskozena hierarchie — nikdy nesmi
+        # projit jako validni. Vyzaduje BLOCKED s duvodem parent_cycle.
         insts = _ok_model() + [_part(160, "Spare", parent_id=160)]
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("parent_cycle" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_missing_parent_id_blocked(self):
+        # Odkaz na neexistujici parent ID = poskozena hierarchie.
+        insts = _ok_model()
+        insts[2] = _part(3, "FL", parent_id=9999)
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("missing parent id" in r
+                            for r in res["blocked_reasons"]))
+        recs = [u for u in res["unidentified"]
+                if u["instance_id"] == 3]
+        self.assertEqual(len(recs), 1)
+        self.assertIn("missing_parent", recs[0]["failed_checks"])
+
+    def test_duplicate_instance_id_blocked(self):
+        # Duplicitni instance ID = poskozeny vstup, nelze klasifikovat.
+        insts = _ok_model() + [_part(3, "FL", parent_id=2)]
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("duplicate instance id" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_cycle_through_wheels_model_blocked(self):
+        # Cyklus zasahujici primo Model:Wheels (Wheels -> FL -> Wheels).
+        insts = _ok_model()
+        for inst in insts:
+            if inst["id"] == 2:
+                inst["parent_id"] = 3
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("parent_cycle" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_cycle_elsewhere_affecting_wheels_blocked(self):
+        # Cyklus v jine casti hierarchie, kudy prochazi retez kola:
+        # mezimodel 300 pod Wheels, kolo FL pod nim, cyklus 300 -> 3 -> 300.
+        insts = _ok_model()
+        insts.append({"id": 300, "name": "Suspension",
+                      "class_name": "Model", "shape": None, "parent_id": 3})
+        for inst in insts:
+            if inst["id"] == 3:
+                inst["parent_id"] = 300
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("parent_cycle" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_long_cycle_through_wheel_blocked(self):
+        # Dlouhy cyklus 3 -> 301 -> 302 -> 303 -> 3 pres kolo FL.
+        insts = _ok_model()
+        insts += [
+            {"id": 301, "name": "M1", "class_name": "Model",
+             "shape": None, "parent_id": 302},
+            {"id": 302, "name": "M2", "class_name": "Model",
+             "shape": None, "parent_id": 303},
+            {"id": 303, "name": "M3", "class_name": "Model",
+             "shape": None, "parent_id": 3},
+        ]
+        for inst in insts:
+            if inst["id"] == 3:
+                inst["parent_id"] = 301
+        res = detect_wheels(insts)
+        self.assertTrue(is_blocked(res))
+        self.assertEqual(res["status"], "BLOCKED")
+        self.assertTrue(any("parent_cycle" in r
+                            for r in res["blocked_reasons"]))
+
+    def test_offchain_model_cycle_does_not_block(self):
+        # Cyklus 600 <-> 601 mezi Modely mimo retez kol nesmi
+        # blokovat jinak validni detekci (specificita, zadny falesny BLOCKED).
+        insts = _ok_model()
+        insts += [
+            {"id": 600, "name": "M1", "class_name": "Model",
+             "shape": None, "parent_id": 601},
+            {"id": 601, "name": "M2", "class_name": "Model",
+             "shape": None, "parent_id": 600},
+        ]
         res = detect_wheels(insts)
         self.assertFalse(is_blocked(res))
         self.assertEqual(res["status"], "OK")
+        for des in ("FL", "FR", "RL", "RR"):
+            self.assertEqual(res["wheels"][des]["status"], "WHEEL")
 
 
 if __name__ == "__main__":

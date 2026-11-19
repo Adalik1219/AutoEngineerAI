@@ -1,12 +1,59 @@
-# Project Status – stav k 2026-11-19 (audit pro hybridní plán)
+# Project Status – stav k 2026-11-19 (větev `feat/m1-m2-foundation`, PR #2)
 
-**Stav:** audit v1 na branchi `docs/hybrid-workflow-spec-m1-m9` (ke schválení).
-**Metoda:** čtení repozitáře (file listing, klíčové dokumenty, katalog, testy), běh `python tests/run_all.py`.
-**HEAD mainu při auditu:** `dd9efdf`. Testy: **162 PASS, 0 FAIL, 4 PENDING** (PENDING není PASS).
+**Aktuální stav:** M1 + M2 (spike + detekce kol) hotovo na této větvi; testy
+**205 běhů, 201 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py`, PENDING beze změny).
+**RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
+
+> **§1–§8 = HISTORICKÝ audit před implementací** (stav k `dd9efdf`, 162 PASS).
+> Ponecháno NEMAZAT jako stopa; aktuální stav je pouze §0 (+ §9 kontroly M1/M2).
 
 ---
 
-## 1. Stav modulů M1–M9
+## 0. Aktuální stav po M1+M2 (tato větev)
+
+### 0.1 M1 – profil + validace (hotovo)
+- Profil Mustangu: EUROPEAN FACTORY STANDARD SPECIFICATION, `vehicle_id` beze změny;
+  VERIFIED (factory, confidence ≥ 0.85, zdroj Ford EU PDF/mirror + datum): poměry 1–6
+  (3.237/2.104/1.422/1.000/0.814/0.622), 0–100 5,3 s, V-max 250 km/h, kotouče
+  390x36/355x28 + Brembo six-piston, LSD obecně, kola 19x9.0J/19x9.5J +
+  pneu 255/40–275/40 R19.
+- UNKNOWN zůstává (křivka, rozložení, bias, Cd, stálý převod s kandidáty
+  3.15/3.55 v notes) + GUARD test T17 (final_drive jako definitivní hodnota → chyba).
+- Validace: profil 0 errors / 0 warnings; sada M1-T01…M1-T20 20/20 PASS.
+- Detail: §9 níže (kontroly Agenta D + opakování po povýšení M1.5).
+
+### 0.2 M2 – spike + detekce kol (hotovo); produkční parser a měření NENÍ hotovo
+- Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`), rozhodovací pravidlo kol
+  `(a) v Model:Wheels + (b) FL/FR/RL/RR + (c) tvar Ball` v
+  `src/Inspection/wheel_detect.py` (19 testů v `tests/test_m2_wheel_detect.py`, vše PASS).
+- P0 oprava (tato změna): cyklus v parent hierarchii ani chybějící parent ID
+  ani duplicitní instance ID se nikdy neklasifikuje jako validní — vždy BLOCKED
+  (`parent_cycle` / `missing parent id` / `duplicate instance id` v blocked_reasons).
+- NOT IMPLEMENTED / BLOCKED: produkční RBXM parser (C05/C06) a měření
+  rozvoru/rozchodů z geometrie — žádné měření se neodhaduje, vše UNKNOWN/BLOCKED.
+
+### 0.3 M3–M9 (beze změny)
+- M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
+  auditu §1 (stav před implementací této větve).
+
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19)
+- `python tests/run_all.py` → **205 běhů, 201 PASS, 0 FAIL, 4 PENDING**
+  (baseline před změnou 199/195/0/4; +6 nových adversarial testů cyklů/hierarchie,
+  1 test přepsán z OK na BLOCKED; PENDING totožné).
+- RBXM: `assets/chassis-original/chasis-work-copy.rbxm` —
+  `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`
+  (před/po shodné, pouze čteno). Druhý soubor v repu
+  (`testgame/.../JeepTemplate.rbxm`) má stejný hash, rovněž beze změny.
+
+### 0.5 Otevřené body
+1. Produkční RBXM parser (C05/C06) + kalibrace měřítka (M2.9/M2.10) — největší riziko plánu.
+2. Měření rozvoru/rozchodů — NOT IMPLEMENTED, blokuje M3 cíle.
+3. Kandidáti M1.5 (final drive 3.15/3.55, křivka, rozložení, bias, Cd) — ke schválení jako VERIFIED.
+4. 4× PENDING není PASS (Roblox Studio odečet, schema conformance Fáze 5, 2× regresní baseline).
+
+---
+
+## 1. Stav modulů M1–M9 — HISTORICKÉ (audit před implementací, NEMAZAT)
 
 | Modul | Stav | Důkaz |
 |---|---|---|
