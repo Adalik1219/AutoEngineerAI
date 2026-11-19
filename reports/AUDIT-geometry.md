@@ -5,7 +5,7 @@ Větev `feat/m1-m2-foundation`, commit `0f5b923`. Rozsah: `src/Inspection/rbxm_p
 `src/Inspection/wheel_detect.py` (identitní pravidlo, klasifikace FL/FR/RL/RR) + testy
 `tests/test_m2_rbxm_parser.py`, `tests/test_m2_wheel_detect.py`.
 Žádný kód se neměnil; všechny nálezy jsou ověřeny spuštěním proti pracovní kopii
-(`assets/chassis-original/chasis-work-copy.rbxm`, sha256 `dc8747e0…1fefdf`, 815 instancí / 37 typů)
+(`assets/chassis-original/chasis-work-copy.rbxm`, sha256 `dc8747e0…2c1fefdf`, 815 instancí / 37 typů)
 a syntetickými fixture stavěnými existujícím test-builderem.
 
 ## Verdikt

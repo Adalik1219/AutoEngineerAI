@@ -1,8 +1,9 @@
-"""Balicek Inspection (M2 – RBXM Inspector & Scale Calibration, spike + kostra).
+"""Balíček Inspection (M2 – RBXM Inspector & Scale Calibration).
 
-Obsahuje rozhodovaci pravidlo pro identifikaci kol (wheel_detect.py)
-dle docs/IMPLEMENTATION_ROADMAP.md sekce M2. Produkcni RBXM parser
-(C05/C06) vznikne az po spike M2.1 — viz reports/RBXM-SPIKE.md.
+Obsahuje rozhodovací pravidlo pro identifikaci kol (wheel_detect.py)
+dle docs/IMPLEMENTATION_ROADMAP.md sekce M2 a produkční RBXM parser
+(rbxm_parser.py: INST + PRNT + SSTR/META/Name + Shape/Size/CFrame
+s provenancí; geometrie BLOCKED do Studio ground-truth).
 """
 
 from src.Inspection.rbxm_parser import (
