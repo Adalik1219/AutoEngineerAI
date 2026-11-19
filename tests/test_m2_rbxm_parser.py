@@ -1,13 +1,14 @@
 """Testy produkcniho RBXM parseru (M2, milnik C05-A/B/C/D): header, chunky,
 LZ4, INST, PRNT, geometrie (shape/size/CFrame) + hardening.
 
-Vstup: skutecne pracovni kopie
-  assets/chassis-original/chasis-work-copy.rbxm a
-  testgame/src/ServerStorage/VehicleTemplates/JeepTemplate.rbxm
+Vstup: prednostne verzovana fixture
+  testgame/src/ServerStorage/VehicleTemplates/JeepTemplate.rbxm,
+fallback lokalni pracovni kopie assets/chassis-original/chasis-work-copy.rbxm
 (POUZE CTENI, nikdy zapis; test_hash_before_after overuje SHA-256
 pred/po + shodu s dokumentovanou hodnotou). Oba soubory maji stejny
 hash dc8747e0 (230421 B) — v repu je jediny distinctni model; jako
 LIMIT je to vyslovne zaznamenano a druhy soubor se testuje zvlast.
+Chybi-li oba soubory, testy cteni hlasi SKIP (PENDING), nikdy ERROR.
 Synteticke poskozene varianty se stavi v pameti (builder nize,
 raw chunky bez komprese + rucne skladane LZ4 bloky), zadny zapis na disk.
 
@@ -256,12 +257,25 @@ def sha256_of(path):
         return hashlib.sha256(handle.read()).hexdigest()
 
 
+def _require_real_copy(testcase) -> str:
+    """Realny RBXM model pro cteni: prednostne verzovany JeepTemplate
+    (funguje i na CI), fallback lokalni pracovni kopie; chybi-li oba,
+    SKIP s duvodem (PENDING), nikdy ERROR/FileNotFoundError."""
+    for path in (JEEP_COPY, WORK_COPY):
+        if os.path.exists(path):
+            return path
+    testcase.skipTest(
+        "PENDING: realny RBXM model neni v tomto prostredi k dispozici "
+        "(chybi JeepTemplate i pracovni kopie) — cteni neni mozne overit")
+    raise AssertionError("nedosazitelne: skipTest vzdy vyhazuje SkipTest")
+
+
 class TestRbxmParser(unittest.TestCase):
     """12 povinnych pripadu C05-A/B (zadny tichy pruchod)."""
 
     def test_valid_rbxm_full_hierarchy(self):
         """1. Platny RBXM: 815 instanci, 37 typu, koren, census, Wheels."""
-        model = parse_rbxm(WORK_COPY)
+        model = parse_rbxm(_require_real_copy(self))
         self.assertEqual(model["num_types"], 37)
         self.assertEqual(model["num_instances"], 815)
         self.assertEqual(len(model["instances"]), 815)
@@ -406,7 +420,7 @@ class TestRbxmParser(unittest.TestCase):
 
     def test_missing_wheels_model(self):
         """9. Chybejici Model:Wheels na realne kopii -> wheel BLOCKED."""
-        model = parse_rbxm(WORK_COPY)
+        model = parse_rbxm(_require_real_copy(self))
         without = [i for i in model["instances"] if i["id"] != 2]
         result = detect_wheels(without)
         self.assertTrue(is_blocked(result))
@@ -418,7 +432,7 @@ class TestRbxmParser(unittest.TestCase):
         size/CFrame strukturalne; wheel_detect 4x WHEEL, ale BLOCKED
         (44 dilu podvozku ve strome Wheels); geometrie se nikdy
         neodvozuje z nazvu (jen z PROP)."""
-        model = parse_rbxm(WORK_COPY)
+        model = parse_rbxm(_require_real_copy(self))
         by_id = {i["id"]: i for i in model["instances"]}
         self.assertEqual(by_id[2]["name"], "Wheels")
         found = sorted(i["name"] for i in model["instances"]
@@ -473,9 +487,10 @@ class TestRbxmParser(unittest.TestCase):
     def test_hash_before_after(self):
         """12. Hash pracovni kopie pred/po + shoda s dokumentovanou hodnotou
         (parser cte pouze 'rb', nikdy nezapisuje)."""
-        before = sha256_of(WORK_COPY)
-        parse_rbxm(WORK_COPY)
-        after = sha256_of(WORK_COPY)
+        real = _require_real_copy(self)
+        before = sha256_of(real)
+        parse_rbxm(real)
+        after = sha256_of(real)
         self.assertEqual(before, after)
         self.assertEqual(after, EXPECTED_SHA256)
 
@@ -506,7 +521,8 @@ class TestRbxmParser(unittest.TestCase):
         Mutace uvnitr retezcovych dat ("Mesh"->"Me8h") zustava
         detekovatelna jen hashem (test 12), format nema checksum."""
         import random
-        with open(WORK_COPY, "rb") as handle:
+        real = _require_real_copy(self)
+        with open(real, "rb") as handle:
             raw = handle.read()
         rng = random.Random(FUZZ_SEED)
         accepted = 0
@@ -1081,10 +1097,11 @@ class TestParserLimitsPerformance(unittest.TestCase):
         finally:
             os.unlink(path)
         # Validni soubor porad projde a hash se nemeni.
-        before = sha256_of(WORK_COPY)
-        model = parse_rbxm(WORK_COPY)
+        real = _require_real_copy(self)
+        before = sha256_of(real)
+        model = parse_rbxm(real)
         self.assertEqual(model["num_instances"], 815)
-        self.assertEqual(sha256_of(WORK_COPY), before)
+        self.assertEqual(sha256_of(real), before)
 
     def test_b2_lz4_block_copy_fast_and_exact(self):
         """P1-3: offset=1 expanze na 1 MiB je rychla (< 2 s) a bitove
@@ -1125,7 +1142,7 @@ class TestParserLimitsPerformance(unittest.TestCase):
             _decode_enum_lanes(b"\x00" * (4 * over), over, "probe")
         self.assertLess(time.perf_counter() - t0, 1.0)
         # Cap je nad realnou kopii: 815 instanci porad projde.
-        model = parse_rbxm(WORK_COPY)
+        model = parse_rbxm(_require_real_copy(self))
         self.assertEqual(model["num_instances"], 815)
         # Obri INST count v tele se odmitne take pred dekodovanim.
         hdr = (_u32(0) + _string("Part") + b"\x00"
@@ -1461,8 +1478,9 @@ class TestFuzzF1F8(unittest.TestCase):
         (815 instanci, platni parenti, tvary ze zname mnoziny);
         soubor zustava hashove netknuty (read-only)."""
         import random
+        real = _require_real_copy(self)
         rng = random.Random(FUZZ_SEED + 8)
-        with open(WORK_COPY, "rb") as handle:
+        with open(real, "rb") as handle:
             raw = handle.read()
         accepted = 0
         trials = 1000
