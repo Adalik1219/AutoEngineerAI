@@ -103,7 +103,8 @@ pátý Ball Spare (`bad_designation` → UNKNOWN_CANDIDATE); hierarchie
 se Studio čísly; prohození stran/náprav (`side_or_axle_swap`); asymetrie
 průměru (`diameter_asymmetry`) a výšek (`height_asymmetry`); neověřený
 rámec → UNKNOWN; chybějící geometrie → UNKNOWN (`missing_position`);
-`report_from_assess` s 44 díly → GEOMETRY_OK + 44 evidováno, Spare vedle
+`report_from_assess` s 44 díly → BLOCKED (I-1 propagace assess BLOCKED,
+per-kolo detaily 4× GEOMETRY_OK) + 44 evidováno, Spare vedle
 allowlistu stále BLOCKED.
 
 ## 7. Shrnutí (§16)
@@ -113,7 +114,7 @@ allowlistu stále BLOCKED.
   4 kol (Ball 2.7³, id 3/52/101/150) potvrzena parser↔Studio; 44 dílů
   podvozku ověřeno na reálné kopii (`dc8747e0…fefdf`, hash před/po
   shodný, read-only) → NEBLOKUJE, evidováno; writer kontraktu +
-  `known_non_wheels` nadstavba; 53/53 testů v modulu, 109/109 s parserem.
+  `known_non_wheels` nadstavba; 53/53 testů v modulu, 110/110 s parserem.
 - **Rozpor zdokumentován:** konvence X=vpřed/Y=vlevo/Z=vzhůru neplatí;
   platí x=lateral / y=up / z=longitudinal (důkaz v §2–3, test v §6).
 - **BLOCKED drží kde má:** UNKNOWN_CANDIDATE / INVALID_WHEEL ve Wheels,

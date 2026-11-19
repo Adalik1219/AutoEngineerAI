@@ -1,6 +1,8 @@
 # M2.9/M2.10 — Scale Calibration Report (Agent B: kalibrace + M3 brána)
 
-Větev `feat/m2-m3-geometry`, HEAD `4cad304` (PR #2 NEMERGOVAT, žádné git
+> **HISTORIE vs AKTUÁLNÍ STAV (Agent C, 2026-11-19):** tělo reportu (§0–§8) psáno na HEAD `4cad304` — historické. §9 (read-only audit na `c1a138b`) potvrdil beze změny kódu. Aktuální HEAD **`64be2c6`**: rozdíl `c1a138b..64be2c6` = pouze docs commity, `src/Inspection/scale_calibration.py` ani `tests/test_m2_scale_calibration.py` neměněny; Agent C čerstvě ověřil čtením + během **`31/31 OK`** (6 tříd, determinismus vč. přehozeného pořadí klíčů, JeepTemplate BLOCKED 7.44 %, M3 brána POUZE VERIFIED). Kalibrační engine beze změny, M3 NOT READY trvá.
+
+Větev `feat/m2-m3-geometry`, historický HEAD `4cad304` (PR #2 NEMERGOVAT, žádné git
 operace). Tvar `scale_calibration.json`
 dle `reports/M2-M3-CONTRACTS-FREEZE-v1.md` (závazný, dodržen přesně).
 Cíl: `ford-mustang-gt-2024-eu-manual-standard` (EUROPEAN FACTORY STANDARD).

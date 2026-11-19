@@ -27,7 +27,7 @@ ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
 - Validace: profil 0 errors / 0 warnings; sada M1-T01…M1-T20 20/20 PASS.
 - Detail: §9 níže (kontroly Agenta D + opakování po povýšení M1.5).
 
-### 0.2 M2 – parser C05 hotov (CODE-VERIFIED); měření/kalibrace BLOCKED / NOT IMPLEMENTED
+### 0.2 M2 – parser C05 hotov (CODE-VERIFIED); engine hotov, měření a výsledek kalibrace BLOCKED
 - Hotovo: RBXM spike (viz `reports/RBXM-SPIKE.md`, fáze B 36cbbdb: lane-order
   MSB-první doložen, Ball=0 invariantní); produkční parser **C05**
   (`src/Inspection/rbxm_parser.py`, 1352 řádků @ `36cbbdb`; fáze B: `parse_rbxm`
@@ -56,10 +56,15 @@ ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
   `test_cframe_unknown_preset_unread`, `test_assess_unread_rotation_blocked`.
 - Detekce kol: rozhodovací pravidlo `(a) v Model:Wheels + (b) FL/FR/RL/RR +
   (c) tvar Ball` v `src/Inspection/wheel_detect.py` (21 testů, vše PASS).
-- BLOCKED / NOT IMPLEMENTED: geometrie z měření (M2.4–M2.6 rozvor/rozchody/
+- BLOCKED (měření + výsledek kalibrace): geometrie z měření (M2.4–M2.6 rozvor/rozchody/
   průměry) — kalibrační brána drží **BLOCKED** (`float_decode_unverified`;
-  reálná kopie: 44 dílů → BLOCKED, ověřeno během); kalibrace `studs_per_meter`
-  (M2.9/M2.10, C06) **NOT IMPLEMENTED** — až po M3 Studio ground-truth.
+  reálná kopie: 4× VALID_WHEEL + 44× KNOWN_NON_WHEEL (11 jmen allowlistu × 4),
+  0 unidentified — celek BLOCKED, ověřeno během). Kalibrační engine
+  `src/Inspection/scale_calibration.py` (M2.9/M2.10, C06) je **IMPLEMENTED +
+  CODE-VERIFIED** (31 testů); NOT IMPLEMENTED je pouze pomocné rozhraní
+  `calibrate_studs_per_meter` v `rbxm_parser.py` (záměrný stub, nikdy nevrací
+  ověřenou hodnotu). Výsledek kalibrace na JeepTemplate je **BLOCKED
+  (rozptyl 7,44 % > 5 %)** — očekávané (jiné vozidlo), ne defekt.
   Žádné měření se neodhaduje, vše UNKNOWN/BLOCKED.
 
 ### 0.3 M3–M9 (beze změny)
@@ -84,9 +89,14 @@ ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
   (`testgame/.../JeepTemplate.rbxm`) má stejný hash, rovněž beze změny.
 
 ### 0.5 Otevřené body
-1. Kalibrace měřítka (M2.9/M2.10, C06) + měření rozvoru/rozchodů — NOT IMPLEMENTED /
-   BLOCKED, největší riziko plánu. Parser C05 je hotov (CODE-VERIFIED, viz §0.2).
-2. M3 Geometry Engine NOT IMPLEMENTED — blokováno bodem 1 (bez kalibrace žádné cíle).
+1. Kalibrace měřítka (M2.9/M2.10, C06) + měření rozvoru/rozchodů — engine
+   IMPLEMENTED + CODE-VERIFIED (`src/Inspection/scale_calibration.py`, 31 testů),
+   měření a výsledek kalibrace BLOCKED (assess `float_decode_unverified`;
+   JeepTemplate rozptyl 7,44 % > 5 %), největší riziko plánu. Parser C05 je hotov
+   (CODE-VERIFIED, viz §0.2; jeho `calibrate_studs_per_meter` je jen záměrný
+   NOT-IMPLEMENTED stub, ne engine).
+2. M3 Geometry Engine NOT IMPLEMENTED — blokováno bodem 1 (bez VERIFIED měřítka
+   žádné cíle; M3 brána `require_verified_for_m3`, M3 NEOTEVŘENA).
 3. Rozhodnuto a uzavřeno: final drive ZŮSTÁVÁ UNKNOWN (kandidáti 3.15/3.55 jen v notes,
    rozhodnutí uživatele); trvale UNKNOWN bez nového zdroje: momentová křivka, rozložení
    hmotnosti + těžiště, brzdový bias, Cd/plocha.
@@ -221,11 +231,17 @@ C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commi
 
 ## 10. Opravná vlna M2 (větev feat/m2-m3-geometry, 2026-11-19)
 
-- Klasifikace: 4-tier (VALID_WHEEL / KNOWN_NON_WHEEL allowlist 11 dílů /
-  UNKNOWN_CANDIDATE / INVALID_WHEEL); 44 dílů evidováno, neblokuje.
-- Parser: MSB-first overen Studiem (4×Ball + 104×Block + 1×Cylinder).
-- Kalibrace: engine IMPLEMENTED + CODE-VERIFIED; JeepTemplate BLOCKED 7,44 %;
-  M3 brána pouze VERIFIED (`require_verified_for_m3`).
+- Klasifikace: 4-tier (VALID_WHEEL 4× FL=3/FR=52/RL=101/RR=150 / KNOWN_NON_WHEEL
+  44× = allowlist 11 dílů × 4 / UNKNOWN_CANDIDATE / INVALID_WHEEL);
+  0 unidentified; KNOWN_NON_WHEEL evidováno, neblokuje (celek drží BLOCKED
+  z assess + kalibrace, viz níže).
+- Parser: MSB-first ověřen Studiem (4×Ball + 104×Block + 1×Cylinder, 0 nepřečtených
+  shape-enumů); C05 CODE-VERIFIED (jeho `calibrate_studs_per_meter` je záměrný
+  NOT-IMPLEMENTED stub, ne kalibrační engine).
+- Kalibrace: engine `src/Inspection/scale_calibration.py` IMPLEMENTED +
+  CODE-VERIFIED (31 testů); výsledek na JeepTemplate BLOCKED 7,44 % > 5 %
+  (očekávané — jiné vozidlo, ne defekt); M3 brána pouze VERIFIED
+  (`require_verified_for_m3`).
 - I-1: assess-BLOCKED se propaguje do inspection_report (fail-closed).
 - Studio: rozchod 5,9907 / rozvor 10,5228 potvrzeny bit-přesně (Edit, read-only).
 - QA verdikt: M2 CONDITIONAL PASS; brána M3 NEOTEVŘENA.

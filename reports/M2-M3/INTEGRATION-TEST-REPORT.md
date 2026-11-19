@@ -1,9 +1,9 @@
 # M2 Integrační test-report (Agent C)
 
 **Vlastněný soubor:** `reports/M2-M3/INTEGRATION-TEST-REPORT.md` · **Datum:** 2026-11-19
-**Větev:** `feat/m2-m3-geometry` · **HEAD:** `c1a138b` (re-verifikace; historický stav na `4cad304` viz HISTORICKÝ STAV níže)
+**Větev:** `feat/m2-m3-geometry` · **HEAD:** `64be2c6` (re-verifikace §9; historické stavy: `4cad304` s nálezem I-1 FAIL, `c1a138b` s I-1 OPRAVENA — viz HISTORICKÝ STAV níže)
 **Režim:** READ-ONLY vůči modulům A/B (pouze čtení; měněn jen tento report; `tests/test_m2_integration.py` existuje a NEMĚNĚN).
-**Stav stromu:** HEAD čistý (žádné uncommitted změny).
+**Stav stromu:** na HEAD `64be2c6` jedna necommitnutá úprava mimo rozsah Agent C (`reports/M2/WHEEL-GEOMETRY-REPORT.md`, vlastník Agent B — ponecháno bez zásahu).
 **Prostředí:** Windows 11, Python 3.14.9, stdlib unittest, vše **sériově** (žádná paralelizace).
 
 > **HISTORICKÝ STAV (platil na HEAD `4cad304`):** integrační sada
@@ -89,3 +89,16 @@ commit `c1a138b81cf82145b5995a19b73fd6e3e289e686`, čistý strom.
 | 6 | G-brány (evidence z běhů 1–5 + cílené sondy) | **G-01 PASS** (hash před/po shodný) · **G-02 PASS** (24/0, reference `value_si + unit=m`) · **G-03 PASS** (reference `source + status`, report `method + warnings`) · **G-04 PASS** (vše-`None` → UNKNOWN + `estimates=[]`, žádná vymyšlená čísla) · **G-05 PASS** (4 PENDING odděleně) · **G-06/G-07 PASS** (report bez `run_id`/`roblox-runtime`/runtime statusu) · **G-10 PASS** (dvojí běh reportu bitově shodný) · **BLOCKED propagace PASS** (assess `BLOCKED [float_decode_unverified…]` → report `BLOCKED`; `usable_for_m3=false`, `require_verified_for_m3` vyhazuje `CalibrationBlockedError` → M3 ZAVŘENA) |
 
 Naměřený řetěz (JeepTemplate): 815 instancí / 37 typů; detect OK (4× VALID_WHEEL FL=3/FR=52/RL=101/RR=150, 44 known, `unidentified=[]`); assess **BLOCKED** (`float_decode_unverified`); report **BLOCKED** (track_f 5.9907 / track_r 5.9907 / wheelbase 10.5228, pneu 2.7, `verified_in_studio=true`); kalibrace **BLOCKED** (rozptyl 7.44 % > 5 %).
+
+## 9. Final re-verification (HEAD `64be2c6`, 2026-11-19, sériově, Agent C)
+
+Rozdíl `c1a138b..64be2c6` = pouze docs commity (`e2a56ef`, `64be2c6`); `src/Inspection/`, `tests/test_m2*.py`, `tools/validate_contracts.py` beze změny → re-verifikace z §8 zůstává platná, níže čerstvý běh na aktuálním HEAD:
+
+| # | Příkaz | Výsledek |
+|---|---|---|
+| 1 | `python -m unittest tests.test_m2_integration` | **20 testů, OK** (0.35 s) — vč. `test_assess_blocked_propagates_to_report` PASS (I-1 historicky uzavřena, netrvá) |
+| 2 | `python -m unittest tests.test_m2_rbxm_parser tests.test_m2_rbxm_inspector tests.test_m2_wheel_detect tests.test_m2_scale_calibration tests.test_m2_integration` | **168 testů, OK** (~20 s) — rozpad 57+7+53+31+20 (viz audit §1; číslo 161 = starší součet bez inspektor-sady) |
+| 3 | `python tests/run_all.py` (plná sada) | **běhů=372 PASS=368 FAIL=0 ERROR=0 PENDING=4** (PENDING očekávané: Studio-měření, Fáze 5 schema-conformance, 2× Fáze 9/10 baseline/VariantStore) |
+| 4 | `python tools/validate_contracts.py` | **24 kontrol, 0 chyb, exit 0** (mezery krytí viz §6) |
+
+G-brány na `64be2c6`: **G-01–G-07, G-10 všechny PASS; BLOCKED propagace M2→M3 PASS** (assess BLOCKED → report BLOCKED; kalibrace BLOCKED 7.44 % + `require_verified_for_m3` vyhazuje → M3 ZAVŘENA oběma nohama). Determinismus: integrační sada (dvojí běh, bitová shoda) PASS v běhu č. 1. Moduly A/B neměněny.

@@ -80,8 +80,11 @@ body 1–14 níže jsou schválená specifikace)
    orientace `None`, nikdy odhad) — plné ověření tabulky presetů mimo M2
    (follow-up, neblokuje; viz `AUDIT-qa-final.md` §4/3).
    **Spike (M2.1) vs. produkce:** výstupem spike je pouze rozhodnutí o čtecí metodě + read-only
-   sonda na kopii; produkční parser C05 po něm vznikl a převzal toto pravidlo doslovně
-   (C06/kalibrace vzniká až po M3 Studio ground-truth).
+   sonda na kopii; produkční parser C05 po něm vznikl a převzal toto pravidlo doslovně.
+   Kalibrační engine C06 (`src/Inspection/scale_calibration.py`) je IMPLEMENTED +
+   CODE-VERIFIED; NOT IMPLEMENTED je pouze pomocné rozhraní
+   `calibrate_studs_per_meter` v `rbxm_parser.py` (záměrný stub). Výsledek kalibrace
+   na JeepTemplate je BLOCKED (rozptyl 7,44 % > 5 %); VERIFIED měřítko pro M3 chybí.
 9. **Unit testy:** determinismus (2× stejný RBXM = identický výstup); všechna 4 kola rozpoznána; nápravy určeny; rozvor/rozchod shodné s referencí.
 10. **Integration testy:** report proti ručnímu měření ve Studiu; nekonzistentní měřítko → WARNING/BLOCKED; nejednoznačné označení kola → UNKNOWN.
 11. **Akceptační kritéria:** M2-T01…M2-T08 (včetně **zápis do originálu RBXM se nesmí stát** — hash vstupu se po běhu nemění).
@@ -89,13 +92,16 @@ body 1–14 níže jsou schválená specifikace)
 13. **Omezení/rizika:** parser C05 existuje a je CODE-VERIFIED (viz bod 8);
    Studio ground-truth kol DONE (`reports/STUDIO_GROUND_TRUTH.md` 2026-11-19:
    rozvor ≈10.52 / rozchod ≈5.99 / Ball 2.7³ potvrzeny) — kalibrační brána pro
-   měření M2.4–M2.8 proto dál drží BLOCKED; největším zbývajícím
-   rizikem zůstává kalibrace `studs_per_meter` (M2.9/M2.10, až po Studio ground-truth).
-14. **Stav:** ČÁSTEČNĚ — C05 parser + detekce kol CODE-VERIFIED
-   (`src/Inspection/rbxm_parser.py` + `wheel_detect.py` @ `36cbbdb`;
+   měření M2.4–M2.8 proto dál drží BLOCKED; kalibrační engine M2.9/M2.10 je
+   IMPLEMENTED + CODE-VERIFIED, ale výsledek na JeepTemplate je BLOCKED
+   (rozptyl 7,44 % > 5 %, jiné vozidlo) — VERIFIED měřítko pro M3 proto chybí.
+14. **Stav:** CONDITIONAL PASS — C05 parser + 4-tier detekce kol + kalibrační engine
+   CODE-VERIFIED (`src/Inspection/rbxm_parser.py` + `wheel_detect.py` +
+   `scale_calibration.py` @ `36cbbdb`, 31 testů kalibrace);
    důkazy `reports/AUDIT-qa-final.md`, `FINAL_INDEPENDENT_QA.md`,
-   `FINAL_COORDINATION_REPORT.md`); měření M2.4–M2.8 BLOCKED kalibrační
-   bránou; kalibrace M2.9/M2.10 NOT IMPLEMENTED. Není RUNTIME
+   `FINAL_COORDINATION_REPORT.md`; měření M2.4–M2.8 BLOCKED kalibrační
+   bránou; výsledek kalibrace M2.9/M2.10 na JeepTemplate BLOCKED
+   (rozptyl 7,44 % > 5 %). Není RUNTIME
    (Studio ground-truth kol DONE — `reports/STUDIO_GROUND_TRUTH.md` —
    potvrzuje hodnoty, nemění stupeň).
 
