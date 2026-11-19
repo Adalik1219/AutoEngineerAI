@@ -48,7 +48,9 @@
 ### 0.5 Otevřené body
 1. Produkční RBXM parser (C05/C06) + kalibrace měřítka (M2.9/M2.10) — největší riziko plánu.
 2. Měření rozvoru/rozchodů — NOT IMPLEMENTED, blokuje M3 cíle.
-3. Kandidáti M1.5 (final drive 3.15/3.55, křivka, rozložení, bias, Cd) — ke schválení jako VERIFIED.
+3. Rozhodnuto a uzavřeno: final drive ZŮSTÁVÁ UNKNOWN (kandidáti 3.15/3.55 jen v notes,
+   rozhodnutí uživatele); trvale UNKNOWN bez nového zdroje: momentová křivka, rozložení
+   hmotnosti + těžiště, brzdový bias, Cd/plocha.
 4. 4× PENDING není PASS (Roblox Studio odečet, schema conformance Fáze 5, 2× regresní baseline).
 
 ---
