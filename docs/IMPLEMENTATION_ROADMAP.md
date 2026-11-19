@@ -54,7 +54,7 @@ body 1–14 níže jsou schválená specifikace)
 3. **Vstupy:** pracovní kopie RBXM (nikdy originál).
 4. **Výstupy:** `inspection_report.json` + `studs_per_meter` s nejistotou, nebo `BLOCKED` s důvodem.
 5. **Vztah:** `k = W_studs / 2.719`, kde `W_studs` je naměřený rozvor; konzistence ověřena přes ≥2 nezávislé rozměry (rozvor + rozchod + průměr kola).
-6. **Navržené soubory:** `src/autoengineer/inspection/{rbxm_inspector,geometry_reader,part_inventory,achassis_reader,inspection_report}.py`; `src/autoengineer/units/{conversions,scale_calibration}.py` — ověřit proti `src/common/units.py` (existuje, rozšířit místo duplikace). (Mapování návrh→realita k @ `36cbbdb`: `rbxm_inspector` ≈ `src/Inspection/rbxm_parser.py` (1352 řádků) + `geometry_reader` ≈ `wheel_detect.py` (21 testů) + `src/Inspection/__init__.py`; `src/autoengineer/` jako adresář neexistuje — viz inventura D3.)
+6. **Navržené soubory:** `src/autoengineer/inspection/{rbxm_inspector,geometry_reader,part_inventory,achassis_reader,inspection_report}.py`; `src/autoengineer/units/{conversions,scale_calibration}.py` — ověřit proti `src/common/units.py` (existuje, rozšířit místo duplikace). (Mapování návrh→realita k @ `36cbbdb`: `rbxm_inspector` ≈ `src/Inspection/rbxm_parser.py` (1352 řádků) + `geometry_reader` ≈ `wheel_detect.py` (53 testů) + `src/Inspection/__init__.py`; `src/autoengineer/` jako adresář neexistuje — viz inventura D3.)
 7. **Závislosti:** žádné (paralelně s M1).
 8. **Úkoly:** M2.1 spike formátu RBXM: HOTOVO (read-only sonda na kopii
    s hash-kontrolou; výstupem spike je pouze rozhodnutí o čtecí metodě; fáze B

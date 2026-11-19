@@ -70,3 +70,37 @@ Kód ani testy neměněny.
 
 - Nic v rozsahu Agenta A. Otevřené body zůstávají v §0.5 (kalibrace BLOCKED,
   M3 zavřená, final-drive UNKNOWN rozhodnutím uživatele, 4× PENDING ≠ PASS).
+
+---
+
+## Vlna 2026-11-19, HEAD `a7e89e5` (re-sync; PR #2 OPEN jinde, nemergováno)
+
+Výchozí stav: opravy z předchozí vlny (výše, @ `64be2c6`) drží — §0.2/§0.5/§10
+i ROADMAP M2/M3 byly již konzistentní (engine IMPLEMENTED + CODE-VERIFIED,
+stub NOT IMPLEMENTED, JeepTemplate BLOCKED 7,44 %, M2 CONDITIONAL PASS,
+M3 NOT IMPLEMENTED / NEOTEVŘENA, M4–M9 PARTIAL). Kód ani testy neměněny.
+
+Ověřeno vlastním během 2026-11-19: `python tests/run_all.py` →
+**372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING** (shodné s §0.4;
+PENDING totožné, PENDING≠PASS). RBXM hash
+`dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf`
+beze změny (pouze čteno). `src/Inspection/scale_calibration.py` existuje;
+grep `def test_`: `test_m2_wheel_detect.py` = 53, `test_m2_scale_calibration.py` = 31.
+
+Opravy této vlny:
+1. `docs/PROJECT_STATUS.md` hlavička §0 + §0.4 (nadpis + Sady M2):
+   `@ e2a56ef` → `@ a7e89e5` (HEAD dle zadání; bez git operací, neověřeno
+   proti `git rev-parse` — ke konfirmaci koordinátorem).
+2. `docs/PROJECT_STATUS.md` §0.2 + `docs/IMPLEMENTATION_ROADMAP.md` M2.8 mapa:
+   `wheel_detect.py` „21 testů" → **53 testů** (grep + běh sady vše PASS).
+
+Grep kontrola po opravě (`NOT IMPLEMENTED` / `BLOCKED` / `44` / `M3`):
+- „kalibrace/engine NOT IMPLEMENTED" — žádný výskyt. NOT IMPLEMENTED zůstává
+  jen: stub `calibrate_studs_per_meter`, M3 (hlavička + §14), historická §1.
+- „44" — vždy 44× KNOWN_NON_WHEEL (11 × 4) + 4× VALID_WHEEL, 0 unidentified.
+- „BLOCKED" — měření (`float_decode_unverified`) + výsledek kalibrace
+  (7,44 % > 5 %) + brána M3 (`require_verified_for_m3`); KNOWN_NON_WHEEL
+  výslovně neblokuje.
+- „CONDITIONAL PASS" — M2 v hlavičce ROADMAP, M2.14 i §10 jednotně.
+
+Zbývá: nic v rozsahu Agenta A.

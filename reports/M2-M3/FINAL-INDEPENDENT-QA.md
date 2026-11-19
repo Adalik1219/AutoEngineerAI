@@ -175,3 +175,73 @@ NEOVĚŘENO (mimo dosah tohoto QA, beze změny z §6): Studio side (Edit-mode re
 
 - **M2: CONDITIONAL PASS** (potvrzeno na HEAD `64be2c6`, potřetí v řadě). Kód drží všechna pravidla: identita (a)+(b)+(c), 4-tier, hierarchie, NaN/CFrame stropy, kalibrační prahy 5 %/2 % + pravidlo 2 rodin, I-1 propagace assess→report. Otevřené podmínky nejsou v kódu: uklidit 1 untracked soubor vlny; `float_decode_unverified` aktualizovat po kalibrační vlně. Na FAIL není důvod.
 - **Brána M3: NEOTEVÍRAT.** Vstupy BLOCKED/BLOCKED (assess-důvod + kalibrace 7.44 %), přísná VERIFIED-brána + I-1 propagace drží; M3 zůstává návrh bez kódu — správně. Otevření až po: Studio ground-truth + VERIFIED kalibrace + GEOMETRY_OK report.
+
+---
+
+## 9. FINAL CLOSEOUT — finální nezávislé QA (Agent D, 2026-11-19, HEAD `a7e89e5`)
+
+**Režim:** READ-ONLY vůči kódu i testům (měněn pouze tento soubor, append). Historické sekce §1–§8 nemazány, neměněny.
+**Větev:** `feat/m2-m3-geometry` · **HEAD:** `a7e89e5c6a35245f72b5bb3e141dd33da41f09d5` · **PR #2:** OPEN, nemergován, žádné git operace.
+**Strom v čase běhů:** jediný untracked soubor `reports/M2-M3/FINAL-CLOSEOUT-BASELINE.md` (pracovní soubor této closeout-vlny — uklidit commitem nebo vyřazením, viz podmínky §9.6); `FINAL-DOCUMENTATION-WAVE-BASELINE.md` z §8 je již commitnut (viz diff níže).
+**Diff `64be2c6..HEAD`:** pouze dokumentace, 11 souborů (`docs/IMPLEMENTATION_ROADMAP.md`, `docs/PROJECT_STATUS.md`, 3 audity Agent-A/B/C, `FINAL-DOCUMENTATION-WAVE-*`, tento soubor, `INTEGRATION-TEST-REPORT.md`, `reports/M2/SCALE-CALIBRATION-REPORT.md`, `reports/M2/WHEEL-GEOMETRY-REPORT.md`). Žádný funkční kód ani test se nezměnil — M2-only potvrzeno.
+**M3 bez kódu:** `src/Geometry/`, `geometry_target.json`, `geometry_diff.json` neexistují (ověřeno `ls` na HEAD) — M3 zůstává návrh, správně.
+
+### 9.1 Vlastní sériové běhy (živě, sériově, tento stroj, 2026-11-19 ~21:25–21:40 UTC)
+
+| # | Příkaz | Běhy | PASS | FAIL | ERROR | PENDING | Návratový kód |
+|---|---|---|---|---|---|---|---|
+| 1 | `python -m unittest tests.test_m2_rbxm_parser` | 57 | 57 | 0 | 0 | 0 | 0 |
+| 2 | `python -m unittest tests.test_m2_rbxm_inspector` | 7 | 7 | 0 | 0 | 0 | 0 |
+| 3 | `python -m unittest tests.test_m2_wheel_detect` | 53 | 53 | 0 | 0 | 0 | 0 |
+| 4 | `python -m unittest tests.test_m2_scale_calibration` | 31 | 31 | 0 | 0 | 0 | 0 |
+| 5 | `python -m unittest tests.test_m2_integration` | 20 | 20 | 0 | 0 | 0 | 0 |
+| 6 | `python tests/run_all.py` (plná sada) | 372 | 368 | 0 | 0 | 4 | 0 |
+| 7 | `python tools/validate_contracts.py` | 24 kontroly | 24 | 0 | 0 | — | 0 |
+
+Součet sad 1–5 = **168** (57+7+53+31+20); hodnota 161 v §2/§7 je součet 4 sad bez inspectora — beze změny z §8.1. PENDING=4 očekávané (Studio-měření, Fáze 5 schema-conformance, 2× Fáze 9/10 baseline/VariantStore), žádný se nezapočítává do PASS.
+
+### 9.2 Brány G-01–G-07 + G-10 (vlastní evidence na HEAD `a7e89e5`; G-08/G-09 mimo rozsah tohoto QA)
+
+| Brána | Verdikt | Důkaz (živě ověřeno na tomto HEAD) |
+|---|---|---|
+| G-01 originál nedotčen | **PASS** | SHA-256 obou kopií shodný: `dc8747e016e1402c…`, 230 421 B (`assets/chassis-original/chasis-work-copy.rbxm` + `testgame/src/ServerStorage/VehicleTemplates/JeepTemplate.rbxm`, `match: True`). Jediný distinctní model = zdokumentovaný LIMIT, ne FAIL. |
+| G-02 jednotky | **PASS** | `validate_contracts` 24/0; test `test_contract_keys` zelený (reference `value_si` + `unit: m` SI, report ve studs). Kód od `64be2c6` nezměněn, sady 1–5 zelené. |
+| G-03 provenance | **PASS** | Reference nesou `source + status`, report nese `method + warnings` (kontrakt klíčů 1:1 + nadstavba `known_non_wheels`); kryto zelenými testy sad 1–5. |
+| G-04 null ≠ odhad | **PASS** | Kryto zelenými testy: chybějící kolo → `null` + `reason=missing_wheel` (celek BLOCKED); kalibrace UNKNOWN → `estimates=[]`; BLOCKED → `combined=null`. Žádná vymyšlená čísla. |
+| G-05 PENDING ≠ PASS | **PASS** | 4 PENDING v `run_all.py` odděleně vypsány (§9.1 ř. 6), nezapočítány do PASS; FAIL=0, ERROR=0, exit 0. |
+| G-06 CODE ≠ RUNTIME | **PASS** | Vlastní sonda: klíče reportu `axles, code_version, coordinate_frame, known_non_wheels, method, overall_status, parser_version, report_id` — žádný `run_id`/runtime status; `grep run_id\|roblox-runtime` v `wheel_detect.py`/`rbxm_parser.py` prázdný. |
+| G-07 simulace ≠ runtime | **PASS** | Žádná simulace není vydávána za runtime měření; Studio-PENDING zůstává PENDING (viz výpis PENDING v §9.1). |
+| G-10 reprodukovatelnost | **PASS** | Vlastní sonda: dvojí běh `build_inspection_report` bitově shodný (`json sort_keys`); determinismus kryt i zelenými testy (`test_determinism`). |
+| BLOCKED propagace M2→M3 | **PASS** | assess BLOCKED → report BLOCKED (I-1, §9.3); kalibrace BLOCKED + `require_verified_for_m3` vyhazuje (§9.4) → M3 ZAVŘENA oběma nohama. |
+
+NEOVĚŘENO (mimo dosah tohoto QA, beze změny z §6/§8): Studio side (Edit-mode read-only, hash před/po), reálný Mustang (pracovní kopie je JeepTemplate), Play/Runtime nároky.
+
+### 9.3 I-1 nezávisle (assess→report BLOCKED; pokus o obejití jen čtením, beze změny kódu)
+
+- **Kanonický řetěz:** syntetický assess se 4× GEOMETRY_OK koly + `blocked=True, status=BLOCKED, blocked_reasons=["float_decode_unverified: test"]` → `report_from_assess` vrací `overall_status: BLOCKED`. I-1 propagace drží na HEAD `a7e89e5`.
+- **Pokus o obejití (pouze čtení API):** přímé volání `build_inspection_report` se stejnou geometrií a bez `assess_blocked_reasons` nevrací BLOCKED (vlastní sonda s minimálním fixture: `UNKNOWN` — strop neověřeného rámce/geometrie, nikoli převzatý BLOCKED). Obejití je tedy možné **jen vynecháním kanonické funkce** `report_from_assess`, tj. misuse volajícího mimo řetěz — v kanonickém řetězu (`detect → assess → report_from_assess`) cesta k zelenému reportu z BLOCKED assess neexistuje. Není to díra v kódu; integrační pin-test `test_assess_blocked_propagates_to_report` kryje kanonickou cestu (20/20 PASS).
+- Stav nálezu: **I-1 CLOSED** (oprava z `34a4994` drží, potvrzeno na čtvrtém HEAD v řadě: `c1a138b`, `64be2c6` i `a7e89e5`).
+
+### 9.4 Kalibrační brána V / E / U / B (vlastní živá sonda na tomto HEAD, `calibrate` + `usable_for_m3` + `require_verified_for_m3`)
+
+- **VERIFIED** (3× VERIFIED ref + konzistentní měření k=3.0): `overall_status=VERIFIED`, `usable_for_m3=true`, brána **OTEVŘENA** — jediný propuštěný stav. ✓
+- **ESTIMATED** (default refs + konzistentní měření): `overall_status=ESTIMATED`, `usable_for_m3=false`, `CalibrationBlockedError`. ✓
+- **UNKNOWN** (vše `None`): `overall_status=UNKNOWN`, `usable_for_m3=false`, brána vyhazuje. ✓
+- **BLOCKED** (wheelbase +20 %, rozpor): `overall_status=BLOCKED`, `usable_for_m3=false`, brána vyhazuje. ✓
+- Reálná data (JeepTemplate): rozptyl **7.44 % > 5 %** → BLOCKED je správné chování (deformovaný model, ne Mustang), ne defekt — převzato z §4/§8.4 (nezávislý přepočet drží, kód nezměněn). Brána M3 držena.
+
+### 9.5 `float_decode_unverified` ponechán — důvod ověřen
+
+`src/Inspection/rbxm_parser.py:1372` blokuje assess i při bit-přesné Studio-shodě středů/rozměrů, dokud float-decode není ověřen proti Studio ground-truth + ověřená kalibrace (M3). Text důvodu zmiňuje „kalibrace NOT IMPLEMENTED" — vztahuje se k `calibrate_studs_per_meter` stubu v parseru (M2 rozhraní, trvale NOT IMPLEMENTED), ne k enginu `scale_calibration.py` (ten existuje a funguje, viz §9.4). Ponechání je **záměrné a konzervativní** (bez něj by M2 mohl vydat GEOMETRY_OK na neověřeném řetězu a M3-brána by neměla co držet), se souhlasem koordinátora. Aktualizace textu až po kalibrační vlně — podmínka zůstává otevřená.
+
+### 9.6 Staré podmínky — CLOSED / otevřené s důkazem
+
+1. **N1 MSB-first: CLOSED.** Diff `64be2c6..HEAD` neobsahuje `rbxm_parser.py` (pouze dokumentace, §9.0); 0 nepřečtených shape-enumů drží (census 4× Ball + 104× Block + 1× Cylinder, kryto 57 zelenými parser testy v §9.1).
+2. **Sériový `run_all.py` před mergem: CLOSED pro tento HEAD.** Běh §9.1 ř. 6: 372/368/0/0/4, exit 0, sériově, na `a7e89e5`. (Před případným dalším mergem po nových změnách běh zopakovat — flaky historie z paralelní vlny.)
+3. **Uklizený strom: TÉMĚŘ CLOSED.** `FINAL-DOCUMENTATION-WAVE-BASELINE.md` z §8 je nyní commitnut (v diffu `64be2c6..HEAD`). Zbývá jediný untracked soubor této vlny: `FINAL-CLOSEOUT-BASELINE.md` — commitnout nebo vyřadit.
+4. **`float_decode_unverified` aktualizace po kalibrační vlně: OTEVŘENO.** Vědomé rozhodnutí koordinátora, beze změny (§9.5).
+
+### 9.7 Verdikt
+
+- **M2: CONDITIONAL PASS** (potvrzeno na HEAD `a7e89e5`, počtvrté v řadě). Kód drží všechna pravidla: identita (a)+(b)+(c), 4-tier, hierarchie, NaN/CFrame stropy, kalibrační prahy 5 %/2 % + pravidlo 2 rodin, I-1 propagace assess→report. Otevřené podmínky nejsou v kódu: uklidit 1 untracked soubor vlny (§9.6 bod 3); `float_decode_unverified` aktualizovat po kalibrační vlně (§9.6 bod 4). Na FAIL není důvod.
+- **Brána M3: NEOTEVÍRAT.** Vstupy BLOCKED/BLOCKED (assess-důvod + kalibrace 7.44 %), přísná VERIFIED-brána + I-1 propagace drží; M3 zůstává návrh bez kódu — správně. Otevření až po: Studio ground-truth + VERIFIED kalibrace + GEOMETRY_OK report.

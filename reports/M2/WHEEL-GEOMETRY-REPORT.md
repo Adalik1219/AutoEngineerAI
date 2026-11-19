@@ -1,6 +1,8 @@
 # M2 WHEEL-GEOMETRY-REPORT (Agent B — Wheel & Geometry)
 
-Větev `feat/m2-m3-geometry` (HEAD `ab840a9`), zpráva ke kontraktu
+Větev `feat/m2-m3-geometry` (HEAD `a7e89e5`, historie: `ab840a9` →
+`c1a138b` Agent-A audit §8 → `a7e89e5` Agent-B sync; PR #2 OPEN jinde,
+NEMERGOVAT), zpráva ke kontraktu
 `reports/M2-M3-CONTRACTS-FREEZE-v1.md` §inspection_report.json (tvar ZÁVAZNÝ).
 
 ## 1. Cíl

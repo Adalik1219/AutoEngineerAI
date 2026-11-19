@@ -2,7 +2,7 @@
 
 **Aktuální stav:** M1 CODE-VERIFIED; M2 CONDITIONAL PASS (parser C05 + 4-tier
 detekce CODE-VERIFIED, kalibrace BLOCKED 7,44 %, M3 brána VERIFIED-only, M3
-NEOTEVŘENA) — větev `feat/m2-m3-geometry` @ `e2a56ef` (navazuje na PR #2
+NEOTEVŘENA) — větev `feat/m2-m3-geometry` @ `a7e89e5` (navazuje na PR #2
 `ab840a9`; nemergováno); testy
 **372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING** (`python tests/run_all.py`,
 ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
@@ -55,7 +55,7 @@ ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
   orientace `None`, nikdy odhad) — kryto `test_f6_cframe_preset_sweep`,
   `test_cframe_unknown_preset_unread`, `test_assess_unread_rotation_blocked`.
 - Detekce kol: rozhodovací pravidlo `(a) v Model:Wheels + (b) FL/FR/RL/RR +
-  (c) tvar Ball` v `src/Inspection/wheel_detect.py` (21 testů, vše PASS).
+  (c) tvar Ball` v `src/Inspection/wheel_detect.py` (53 testů, vše PASS).
 - BLOCKED (měření + výsledek kalibrace): geometrie z měření (M2.4–M2.6 rozvor/rozchody/
   průměry) — kalibrační brána drží **BLOCKED** (`float_decode_unverified`;
   reálná kopie: 4× VALID_WHEEL + 44× KNOWN_NON_WHEEL (11 jmen allowlistu × 4),
@@ -71,11 +71,11 @@ ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
 - M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
   auditu §1 (stav před implementací této větve).
 
-### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `e2a56ef`, větev feat/m2-m3-geometry)
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `a7e89e5`, větev feat/m2-m3-geometry)
 - `python tests/run_all.py` → **372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING**
   (vlastní běh 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
   260/256 @ `ff6f266`; PENDING totožné, PENDING≠PASS).
-- Sady M2 (@ `e2a56ef`): `test_m2_rbxm_parser.py` 57 testů, `test_m2_wheel_detect.py` 53,
+- Sady M2 (@ `a7e89e5`): `test_m2_rbxm_parser.py` 57 testů, `test_m2_wheel_detect.py` 53,
   `test_m2_scale_calibration.py` 31, `test_m2_rbxm_inspector.py` 7,
   `test_m2_integration.py` 20; M1: `test_m1_mustang_profile.py` 22 (T01–T22);
   CI-portability 11 + loader-root 5.
