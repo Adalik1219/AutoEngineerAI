@@ -63,3 +63,20 @@ Testy @ `8b2d80a`: **279 běhů / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING**
 (tests 3.11, 3.12, 3.13, 3.14). Stupeň: M1+M2-C05 IMPLEMENTED +
 CODE-VERIFIED, **není RUNTIME** (CODE≠RUNTIME); M3 NOT IMPLEMENTED;
 1 distinctní RBXM (LIMIT přiznán). Verdikt: MERGE WITH CONDITIONS trvá.
+
+## Finální dodatek – synchronizace na HEAD `2155dfe` (2026-11-19)
+
+- Poslední commit se změnou kódu: `ff4a9d6`.
+- Předchozí dokumentační HEAD: `8b2d80a` (historický snapshot, ponechán výše).
+- Aktuální finální HEAD: `2155dfe29a4a20bfffd32976beb79b1274a52c00`.
+- Commit `2155dfe` obsahuje pouze dokumentační změny (diff `ff4a9d6..2155dfe`
+  bez změn zdrojových souborů a testů).
+- CI k finálnímu HEAD: run `44598711818` na `2155dfe` — 4/4 success
+  (Python 3.11–3.14). CI run #94 (`44597270328`) k `8b2d80a` zůstává
+  historickým důkazem pro nezměněný kód.
+- Testy: 279 / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING (PENDING≠PASS).
+  `tools/validate_contracts.py` 24/0 je lokální výsledek, ne CI.
+- Stupeň: M1 CODE-VERIFIED; parser C05 CODE-VERIFIED (není RUNTIME);
+  geometrie BLOCKED; kalibrace + M3 NOT IMPLEMENTED; 1 distinctní RBXM.
+- PR #2 OPEN, NEMERGOVAT bez souhlasu. Formální GitHub reviews: 0
+  (interní QA reporty nejsou formální reviews).
