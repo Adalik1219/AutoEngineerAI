@@ -50,3 +50,16 @@ Docstring `__init__.py` + hash-překlep opraveny v tomto commitu; merge message 
 - Aktuální stav: 279 běhů / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING.
 - CI 4/4 zelené. Merge message: „279/275 + 4 PENDING, CODE-VERIFIED≠RUNTIME,
   M3 NOT IMPLEMENTED, 1 distinctní RBXM". Předchozí sekce ponechány (historie).
+
+## Dodatek — duální pin: kód `ff4a9d6` / finální HEAD `8b2d80a` (2026-11-19)
+
+Výše = historie — NEMAZÁNO. Předchozí dodatek pinoval `f3223cd` (mezistav);
+tento dodatek ho nahrazuje finálním pinem `8b2d80a`
+(`8b2d80aece258f7c13532ac36903a91584992c9c`; delta `f3223cd..8b2d80a` =
+jen docs, žádný kód/test). Poslední commit se změnou kódu:
+`ff4a9d6d3b4c15390f59c87ae480aff17fb115fe` (PR #2 OPEN, NEMERGOVAT).
+Testy @ `8b2d80a`: **279 běhů / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING**
+(PENDING≠PASS). CI run #94 (ID 44597270328): **4/4 zelené**
+(tests 3.11, 3.12, 3.13, 3.14). Stupeň: M1+M2-C05 IMPLEMENTED +
+CODE-VERIFIED, **není RUNTIME** (CODE≠RUNTIME); M3 NOT IMPLEMENTED;
+1 distinctní RBXM (LIMIT přiznán). Verdikt: MERGE WITH CONDITIONS trvá.

@@ -80,3 +80,25 @@ stupňů (CODE-VERIFIED ≠ RUNTIME), M2 body z předchozího syncu níže se ne
 Předchozí běh @ `ff6f266`: **260 běhů, 256 PASS, 0 FAIL, 4 PENDING**
 (53 / 21 / 20 testů v sadách; parser 1345 řádků). Řádky 1–10 původní tabulky níže —
 ponecháno jako stopa, nic se nepřepisuje.
+
+---
+
+## 6. Dodatek — duální pin: kód `ff4a9d6` / finální HEAD `8b2d80a` (2026-11-19)
+
+Výše (§1–§5) = historie — NEMAZÁNO, nic se nepřepisuje. Staré počty
+(260/256 @ `ff6f266`, 272/268 @ `36cbbdb`) platí jen s datem/revizí;
+kanonické číslo HEAD je níže.
+
+- Poslední commit se změnou kódu: `ff4a9d6d3b4c15390f59c87ae480aff17fb115fe`
+  (loader root z umístění souboru, mutation-proven portability, Studio runtime).
+- Finální HEAD včetně dokumentační synchronizace:
+  `8b2d80aece258f7c13532ac36903a91584992c9c` (PR #2 OPEN, NEMERGOVAT).
+- Testy @ `8b2d80a` (vlastní běh `python tests/run_all.py` 2026-11-19):
+  **279 běhů / 275 PASS / 0 FAIL / 0 ERROR / 4 PENDING** — PENDING≠PASS
+  (4 totožné: Studio odečet, schema Fáze 5, 2× regresní baseline).
+- CI run #94 (ID 44597270328): **4/4 zelené** (tests 3.11, 3.12, 3.13, 3.14),
+  kanonický runner `python tests/run_all.py`.
+- Stupeň: M1+M2-C05 IMPLEMENTED + CODE-VERIFIED, **není RUNTIME**
+  (CODE≠RUNTIME); M3 NOT IMPLEMENTED; 1 distinctní RBXM (LIMIT přiznán).
+- Merge message / PR popis musí nést: „279/275 + 4 PENDING (PENDING≠PASS),
+  CODE-VERIFIED není RUNTIME, M3 NOT IMPLEMENTED, 1 distinctní RBXM".
