@@ -2,10 +2,9 @@
 
 **Aktuální stav:** M1 CODE-VERIFIED; M2 parser C05 CODE-VERIFIED (není RUNTIME),
 geometrie/měření BLOCKED, kalibrace NOT IMPLEMENTED; M3 NOT IMPLEMENTED —
-kód i docs na této větvi @ `36cbbdb` (PR #2, OPEN, NEMERGOVAT; dvouúrovňový pin
-z inventury `reports/AUDIT2-docs-inventory.md` D1 je tímto uzavřen — kód se od
-`ff6f266` změnil fázemi 53c2e23 + 36cbbdb, nový pin je jednotný `36cbbdb`); testy
-**272 běhů, 268 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `36cbbdb`,
+kód i docs na této větvi @ `ff4a9d6` (PR #2, OPEN, NEMERGOVAT; pin sjednocen:
+`36cbbdb` + fáze loader/CI/Studio → `ff4a9d6`); testy
+**279 běhů, 275 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `ff4a9d6`,
 ověřeno vlastním během 2026-11-19; historické: 260/256/0/4 @ `ff6f266` —
 viz §0.4; PENDING beze změny, PENDING≠PASS).
 **RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
@@ -67,8 +66,8 @@ viz §0.4; PENDING beze změny, PENDING≠PASS).
 - M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
   auditu §1 (stav před implementací této větve).
 
-### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `36cbbdb`)
-- `python tests/run_all.py` → **272 běhů, 268 PASS, 0 FAIL, 4 PENDING**
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `ff4a9d6`)
+- `python tests/run_all.py` → **279 běhů, 275 PASS, 0 FAIL, 4 PENDING**
   (vlastní běh 2026-11-19 @ `36cbbdb`; předchozí: 260/256/0/4 @ `ff6f266`
   — viz `reports/FINAL_DOCUMENTATION_SYNC.md` historie; 199/195/0/4 před M2
   hardeningem a 192/188/0/4 stav k Agentu D — viz §9 níže;

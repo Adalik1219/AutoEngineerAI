@@ -1,4 +1,7 @@
-# Final Documentation Sync — stav k HEAD `36cbbdb` (2026-11-19)
+# Final Documentation Sync — stav k HEAD `ff4a9d6` (2026-11-19)
+
+Větev `feat/m1-m2-foundation`, PR #2 (OPEN, NEMERGOVAT).
+Předchozí sync k `36cbbdb` níže (§5 Historie); starší k `ff6f266` tamtéž. Historie NEMAZÁNA.
 
 Větev `feat/m1-m2-foundation`, PR #2 (OPEN, NEMERGOVAT).
 Role: Documentation & Traceability. Metoda: čtení `docs/PROJECT_STATUS.md` +
@@ -9,11 +12,11 @@ Historie NEMAZÁNA — starší sync k `ff6f266` (oddíl 5 níže) a stará čí
 v §9 PROJECT_STATUS zůstávají s datem jako historická.
 Inventurní doporučení D1–D5 (`reports/AUDIT2-docs-inventory.md`) jsou tímto uzavřena.
 
-## 1. Aktuální ověřené počty (@ `36cbbdb`, vlastní běh 2026-11-19)
+## 1. Aktuální ověřené počty (@ `ff4a9d6`, vlastní běh 2026-11-19)
 
-`python tests/run_all.py` → **běhů 272, PASS 268, FAIL 0, ERROR 0, PENDING 4**,
-VÝSLEDEK: PASS (s 4 PENDING). PENDING totožné (Studio odečet, schema conformance
-Fáze 5, 2× regresní baseline) — není PASS.
+`python tests/run_all.py` → **běhů 279, PASS 275, FAIL 0, ERROR 0, PENDING 4**,
+VÝSLEDEK: PASS (s 4 PENDING). (Předchozí: 272/268 @ `36cbbdb` — viz §5 Historie.)
+PENDING totožné (Studio odečet, schema conformance Fáze 5, 2× regresní baseline) — není PASS.
 
 - `tests/test_m2_rbxm_parser.py`: 54 testů (`grep "def test"` @ `36cbbdb`;
   +1 proti 53 @ `ff6f266`: OSError → RbxmCorruptError, fáze B 36cbbdb), vše PASS v rámci sady.

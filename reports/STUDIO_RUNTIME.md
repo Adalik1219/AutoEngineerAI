@@ -5,7 +5,7 @@
 | Meta | Hodnota |
 |---|---|
 | Větev | `feat/m1-m2-foundation` |
-| HEAD | `86b04f2` (PR #2 OPEN, NEMERGOVAT) |
+| HEAD | `ff4a9d6` (PR #2 OPEN, NEMERGOVAT) |
 | Studio instance | `ae_test.rbxlx`, režim **Edit** |
 | Studio verze | `0.748.0.7481526` (`return version()`) |
 | Rojo serve | `localhost:34872`, serverVersion `7.7.1`, project `AutoEngineerTestGame` |
