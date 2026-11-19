@@ -220,3 +220,15 @@ C14 evaluator · C15 iteration advisor · C16 end-to-end workflow. Každý commi
 - **Opraveno touto kontrolou:** ROADMAP M1.13 (stale „převody, brzdy UNKNOWN") +
   M1.14 („profil chybí"); PROJECT_STATUS §1 a §5 (stale UNKNOWN výčty).
   Verdikt: **PASS** (otevřené body z 9. odstavce uzavřeny rozhodnutím uživatele).
+
+## 10. Opravná vlna M2 (větev feat/m2-m3-geometry, 2026-11-19)
+
+- Klasifikace: 4-tier (VALID_WHEEL / KNOWN_NON_WHEEL allowlist 11 dílů /
+  UNKNOWN_CANDIDATE / INVALID_WHEEL); 44 dílů evidováno, neblokuje.
+- Parser: MSB-first overen Studiem (4×Ball + 104×Block + 1×Cylinder).
+- Kalibrace: engine IMPLEMENTED + CODE-VERIFIED; JeepTemplate BLOCKED 7,44 %;
+  M3 brána pouze VERIFIED (`require_verified_for_m3`).
+- I-1: assess-BLOCKED se propaguje do inspection_report (fail-closed).
+- Studio: rozchod 5,9907 / rozvor 10,5228 potvrzeny bit-přesně (Edit, read-only).
+- QA verdikt: M2 CONDITIONAL PASS; brána M3 NEOTEVŘENA.
+- M3 zůstává návrh bez kódu. Detail: `reports/M2-M3/REMEDIATION-WAVE-FINAL-REPORT.md`.

@@ -43,10 +43,11 @@ následující body 1–14 jsou schválená specifikace, aktuální stav drží 
 13. **Omezení/rizika:** křivka, rozložení hmotnosti, bias, Cd/čelní plocha, stálý převod (kandidáti 3.15:1/3.55:1 bez přiřazení), zpátečka a kompresní poměr jsou UNKNOWN — M4 s nimi musí počítat; převody 1–6, brzdy Brembo 390/355, kola, 0–100 5,3 s a V-max 250 km/h jsou VERIFIED (M1.5, 2026-11-19); riziko záměny EU/US a GT/Dark Horse dat.
 14. **Stav:** CODE-VERIFIED — schémata a 3 referenční vozy existují (civic, gr86, mustang GT 2024 EU factory standard); profil Mustangu validuje 0/0, 22 testů M1-T01…M1-T22 PASS (T21/T22 fáze B 36cbbdb: M1.9 výjimka i v `tools/validate_contracts.py`; `validate_contracts` 24/0 @ `36cbbdb`). (M1 nemá runtime složku; vyšší stupeň neexistuje.)
 
-## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: ČÁSTEČNĚ
-(parser C05 + detekce kol M2.1/M2.2 CODE-VERIFIED @ `36cbbdb`, není RUNTIME;
-měření M2.4–M2.8 BLOCKED kalibrační bránou; kalibrace M2.9/M2.10 NOT IMPLEMENTED;
-aktuální stav drží `docs/PROJECT_STATUS.md` §0; body 1–14 níže jsou schválená specifikace)
+## M2 – RBXM Inspector & Scale Calibration · priorita P0 · stav: CONDITIONAL PASS
+(parser C05 + 4-tier detekce kol + MSB-first + inspection_report writer CODE-VERIFIED;
+kalibrační engine IMPLEMENTED + CODE-VERIFIED; kalibrace JeepTemplate BLOCKED 7,44%;
+M3 brána pouze VERIFIED; M3 NEOTEVŘENA — viz `docs/PROJECT_STATUS.md` §10;
+body 1–14 níže jsou schválená specifikace)
 
 1. **Cíl:** read-only změřit existující RBXM (kola, nápravy, rozměry) a určit měřítko studs/m.
 2. **Odpovědnosti:** parsování RBXM bez zápisu; identifikace 4 kol + náprav; výpočet rozvoru/rozchodů/průměrů; inventář dílů a hmotností; čtení Tune/Script/Structure parametrů; kalibrace `studs_per_meter`.
