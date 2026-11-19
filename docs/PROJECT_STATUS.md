@@ -1,12 +1,12 @@
-# Project Status – stav k 2026-11-19 (větev `feat/m1-m2-foundation`, PR #2)
+# Project Status – stav k 2026-11-19 (větev `feat/m2-m3-geometry`; PR #2 OPEN jinde)
 
-**Aktuální stav:** M1 CODE-VERIFIED; M2 parser C05 CODE-VERIFIED (není RUNTIME),
-geometrie/měření BLOCKED, kalibrace NOT IMPLEMENTED; M3 NOT IMPLEMENTED —
-kód i docs na této větvi @ `ff4a9d6` (PR #2, OPEN, NEMERGOVAT; pin sjednocen:
-`36cbbdb` + fáze loader/CI/Studio → `ff4a9d6`); testy
-**279 běhů, 275 PASS, 0 FAIL, 4 PENDING** (`python tests/run_all.py` @ `ff4a9d6`,
-ověřeno vlastním během 2026-11-19; historické: 260/256/0/4 @ `ff6f266` —
-viz §0.4; PENDING beze změny, PENDING≠PASS).
+**Aktuální stav:** M1 CODE-VERIFIED; M2 CONDITIONAL PASS (parser C05 + 4-tier
+detekce CODE-VERIFIED, kalibrace BLOCKED 7,44 %, M3 brána VERIFIED-only, M3
+NEOTEVŘENA) — větev `feat/m2-m3-geometry` @ `e2a56ef` (navazuje na PR #2
+`ab840a9`; nemergováno); testy
+**372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING** (`python tests/run_all.py`,
+ověřeno vlastním během 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
+260/256 @ `ff6f266` — viz §0.4; PENDING beze změny, PENDING≠PASS).
 **RBXM hashe beze změny** (pouze čtení, žádný zápis — viz §0.4).
 
 > **§1–§8 = HISTORICKÝ audit před implementací** (stav k `dd9efdf`, 162 PASS).
@@ -66,16 +66,14 @@ viz §0.4; PENDING beze změny, PENDING≠PASS).
 - M3 Geometry Engine NOT IMPLEMENTED; M4/M5/M6/M7/M8/M9 PARTIAL dle historického
   auditu §1 (stav před implementací této větve).
 
-### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `ff4a9d6`)
-- `python tests/run_all.py` → **279 běhů, 275 PASS, 0 FAIL, 4 PENDING**
-  (vlastní běh 2026-11-19 @ `36cbbdb`; předchozí: 260/256/0/4 @ `ff6f266`
-  — viz `reports/FINAL_DOCUMENTATION_SYNC.md` historie; 199/195/0/4 před M2
-  hardeningem a 192/188/0/4 stav k Agentu D — viz §9 níže;
-  PENDING totožné, PENDING≠PASS).
-- Sady: `test_m2_rbxm_parser.py` 54 testů (`grep "def test"` @ `36cbbdb`;
-  +1 fáze B: OSError → RbxmCorruptError), `test_m2_wheel_detect.py` 21 testů,
-  `test_m1_mustang_profile.py` 22 testů (T01–T22; +T21/T22 fáze B 36cbbdb:
-  contracts-validátor M1.9 výjimka).
+### 0.4 Testy a RBXM integrita (nový běh 2026-11-19 @ `e2a56ef`, větev feat/m2-m3-geometry)
+- `python tests/run_all.py` → **372 běhů, 368 PASS, 0 FAIL, 0 ERROR, 4 PENDING**
+  (vlastní běh 2026-11-19; historické: 279/275 @ `ff4a9d6` (PR #2),
+  260/256 @ `ff6f266`; PENDING totožné, PENDING≠PASS).
+- Sady M2 (@ `e2a56ef`): `test_m2_rbxm_parser.py` 57 testů, `test_m2_wheel_detect.py` 53,
+  `test_m2_scale_calibration.py` 31, `test_m2_rbxm_inspector.py` 7,
+  `test_m2_integration.py` 20; M1: `test_m1_mustang_profile.py` 22 (T01–T22);
+  CI-portability 11 + loader-root 5.
 - `tools/validate_contracts.py` → 24/0 ÚSPĚCH (@ `36cbbdb`, commit message;
   M1.9 výjimka i v contracts validátoru).
 - CI: `53c2e23` fix (repo-relative fixture, SKIP místo ERROR, portability testy
