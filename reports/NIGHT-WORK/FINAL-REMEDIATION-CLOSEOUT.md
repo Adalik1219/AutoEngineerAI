@@ -47,5 +47,11 @@ Katalog cyklický (návrhy A §7 neaplikovány) · 3 vakuové testy · StAxisOff
 ## 14. Verdikt: CONDITIONAL PASS
 Bezpečnostní a implementační požadavky splněny (brána, testy, normalizace-agregace, QA, CI na přesném SHA); zůstávají vymezené neblokující PENDING (E-normalizace 60, 3 vakuua, 5 test-PENDING). Plný PASS až po R-rozhodnutích (katalogová data, schémata, Sim-vakuua).
 
-## Rollback
-`git revert <closeout> && git revert 8fd23cb` (merges) → stav `0f4670a`; ověření `run_all` 443/432/4 local. Jednotlivě: revert merge `c3dc380` (testy), `31f1180` (data), `301ef38` (jen report).
+## Rollback — OVĚŘENÝ POSTUP (simulace 20. 11. 2026, worktree AE-ROLLBACK-TEST)
+Scénář B (návrat celého stromu na baseline `0f4670a`), mainline parent je vždy `-m 1`
+(první rodič = větev `feat/m2-m3-geometry`; ověřeno `git show --pretty=%P`):
+`git revert --no-commit 57043ee && git revert --no-commit -m 1 8fd23cb && git revert --no-commit -m 1 c3dc380 && git revert --no-commit -m 1 301ef38 && git revert --no-commit 074b9d2`
+Výsledek: `git diff --exit-code 0f4670a -- .` → prázdný (DIFF-EXIT 0), `run_all` 443/438/5 PASS (worktree-prostředí), kontrakty 24/24. Důkazní commit simulace: `11399574` (DO-NOT-MERGE, pouze evidence). Rollback NEBYL proveden na sdílené větvi. Starý postup `git revert <closeout> && git revert 8fd23cb` bez `-m 1` je NEPLATNÝ (merge bez mainline selže/je nejednoznačný).
+
+## Doložka 2026-11-20 (navazující vlna)
+Riziko „3 vakuové testy“ je UZAVŘENO: V1/V2/V3 opraveny (AGENT-C-VACUOUS-TEST-REVIEW) a nezávisle potvrzeny (AGENT-G-TEST-INDEPENDENT-REVIEW, 4/4, 7/7 sabotáží). E-normalizace zůstává PENDING (60 nedoloženo, Varianta B).

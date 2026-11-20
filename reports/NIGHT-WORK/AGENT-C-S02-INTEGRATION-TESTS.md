@@ -91,3 +91,6 @@ Všechny přes SKUTEČNÝ entry point (`map_config` / `build_search_space`), ne 
 - `tests/test_f4_optimizer_effect.py` — 2 BLOCKED přepisy (z toho 1 explicitní prostor) + 1 import brány + helper `_explicit_bias_space`.
 - `reports/NIGHT-WORK/AGENT-C-S02-INTEGRATION-TESTS.md` — tento report.
 - Produkční kód: **0 změn** (ověřeno: `git status` ukazuje u `src/` jen práci Agenta B).
+
+## Doložka 2026-11-20 — HISTORICKÝ STAV (nepřepisovat)
+Tento report popisoval integrační testy k `bc6f955`. Důkazní síla je nyní vedena v `AGENT-C-REMEDIATION-TEST-AUDIT.md` (C1–C5) a vakuová revize v `AGENT-C-VACUOUS-TEST-REVIEW.md` (V1–V3 opraveny, G-potvrzeny).

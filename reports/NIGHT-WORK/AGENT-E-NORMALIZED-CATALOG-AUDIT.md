@@ -142,3 +142,6 @@ její stavový rozpad nesedí se strojovým počtem. Verdikt: **PENDING** (pocti
 zdroje nestačí; nic nepodloženo). Cesta k PASS: Agent F zveřejní explicitní
 seznam 60 katalogových ID (výběr ze 138) s jedním stavem na ID; pak se tento
 audit přepočítá 1:1. FAIL se nekoná — žádné ID ani stav nebyly vymyšleny.
+
+## Doložka 2026-11-20 — navazující vlna (nepřepisovat výše uvedené)
+F-rekonstrukce rozhodla Variantu B: `ORIGINAL_60_SET=NOT_RECONSTRUCTABLE` (AGENT-F-60-ID-RECONSTRUCTION). Validátor zesílen E1–E6 + 14 negativních testů (AGENT-E-VALIDATOR-REMEDIATION, `tests/test_normalization_validation.py` 14/14, exit kódy 0/1/2). Tři počty odděleny: SOURCE_TABLE_ROWS=78 / ORIGINAL_LOGICAL_IDS=PENDING / NORMALIZED_IDS=94. Aktualizováno: `normalized_ids.json` (jen meta), `tools/validate_normalization.py`.

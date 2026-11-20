@@ -96,3 +96,6 @@ Shoda s tvrzenými čísly (443/439/0/0/4, S-02 39/39, kontrakty 24/24) — **ov
 
 Brána je správná, atomická, krytá z obou entry pointů; svědek platí hrana po hraně; turbo-sémantika drží; strategie držena; čísla sedí; 0 FAIL; Sim-krytí zachováno reálnými běhy. Vakuové testy procházejí, ale nedokazují svá jména.
 **Podmínky:** (1) 2 přiznaná vakuua + mapovací noha `test_final_drive…` zůstávají explicitně označena jako oslabená bránou; (2) s acyklickým katalogem (náprava Agent A) se vrátí per-klíč odmítnutí, plný `test_chain…` včetně Sim/evaluate, a mapovací noha final_drive — do té doby žádný z těchto testů nesmí být citován jako důkaz per-klíč chování; (3) G-report příští vlny ověří (1)–(2) znovu vlastním během.
+
+## Doložka 2026-11-20 — HISTORICKÝ STAV (nepřepisovat)
+Tento report popisoval stav k `bc6f955`+dirty. Podmínky (1)–(3) jsou SPLNĚNY: C1 per-klíč test přidán, FinalDrive fixture auto-validována, vakuua V1–V3 opravena a G-potvrzena (AGENT-C-VACUOUS-TEST-REVIEW, AGENT-G-TEST-INDEPENDENT-REVIEW). Aktuální verdikt viz AGENT-G-FINAL-NEXT-WAVE-QA a NEXT-WAVE-FINAL-CLOSEOUT.
