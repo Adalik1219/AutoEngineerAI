@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/scale_calibration-v1.json",
+  "title": "ScaleCalibration v1 (PROPOSED)",
+  "description": "PROPOSED — čeká na schválení, nevalidováno. Výstup M2 kalibrace měřítka studs/m (producent Agent C, calibrate() v src/Inspection/scale_calibration.py). Tvar dle reports/M2-M3-CONTRACTS-FREEZE-v1.md §scale_calibration.json. Reference v SI (unit const m) + provenance; měření v studs. Stavy pouze VERIFIED | ESTIMATED | UNKNOWN | BLOCKED; rodiny nezávislosti wheelbase/track/tire_diameter; < 2 nezávislé rodiny → BLOCKED; do M3 jen VERIFIED.",
+  "type": "object",
+  "required": ["vehicle_id", "inspection_ref", "references", "measurements_studs", "estimates", "deviations_pct", "uncertainty", "overall_status", "blocked_reason"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0", "description": "Volitelné: producent (calibrate) jej dnes neemituje; je-li přítomno, musí být 1.0.0. Otázka ke schválení Q-1." },
+    "vehicle_id": { "type": "string", "minLength": 1 },
+    "inspection_ref": { "type": ["string", "null"], "description": "Odkaz na inspection_report (report_id nebo sha256:hex)." },
+    "references": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["param", "value_si", "unit", "source", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "param": { "enum": ["wheelbase", "track_f", "track_r", "tire_d_f", "tire_d_r"] },
+          "value_si": { "type": ["number", "null"], "description": "Referenční rozměr v metrech; null = chybějící údaj (pak status UNKNOWN)." },
+          "unit": { "const": "m" },
+          "source": { "type": "string", "minLength": 1, "description": "Provenance: povinný zdroj reference." },
+          "status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN"] }
+        }
+      }
+    },
+    "measurements_studs": {
+      "type": "object",
+      "required": ["wheelbase", "track_f", "track_r", "tire_d_f", "tire_d_r"],
+      "additionalProperties": false,
+      "properties": {
+        "wheelbase": { "type": ["number", "null"] },
+        "track_f": { "type": ["number", "null"] },
+        "track_r": { "type": ["number", "null"] },
+        "tire_d_f": { "type": ["number", "null"] },
+        "tire_d_r": { "type": ["number", "null"] }
+      }
+    },
+    "estimates": {
+      "type": "array",
+      "description": "Prázdné při UNKNOWN (není co kalibrovat) i BLOCKED (nekonzistence).",
+      "items": {
+        "type": "object",
+        "required": ["param", "studs_per_meter"],
+        "additionalProperties": false,
+        "properties": {
+          "param": { "enum": ["wheelbase", "track_f", "track_r", "tire_d_f", "tire_d_r"] },
+          "studs_per_meter": { "type": "number", "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "deviations_pct": {
+      "type": "object",
+      "additionalProperties": { "type": "number" }
+    },
+    "uncertainty": {
+      "type": "object",
+      "required": ["combined_studs_per_meter", "rel_pct", "method"],
+      "additionalProperties": false,
+      "properties": {
+        "combined_studs_per_meter": { "type": ["number", "null"] },
+        "rel_pct": { "type": ["number", "null"] },
+        "method": { "type": "string", "minLength": 1 }
+      }
+    },
+    "overall_status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"] },
+    "blocked_reason": { "type": ["string", "null"], "description": "Povinný (non-empty) při BLOCKED; null jinak." }
+  }
+}

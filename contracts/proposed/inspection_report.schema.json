@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/inspection_report-v1.json",
+  "title": "InspectionReport v1 (PROPOSED)",
+  "description": "PROPOSED — čeká na schválení, nevalidováno. Výstup M2 inspekce RBXM (producent Agent B, writer build_inspection_report v src/Inspection/wheel_detect.py). Tvar dle reports/M2-M3-CONTRACTS-FREEZE-v1.md §inspection_report.json. Vše studs; status povinný u každého měření; chybějící hodnota = null + status UNKNOWN/BLOCKED, nikdy odhad. Stavy pouze GEOMETRY_OK | UNKNOWN | BLOCKED.",
+  "type": "object",
+  "required": ["report_id", "vehicle_id", "source_file", "source_sha256", "parser_version", "code_version", "wheels", "axles", "wheelbase_studs", "tire_diameters_studs", "coordinate_frame", "method", "warnings", "overall_status"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0", "description": "Volitelné: producent (build_inspection_report) jej dnes neemituje; je-li přítomno, musí být 1.0.0. Otázka ke schválení Q-1." },
+    "report_id": { "type": "string", "minLength": 1, "description": "Identifikátor reportu, default vehicle_id@sha256[:12]." },
+    "vehicle_id": { "type": "string", "minLength": 1 },
+    "source_file": { "type": "string", "minLength": 1 },
+    "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$", "description": "SHA-256 zdrojového RBXM, hex." },
+    "parser_version": { "type": "string", "minLength": 1 },
+    "code_version": { "type": "string", "minLength": 1 },
+    "wheels": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "required": ["designation", "instance_id", "class_name", "center_studs", "size_studs", "shape", "status", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "designation": { "enum": ["FL", "FR", "RL", "RR"] },
+          "instance_id": { "type": ["integer", "string", "null"] },
+          "class_name": { "type": ["string", "null"] },
+          "center_studs": { "$ref": "#/$defs/xyz_or_null" },
+          "size_studs": { "$ref": "#/$defs/xyz_or_null" },
+          "shape": { "type": ["string", "null"] },
+          "status": { "enum": ["GEOMETRY_OK", "UNKNOWN", "BLOCKED"] },
+          "reason": { "type": ["string", "null"], "description": "Důvod selhání; null = OK." }
+        }
+      }
+    },
+    "axles": {
+      "type": "object",
+      "required": ["front", "rear"],
+      "additionalProperties": false,
+      "properties": {
+        "front": { "$ref": "#/$defs/axle" },
+        "rear": { "$ref": "#/$defs/axle" }
+      }
+    },
+    "wheelbase_studs": { "type": ["number", "null"] },
+    "tire_diameters_studs": {
+      "type": "object",
+      "required": ["FL", "FR", "RL", "RR"],
+      "additionalProperties": false,
+      "properties": {
+        "FL": { "type": ["number", "null"] },
+        "FR": { "type": ["number", "null"] },
+        "RL": { "type": ["number", "null"] },
+        "RR": { "type": ["number", "null"] }
+      }
+    },
+    "coordinate_frame": {
+      "type": "object",
+      "required": ["x", "y", "z", "verified_in_studio"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "string", "minLength": 1 },
+        "y": { "type": "string", "minLength": 1 },
+        "z": { "type": "string", "minLength": 1 },
+        "verified_in_studio": { "type": "boolean" }
+      }
+    },
+    "method": { "type": "string", "minLength": 1 },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "known_non_wheels": {
+      "type": "array",
+      "description": "Nadstavba modulu nad kontrakt (evidované legitimní díly podvozku, neblokují).",
+      "items": {
+        "type": "object",
+        "required": ["instance_id", "name", "shape", "tier"],
+        "additionalProperties": true,
+        "properties": {
+          "instance_id": { "type": ["integer", "string", "null"] },
+          "name": { "type": ["string", "null"] },
+          "shape": { "type": ["string", "null"] },
+          "tier": { "const": "KNOWN_NON_WHEEL" }
+        }
+      }
+    },
+    "overall_status": { "enum": ["GEOMETRY_OK", "UNKNOWN", "BLOCKED"] }
+  },
+  "$defs": {
+    "xyz_or_null": {
+      "description": "Trojice v studs, nebo null = chybějící údaj (pak status UNKNOWN/BLOCKED).",
+      "anyOf": [
+        {
+          "type": "object",
+          "required": ["x", "y", "z"],
+          "additionalProperties": false,
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "z": { "type": "number" }
+          }
+        },
+        { "type": "null" }
+      ]
+    },
+    "axle": {
+      "type": "object",
+      "required": ["wheel_L", "wheel_R", "track_studs"],
+      "additionalProperties": false,
+      "properties": {
+        "wheel_L": { "enum": ["FL", "FR", "RL", "RR"] },
+        "wheel_R": { "enum": ["FL", "FR", "RL", "RR"] },
+        "track_studs": { "type": ["number", "null"] }
+      }
+    }
+  }
+}

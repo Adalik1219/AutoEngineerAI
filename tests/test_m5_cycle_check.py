@@ -1,12 +1,19 @@
-# Testy detektoru cyklů závislostí S-02 (Agent B).
-"""Testy pro src/Chassis/mapping/cycle_check.py.
+# Testy detektoru cyklu zavislosti S-02 + integrace validace (Agent C).
+"""Testy pro src/Chassis/mapping/cycle_check.py a validate_catalog.py.
 
-Pouze syntetická data + KNOWN_* tabulky z dependencies.py (read-only).
-Žádné RBXM, žádná síť, žádné VERIFIED hodnoty.
+Nove API Agenta B: has_cycle(graph) -> CycleResult, find_witness(graph),
+check_integrity(graph), build_graph_from_catalog/records,
+check_catalog_records/file -> CatalogCheckResult (.valid),
+check_known_tables() -> CycleResult; find_cycles() = DEPRECATED wrapper.
+
+Pouzivaji se pouze synteticka data + skutecny katalog parameters.json
+(read-only). Zadna RBXM, zadna sit, zadne VERIFIED hodnoty.
 """
 
+import json
 import os
 import sys
+import tempfile
 import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -14,49 +21,327 @@ ROOT = os.path.dirname(HERE)
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
-from src.Chassis.mapping.cycle_check import check_known_tables, find_cycles
+from src.Chassis.mapping.cycle_check import (
+    CatalogCheckResult,
+    CycleResult,
+    InvalidGraphError,
+    build_graph_from_catalog,
+    build_graph_from_records,
+    check_catalog_file,
+    check_catalog_records,
+    check_integrity,
+    check_known_tables,
+    find_witness,
+    has_cycle,
+)
+from src.Chassis.mapping.validate_catalog import (
+    STATUS_BLOCKED,
+    STATUS_OK,
+    validate_catalog_for_mapping,
+    validate_records_for_mapping,
+)
+
+CATALOG_PATH = os.path.join(ROOT, "src", "Chassis", "catalog", "parameters.json")
+
+# Zname vzajemne pary z auditu Agenta A (AGENT-A-S02-CATALOG-AUDIT.md, §5):
+# kazdy je overeny 2-cyklus depends_on v realnych datech.
+KNOWN_MUTUAL_PAIRS = frozenset([
+    frozenset(("auto_shift_type", "shift_down_time")),
+    frozenset(("auto_shift_type", "shift_up_time")),
+    frozenset(("auto_up_thresh", "peak_rpm")),
+    frozenset(("clutch_engage", "flywheel")),
+    frozenset(("compress_lim_f", "sus_length_f")),
+    frozenset(("compress_lim_r", "sus_length_r")),
+    frozenset(("compression_ratio", "turbo_boost")),
+    frozenset(("extension_lim_f", "sus_length_f")),
+    frozenset(("extension_lim_r", "sus_length_r")),
+    frozenset(("final_drive", "gear_ratios")),
+    frozenset(("flywheel", "rev_accel")),
+    frozenset(("lock_to_lock", "steer_ratio")),
+    frozenset(("pbrake_bias", "pbrake_force")),
+    frozenset(("pre_compress_f", "sus_length_f")),
+    frozenset(("pre_compress_r", "sus_length_r")),
+    frozenset(("redline_rpm", "rev_bounce")),
+    frozenset(("tcs_gradient", "tcs_threshold_sps")),
+    frozenset(("tcs_limit_pct", "tcs_threshold_sps")),
+    frozenset(("weight_box_size", "weight_lb")),
+])
+
+OVERLAP_GRAPH = {"a": ["b", "c"], "b": ["c"], "c": ["a"]}
 
 
-class TestFindCycles(unittest.TestCase):
+def assertValidWitness(testcase, graph, witness):
+    """Overi svedka hranu po hrane: uzavrena cesta v grafu (ne jen non-None)."""
+    testcase.assertIsInstance(witness, list)
+    testcase.assertGreaterEqual(len(witness), 2,
+                                "svedek musi mit aspon 2 prvky (uzavrena cesta)")
+    testcase.assertEqual(witness[0], witness[-1],
+                         "svedek musi byt uzavrena cesta (prvni == posledni)")
+    for src, dst in zip(witness, witness[1:]):
+        testcase.assertIn(src, graph, "uzel %r svedka neni v grafu" % (src,))
+        testcase.assertIn(dst, graph.get(src, []),
+                          "hrana %r -> %r svedka neni v grafu" % (src, dst))
+
+
+def make_records(pairs):
+    """Pomocna stavba zaznamu katalogu: pairs = [(id, [deps])]."""
+    return [{"id": pid, "depends_on": list(deps)} for pid, deps in pairs]
+
+
+class TestMigratedCore(unittest.TestCase):
+    """Migrace pokryti starych testu na nove API (CycleResult semantika)."""
+
     def test_acyclic_graph_ok(self):
-        # Acyklický graf: lineární řetěz + větev, včetně listového uzlu mimo klíče.
-        graph = {
-            "a": ["b", "c"],
-            "b": ["c"],
-            "c": ["d"],
-        }
-        self.assertEqual(find_cycles(graph), [])
+        graph = {"a": ["b", "c"], "b": ["c"], "c": ["d"]}
+        result = has_cycle(graph)
+        self.assertIsInstance(result, CycleResult)
+        self.assertFalse(result.has_cycle)
+        self.assertEqual(result.witness_path, [])
+        self.assertIsNone(find_witness(graph))
 
     def test_self_loop(self):
-        # Smyčka na vlastním uzlu.
-        self.assertEqual(find_cycles({"a": ["a"]}), [["a"]])
+        result = has_cycle({"a": ["a"]})
+        self.assertTrue(result.has_cycle)
+        self.assertEqual(result.witness_path, ["a", "a"])
+        assertValidWitness(self, {"a": ["a"]}, result.witness_path)
 
     def test_two_cycle(self):
-        # Vzájemná závislost dvou parametrů.
-        self.assertEqual(find_cycles({"a": ["b"], "b": ["a"]}), [["a", "b"]])
+        graph = {"a": ["b"], "b": ["a"]}
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+        self.assertEqual(len(result.witness_path), 3)
 
     def test_three_cycle(self):
-        # Cyklus délky 3.
         graph = {"a": ["b"], "b": ["c"], "c": ["a"]}
-        self.assertEqual(find_cycles(graph), [["a", "b", "c"]])
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+        self.assertEqual(len(result.witness_path), 4)
 
     def test_determinism(self):
-        # Dvě volání nad stejným grafem (včetně více cyklů) dají stejný výsledek.
         graph = {
             "m": ["n", "o"],
             "n": ["m", "o"],
             "o": ["o"],
             "p": ["m"],
         }
-        first = find_cycles(graph)
-        second = find_cycles(graph)
+        first = has_cycle(graph)
+        second = has_cycle(graph)
         self.assertEqual(first, second)
-        # Výstup je navíc setříděný.
-        self.assertEqual(first, sorted(first))
+        self.assertEqual(find_witness(graph), find_witness(graph))
 
     def test_known_tables_acyclic(self):
-        # Známé tabulky z dependencies.py nesmí obsahovat cyklus.
-        self.assertEqual(check_known_tables(), [])
+        # Opravena semantika: check_known_tables vraci CycleResult, ne list.
+        result = check_known_tables()
+        self.assertIsInstance(result, CycleResult)
+        self.assertFalse(result.has_cycle)
+        self.assertEqual(result.witness_path, [])
+
+
+class TestOverlapWitness(unittest.TestCase):
+    """Povinny prekryvovy graf: a->[b,c], b->[c], c->[a]."""
+
+    def test_overlap_graph_cycle_with_valid_witness(self):
+        result = has_cycle(OVERLAP_GRAPH)
+        self.assertTrue(result.has_cycle)
+        # Svedek musi byt platny cyklus overeny hranu po hrane.
+        assertValidWitness(self, OVERLAP_GRAPH, result.witness_path)
+
+
+class TestExtraCases(unittest.TestCase):
+    """Dalsi pripady detekce, integrity a neplatnych vstupu."""
+
+    def test_self_loop_in_larger_graph(self):
+        graph = {"a": ["b"], "b": ["c"], "c": ["c", "d"], "d": []}
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+
+    def test_two_separate_cycles(self):
+        graph = {"a": ["b"], "b": ["a"], "c": ["d"], "d": ["c"]}
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+
+    def test_cycles_sharing_node(self):
+        # Dva cykly se spolecnym uzlem a: a->b->a a a->c->a.
+        graph = {"a": ["b", "c"], "b": ["a"], "c": ["a"]}
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+
+    def test_cycles_sharing_edge(self):
+        # Dva cykly se spolecnou hranou a->b: a->b->a a a->b->c->a.
+        graph = {"a": ["b"], "b": ["a", "c"], "c": ["a"]}
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+
+    def test_longer_cycle_5(self):
+        graph = {"a": ["b"], "b": ["c"], "c": ["d"], "d": ["e"], "e": ["a"]}
+        result = has_cycle(graph)
+        self.assertTrue(result.has_cycle)
+        assertValidWitness(self, graph, result.witness_path)
+        self.assertEqual(len(result.witness_path), 6)
+
+    def test_large_acyclic_graph(self):
+        # Retez 500 uzlu + odbocka: acyklicky, statistika sedi.
+        graph = {"n%03d" % i: (["n%03d" % (i + 1)] if i < 499 else [])
+                 for i in range(500)}
+        graph["n000"].append("n499")
+        result = has_cycle(graph)
+        self.assertFalse(result.has_cycle)
+        self.assertEqual(result.witness_path, [])
+        self.assertEqual(result.checked_nodes, 500)
+        self.assertEqual(result.checked_edges, 500)
+
+    def test_duplicate_edge(self):
+        # Duplicitni hrana neni cyklus; statistika pocita unikatni hrany.
+        result = has_cycle({"a": ["b", "b"], "b": []})
+        self.assertFalse(result.has_cycle)
+        self.assertEqual(result.checked_edges, 1)
+
+    def test_unknown_target_is_integrity_not_cycle(self):
+        graph = {"a": ["ghost"]}
+        self.assertEqual(check_integrity(graph), [("a", "ghost")])
+        # Chybejici cil = chyba integrity, NE cyklus.
+        self.assertFalse(has_cycle(graph).has_cycle)
+        records = make_records([("a", ["ghost"])])
+        checked = check_catalog_records(records)
+        self.assertEqual(checked.integrity_errors, [("a", "ghost")])
+        self.assertFalse(checked.has_cycle)
+        self.assertFalse(checked.valid)
+
+    def test_empty_graph(self):
+        result = has_cycle({})
+        self.assertFalse(result.has_cycle)
+        self.assertEqual(result.witness_path, [])
+        self.assertEqual(result.checked_nodes, 0)
+        self.assertEqual(result.checked_edges, 0)
+        self.assertEqual(check_integrity({}), [])
+
+    def test_invalid_graph_not_dict(self):
+        with self.assertRaises(InvalidGraphError):
+            has_cycle([("a", ["b"])])  # type: ignore
+
+    def test_invalid_graph_non_string_node(self):
+        with self.assertRaises(InvalidGraphError):
+            has_cycle({1: ["a"]})  # type: ignore
+
+    def test_invalid_graph_neighbours_not_list(self):
+        with self.assertRaises(InvalidGraphError):
+            has_cycle({"a": "b"})  # type: ignore
+
+    def test_invalid_graph_non_string_target(self):
+        with self.assertRaises(InvalidGraphError):
+            has_cycle({"a": [1]})  # type: ignore
+
+    def test_invalid_catalog_duplicate_id(self):
+        records = make_records([("a", []), ("a", [])])
+        with self.assertRaises(InvalidGraphError):
+            check_catalog_records(records)
+
+    def test_same_graph_different_edge_order(self):
+        # Stejny graf v ruznem poradi hran: stejny vysledek i svedek.
+        first = {"a": ["b", "c"], "b": ["c"], "c": ["a"]}
+        second = {"c": ["a"], "b": ["c"], "a": ["c", "b"]}
+        self.assertEqual(has_cycle(first), has_cycle(second))
+        self.assertEqual(find_witness(first), find_witness(second))
+
+
+class TestRealCatalog(unittest.TestCase):
+    """Skutecny katalog parameters.json (read-only)."""
+
+    def test_real_catalog_counts(self):
+        graph = build_graph_from_catalog(CATALOG_PATH)
+        self.assertEqual(len(graph), 138)
+        self.assertEqual(sum(len(v) for v in graph.values()), 101)
+
+    def test_real_catalog_has_cycle(self):
+        result = check_catalog_file(CATALOG_PATH)
+        self.assertIsInstance(result, CatalogCheckResult)
+        self.assertTrue(result.has_cycle)
+        self.assertFalse(result.valid)
+        self.assertEqual(result.checked_nodes, 138)
+        self.assertEqual(result.checked_edges, 101)
+
+    def test_real_catalog_witness_matches_agent_a(self):
+        # Ocekavany svedek z auditu Agenta A: cyklus c. 1
+        # tcs_gradient <-> tcs_threshold_sps.
+        result = check_catalog_file(CATALOG_PATH)
+        graph = build_graph_from_catalog(CATALOG_PATH)
+        assertValidWitness(self, graph, result.witness_path)
+        self.assertEqual(
+            result.witness_path,
+            ["tcs_threshold_sps", "tcs_gradient", "tcs_threshold_sps"])
+        self.assertIn(frozenset(result.witness_path), KNOWN_MUTUAL_PAIRS)
+
+    def test_real_catalog_integrity_clean(self):
+        graph = build_graph_from_catalog(CATALOG_PATH)
+        self.assertEqual(check_integrity(graph), [])
+        self.assertEqual(check_catalog_file(CATALOG_PATH).integrity_errors, [])
+
+
+class TestValidationIntegration(unittest.TestCase):
+    """Integrace: verdikt katalogu pro mapovaci cestu (validate_catalog)."""
+
+    def _write_tmp_catalog(self, records):
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json",
+                                          delete=False, encoding="utf-8")
+        self.addCleanup(
+            lambda: os.path.exists(tmp.name) and os.unlink(tmp.name))
+        with tmp:
+            json.dump(records, tmp)
+        return tmp.name
+
+    def test_clean_catalog_ok(self):
+        verdict = validate_records_for_mapping(
+            make_records([("a", ["b"]), ("b", [])]))
+        self.assertEqual(verdict.status, STATUS_OK)
+        self.assertTrue(verdict.allowed)
+        self.assertEqual(verdict.witness_path, [])
+
+    def test_cyclic_catalog_blocked_with_path(self):
+        verdict = validate_records_for_mapping(
+            make_records([("a", ["b"]), ("b", ["a"])]))
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertFalse(verdict.allowed)
+        graph = build_graph_from_records(
+            make_records([("a", ["b"]), ("b", ["a"])]))
+        assertValidWitness(self, graph, verdict.witness_path)
+        self.assertIn("CYCLE", verdict.reason)
+
+    def test_integrity_error_blocked_with_different_reason(self):
+        verdict = validate_records_for_mapping(make_records([("a", ["ghost"])]))
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertFalse(verdict.allowed)
+        self.assertEqual(verdict.integrity_errors, [("a", "ghost")])
+        self.assertIn("INTEGRITY", verdict.reason)
+        self.assertNotIn("CYCLE", verdict.reason)
+
+    def test_negative_probe_cyclic_must_not_pass(self):
+        # Katalog s cyklem NESMI projit PASS (souborova cesta).
+        path = self._write_tmp_catalog(make_records(
+            [("x", ["y"]), ("y", ["x"]), ("z", [])]))
+        verdict = validate_catalog_for_mapping(path)
+        self.assertNotEqual(verdict.status, STATUS_OK)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+
+    def test_negative_probe_unknown_id_must_not_pass(self):
+        # Katalog s neexistujicim id NESMI projit PASS (souborova cesta).
+        path = self._write_tmp_catalog(make_records([("x", ["neexistuje"])]))
+        verdict = validate_catalog_for_mapping(path)
+        self.assertNotEqual(verdict.status, STATUS_OK)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+
+    def test_real_catalog_blocked_for_mapping(self):
+        verdict = validate_catalog_for_mapping(CATALOG_PATH)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertFalse(verdict.allowed)
+        self.assertIn("CYCLE", verdict.reason)
+        graph = build_graph_from_catalog(CATALOG_PATH)
+        assertValidWitness(self, graph, verdict.witness_path)
 
 
 if __name__ == "__main__":

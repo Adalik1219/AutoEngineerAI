@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/geometry_diff-v1.json",
+  "title": "GeometryDiff v1 (PROPOSED)",
+  "description": "PROPOSED — čeká na schválení, nevalidováno. Geometrický rozdíl M3: zdroj (inspekce) vs cíl (M3 brána). Tvar dle reports/M2-M3-CONTRACTS-FREEZE-v1.md §geometry_diff.json; delta v target_unit; method measured | computed. Při BLOCKED vstupu M2 → celý report BLOCKED (všechny řádky status BLOCKED, hodnoty null). Stavy pouze VERIFIED | ESTIMATED | UNKNOWN | BLOCKED.",
+  "type": "array",
+  "minItems": 1,
+  "items": {
+    "type": "object",
+    "required": ["param", "source_value", "source_unit", "target_value", "target_unit", "delta", "method", "status", "source_ref"],
+    "additionalProperties": false,
+    "properties": {
+      "param": {
+        "type": "string",
+        "pattern": "^(wheelbase|track_f|track_r|tire_d_f|tire_d_r|center_(FL|FR|RL|RR)_[xyz])$"
+      },
+      "source_value": { "type": ["number", "null"] },
+      "source_unit": { "enum": ["studs", "m"] },
+      "target_value": { "type": ["number", "null"] },
+      "target_unit": { "enum": ["studs", "m"] },
+      "delta": { "type": ["number", "null"], "description": "target − source, v target_unit; null při BLOCKED." },
+      "method": { "enum": ["measured", "computed"] },
+      "status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"] },
+      "source_ref": { "type": "string", "minLength": 1, "description": "Provenance: povinný odkaz (inspection:report_id / computed:M3.x)." }
+    }
+  }
+}

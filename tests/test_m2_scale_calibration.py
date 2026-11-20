@@ -208,7 +208,7 @@ class TestJeepTemplateGroundTruth(unittest.TestCase):
     }
 
     def test_jeep_template_is_blocked(self):
-        res = calibrate(measurements_studs=dict(self.JEEP_MEAS))
+        res = calibrate(vehicle_id="JeepTemplate", measurements_studs=dict(self.JEEP_MEAS))
         self.assertEqual(res["overall_status"], "BLOCKED")
         self.assertTrue(res["blocked_reason"])
         self.assertIn("7.44", res["blocked_reason"])
@@ -217,7 +217,7 @@ class TestJeepTemplateGroundTruth(unittest.TestCase):
         self.assertIsNone(res["uncertainty"]["rel_pct"])
 
     def test_jeep_template_blocked_from_m3(self):
-        res = calibrate(measurements_studs=dict(self.JEEP_MEAS))
+        res = calibrate(vehicle_id="JeepTemplate", measurements_studs=dict(self.JEEP_MEAS))
         self.assertFalse(usable_for_m3(res))
         with self.assertRaises(CalibrationBlockedError):
             require_verified_for_m3(res)

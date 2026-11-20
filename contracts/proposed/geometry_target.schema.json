@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://autoengineerai.local/schemas/geometry_target-v1.json",
+  "title": "GeometryTarget v1 (PROPOSED)",
+  "description": "PROPOSED — čeká na schválení, nevalidováno. Cílová geometrie M3 (producent Agent E, až po bráně M2). Tvar dle reports/M2-M3-CONTRACTS-FREEZE-v1.md §geometry_target.json, rozšířen o statusy a reference dle reports/M3/GEOMETRY-ENGINE-PROPOSAL.md §6. Vše studs (units const). ODCHYLKA od M3 návrhu §6: overall_status používá existující terminologii stavů VERIFIED | ESTIMATED | UNKNOWN | BLOCKED, nikoli nový stav OK. Při BLOCKED vstupu M2 → celý report BLOCKED, všechny value null.",
+  "type": "object",
+  "required": ["schema_version", "vehicle_id", "scale_ref", "wheelbase_studs", "track_f_studs", "track_r_studs", "tire_d_f_studs", "tire_d_r_studs", "wheel_centers_studs", "units", "overall_status", "blocked_reason"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": "1.0.0" },
+    "vehicle_id": { "type": "string", "minLength": 1 },
+    "scale_ref": {
+      "type": "object",
+      "required": ["code_version", "studs_per_meter", "calibration_status"],
+      "additionalProperties": false,
+      "properties": {
+        "calibration_id": { "type": "string", "minLength": 1 },
+        "code_version": { "type": "string", "minLength": 1 },
+        "studs_per_meter": { "type": ["number", "null"], "description": "Měřítko z kalibrace; konečné kladné číslo vyžadováno pro číselné cíle." },
+        "uncertainty_rel_pct": { "type": ["number", "null"] },
+        "calibration_status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"], "description": "Verdikt kalibrace; číselné cíle smí vzniknout jen při VERIFIED (M3 brána)." }
+      }
+    },
+    "inspection_ref": {
+      "type": "object",
+      "required": ["report_id", "source_sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "report_id": { "type": "string", "minLength": 1 },
+        "source_sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "wheelbase_studs": { "$ref": "#/$defs/measured_studs" },
+    "track_f_studs": { "$ref": "#/$defs/measured_studs" },
+    "track_r_studs": { "$ref": "#/$defs/measured_studs" },
+    "tire_d_f_studs": { "$ref": "#/$defs/measured_studs" },
+    "tire_d_r_studs": { "$ref": "#/$defs/measured_studs" },
+    "wheel_centers_studs": {
+      "type": "object",
+      "required": ["FL", "FR", "RL", "RR"],
+      "additionalProperties": false,
+      "properties": {
+        "FL": { "$ref": "#/$defs/center_studs" },
+        "FR": { "$ref": "#/$defs/center_studs" },
+        "RL": { "$ref": "#/$defs/center_studs" },
+        "RR": { "$ref": "#/$defs/center_studs" }
+      }
+    },
+    "units": { "const": "studs" },
+    "sources": {
+      "type": "array",
+      "description": "Volitelný index provenance nad rámec per-hodnota source_ref.",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "status_per_value": {
+      "type": "object",
+      "description": "Volitelná souhrnná mapa param → status (autoritative jsou per-hodnota statusy). Kandidát na vypuštění při schválení.",
+      "additionalProperties": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"] }
+    },
+    "overall_status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"] },
+    "blocked_reason": { "type": ["string", "null"], "description": "Povinný (non-empty) při BLOCKED; null jinak." }
+  },
+  "$defs": {
+    "measured_studs": {
+      "type": "object",
+      "required": ["value", "unit", "status", "source_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "value": { "type": ["number", "null"], "description": "Cíl v studs; null = BLOCKED/UNKNOWN (žádná čísla při nekonzistenci)." },
+        "unit": { "const": "studs" },
+        "status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"] },
+        "source_ref": { "type": "string", "minLength": 1, "description": "Provenance: povinný odkaz na zdroj (profil / computed:M3.x)." }
+      }
+    },
+    "center_studs": {
+      "type": "object",
+      "required": ["value", "unit", "status", "source_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "description": "Cílový střed kola [x, y, z] v studs; null = BLOCKED/UNKNOWN.",
+          "anyOf": [
+            { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+            { "type": "null" }
+          ]
+        },
+        "unit": { "const": "studs" },
+        "status": { "enum": ["VERIFIED", "ESTIMATED", "UNKNOWN", "BLOCKED"] },
+        "source_ref": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
