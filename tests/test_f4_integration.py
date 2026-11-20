@@ -249,88 +249,123 @@ class TestF4Integration(unittest.TestCase):
               % (dist_before, dist_after))
 
     def test_final_drive_change_moves_metric_or_unsupported(self):
-        """final_drive: odezva metriky, jinak explicitní nepodporováno."""
-        if "transmission.final_drive" not in SIM_SUPPORTED_CONFIG_PATHS:
-            mapped, _, _ = _map_and_apply(demo_config())
-            keys = {c["tune_key"] for c in mapped["tune_changes"]}
-            self.assertNotIn("FinalDrive", keys)
-            self.assertEqual(mapped["rejected"], [])
-            return
-        # Reálný katalog je cyklický a gate jej správně zastaví. Izolujeme
-        # downstream mapování na explicitním acyklickém fixture katalogu.
-        with open(CATALOG, encoding="utf-8") as fh:
-            records = json.load(fh)
-        records = records.get("parameters", records) if isinstance(records, dict) else records
-        # Odeber pouze hrany uvnitř SCC (12 komponent podle auditu), ostatní
-        # integritu a metadata zachovej; vytvoří se DAG pro downstream test.
-        cycle_edges = {
-            ("auto_shift_type", "shift_down_time"),
-            ("auto_shift_type", "shift_up_time"),
-            ("shift_down_time", "auto_shift_type"),
-            ("shift_up_time", "auto_shift_type"),
-            ("auto_up_thresh", "peak_rpm"), ("peak_rpm", "auto_up_thresh"),
-            ("clutch_engage", "flywheel"), ("flywheel", "clutch_engage"),
-            ("flywheel", "rev_accel"), ("rev_accel", "flywheel"),
-            ("sus_length_f", "pre_compress_f"),
-            ("sus_length_f", "extension_lim_f"),
-            ("sus_length_f", "compress_lim_f"),
-            ("pre_compress_f", "sus_length_f"),
-            ("extension_lim_f", "sus_length_f"),
-            ("compress_lim_f", "sus_length_f"),
-            ("sus_length_r", "pre_compress_r"),
-            ("sus_length_r", "extension_lim_r"),
-            ("sus_length_r", "compress_lim_r"),
-            ("pre_compress_r", "sus_length_r"),
-            ("extension_lim_r", "sus_length_r"),
-            ("compress_lim_r", "sus_length_r"),
-            ("compression_ratio", "turbo_boost"),
-            ("turbo_boost", "compression_ratio"),
-            ("final_drive", "gear_ratios"), ("gear_ratios", "final_drive"),
-            ("gear_ratios", "final_drive_mult"),
-            ("final_drive_mult", "final_drive"),
-            ("lock_to_lock", "steer_ratio"), ("steer_ratio", "lock_to_lock"),
-            ("pbrake_bias", "pbrake_force"), ("pbrake_force", "pbrake_bias"),
-            ("redline_rpm", "rev_bounce"), ("rev_bounce", "redline_rpm"),
-            ("tcs_gradient", "tcs_threshold_sps"),
-            ("tcs_threshold_sps", "tcs_gradient"),
-            ("tcs_limit_pct", "tcs_threshold_sps"),
-            ("tcs_threshold_sps", "tcs_limit_pct"),
-            ("weight_box_size", "weight_lb"), ("weight_lb", "weight_box_size"),
-        }
+        """C3: FinalDrive 2.6 -> 3.2 na deterministickém fixture bez ručních
+        hran: mapování -> adaptér -> Sim hýbe metrikou t_0_100_s.
+
+        Účel: downstream důkaz, že změna final_drive proteče celým
+        řetězcem až do měřitelné odezvy Simu, BEZ křehkého ručního
+        seznamu cyklových hran (ten by tiše zastaral při změně katalogu
+        a test by falešně PASoval na prázdném mapování).
+        Chytá: (a) regresi citlivosti Simu na final_drive (rozdíl <= 0.05
+        s → FAIL s konkrétními čísly), (b) prázdné/zastaralé mapování
+        (přesně 1 tune_change FinalDrive se správnou hodnotou),
+        (c) odmítnutí adaptérem, (d) záměnu vstupů 2.6/3.2,
+        (e) cyklické/nekonzistentní fixture (auto-validace bránou +
+        integritou — FAIL s důvodem, NE falešný PASS).
+        Falešný výsledek bez klíčových asercí: PASS i kdyby Sim final_drive
+        ignoroval (jen 'metrika existuje') nebo kdyby fixture byla
+        BLOCKED a mapování prázdné. Brání: přesné hodnoty tune_changes,
+        nerovnost metrik s prahem, gate==allowed před během.
+        Determinismus: mapování 2.6 opakovaně → identické JSON; stejný
+        seed Simu. Fixture je deterministická (pevné literály, žádné čtení
+        reálného katalogu, žádné ruční hrany k údržbě). Žádný skip, žádná
+        None/slabá podmínka jako jediná aserce; důvod vždy konkrétní
+        (hodnota metriky, reason brány), ne obecné BLOCKED.
+        Nelze-li fixture sestavit jako acyklickou/validní → FAIL
+        s důvodem brány (prokazatelně, ne tiše).
+        """
+
+        def _fd_record(fd_default):
+            return {
+                "id": "final_drive", "tune_key": "FinalDrive",
+                "category": "MUTABLE_TUNE",
+                "config_path": "transmission.final_drive",
+                "value": fd_default, "unit": "-",
+                "value_type": "number", "min": 2.5, "max": 4.2,
+                "default": fd_default,
+                "function": "C3 fixture: staly prevod",
+                "physical_effect": "C3 fixture",
+                "used_in": ["straight_accel"],
+                "depends_on": [], "conflicts": [],
+                "change_method": "tune",
+                "source": "A-CHASSIS-AUDIT.md §6",
+                "confidence": 1.0, "verification_status": "PASS",
+            }
+
+        def _bias_record():
+            return {
+                "id": "brake_bias_front", "tune_key": "BrakeBias",
+                "category": "MUTABLE_TUNE",
+                "config_path": "brakes.bias_front",
+                "value": 0.6, "unit": "0-1",
+                "value_type": "number", "min": 0, "max": 1,
+                "default": 0.6,
+                "function": "C3 fixture: brzdny bias",
+                "physical_effect": "C3 fixture",
+                "used_in": ["straight_brake_100_0"],
+                "depends_on": [], "conflicts": [],
+                "change_method": "tune",
+                "source": "A-CHASSIS-AUDIT.md §12",
+                "confidence": 1.0, "verification_status": "PASS",
+            }
+
+        records = [_fd_record(3.2), _bias_record()]
+        # Auto-validace integrity: každá hrana depends_on se překládá
+        # na existující záznam (jinak FAIL s konkrétní hranou).
+        by_id = {r["id"]: r for r in records}
         for rec in records:
-            rec["depends_on"] = [
-                dep for dep in rec.get("depends_on", [])
-                if (rec["id"], dep if isinstance(dep, str) else dep.get("param"))
-                not in cycle_edges]
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False,
+            for dep in rec.get("depends_on") or []:
+                token = dep if isinstance(dep, str) else dep.get("param")
+                self.assertIn(token, by_id,
+                              "C3 fixture: nekonzistentní hrana %r" % token)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json",
+                                         delete=False,
                                          encoding="utf-8") as fh:
             json.dump(records, fh)
             fixture = fh.name
-        self.addCleanup(lambda: os.path.exists(fixture) and os.unlink(fixture))
+        self.addCleanup(lambda: os.path.exists(fixture)
+                        and os.unlink(fixture))
+        # Auto-validace acykličnosti bránou (místo ručního seznamu hran):
+        # není-li fixture průchozí, FAIL s důvodem brány, NE tichý PASS.
+        verdict = gate_catalog_file(fixture)
+        self.assertTrue(verdict.allowed,
+                        "C3 fixture musí projít bránou S-02 (jinak test "
+                        "neměří downstream, ale BLOCKED): %s"
+                        % (verdict.reason,))
 
         def mapped_config(fd):
             cfg = demo_config(final_drive=fd)
             cfg["parameters"] = {"transmission": {"final_drive": fd}}
+            snapshot = copy.deepcopy(cfg)
             mapped = map_config(cfg, fixture, "achassis-v1")
+            self.assertEqual(cfg, snapshot)
             self.assertEqual(mapped["rejected"], [])
             self.assertEqual(len(mapped["tune_changes"]), 1)
-            self.assertEqual(mapped["tune_changes"][0]["tune_key"], "FinalDrive")
+            self.assertEqual(mapped["tune_changes"][0]["tune_key"],
+                             "FinalDrive")
             self.assertEqual(mapped["tune_changes"][0]["value"], fd)
             cfg["parameters"] = dict(cfg["parameters"])
             cfg["parameters"]["tune"] = {"FinalDrive": fd}
             report = AChassisV1Adapter().apply_config(
                 os.path.join(ROOT, "assets", "chassis-original"), cfg)
             self.assertEqual(report.rejected, [])
-            return report.to_dict()["patched_config"]
+            applied = {a["tune_key"]: a["to"] for a in report.applied}
+            self.assertEqual(applied.get("FinalDrive"), fd)
+            return report.to_dict()["patched_config"], mapped
 
-        patched_lo = mapped_config(2.6)
-        patched_hi = mapped_config(3.2)
-        sim_lo = sim_input_from_patched(patched_lo)
-        sim_hi = sim_input_from_patched(patched_hi)
+        patched_lo, mapped_lo = mapped_config(2.6)
+        patched_hi, _ = mapped_config(3.2)
+        # Determinismus mapování: opakování 2.6 → identické JSON.
+        _, mapped_lo_again = mapped_config(2.6)
+        self.assertEqual(json.dumps(mapped_lo_again, sort_keys=True),
+                         json.dumps(mapped_lo, sort_keys=True))
+        sim_lo = sim_input_from_patched(patched_lo, fixture)
+        sim_hi = sim_input_from_patched(patched_hi, fixture)
         self.assertEqual(sim_lo["parameters"]["transmission"]
                          ["final_drive"], 2.6)
         self.assertEqual(sim_hi["parameters"]["transmission"]
                          ["final_drive"], 3.2)
+        self.assertNotEqual(sim_lo, sim_hi)
         _, _, met_lo, _ = _run_sim_return_metrics(sim_lo, SCENARIO, SEED)
         _, _, met_hi, _ = _run_sim_return_metrics(sim_hi, SCENARIO, SEED)
         t_lo = met_lo["t_0_100_s"]
@@ -338,8 +373,9 @@ class TestF4Integration(unittest.TestCase):
         self.assertIsNotNone(t_lo)
         self.assertIsNotNone(t_hi)
         self.assertGreater(abs(t_hi - t_lo), 0.05,
-                           "zmena final_drive musi pohnout t_0_100_s")
-        print("RAW final_drive before/after: fd 2.6 -> t_0_100 %.3f s "
+                           "zmena final_drive 2.6->3.2 musi pohnout "
+                           "t_0_100_s (t_lo=%s, t_hi=%s)" % (t_lo, t_hi))
+        print("RAW C3 final_drive before/after: fd 2.6 -> t_0_100 %.3f s "
               "(v_max %.1f km/h); fd 3.2 -> t_0_100 %.3f s "
               "(v_max %.1f km/h)"
               % (t_lo, met_lo["v_max_kmh"], t_hi, met_hi["v_max_kmh"]))
@@ -383,27 +419,98 @@ class TestF4Integration(unittest.TestCase):
               % mapped["rejected"][0]["reason"])
 
     def test_sim_runs_on_patched_config_not_original(self):
-        """Sim se skutečně spustí nad patchnutým tune, ne původním vstupem."""
-        config = demo_config(bias_front=0.70)
-        self.assertNotIn("tune", config["parameters"])
-        cfg_tune = copy.deepcopy(config)
+        """C2: Sim běží nad patchnutou konfigurací, NE nad původním vstupem.
+
+        ROZSAH (důležité): toto je test downstream-izolace
+        (adaptér -> Sim předání), NENÍ to důkaz mapování přes bránu S-02 —
+        map_config nad reálným katalogem je BLOCKED (CYCLE), proto se
+        tune staví explicitně (krok 3), nikoli z mapování. Mapovací
+        korektnost kryjí testy C1 (per-klíč) a C4 (katalog-BLOCKED).
+        Metriky jsou sekundární (jen existence), chrání před záměnou
+        s testem citlivosti (bias sweep výše).
+        Chytá: (a) Sim spuštěný nad původním vstupem místo patched
+        (krok 9/10 by selhal: bias 0.62 místo 0.70), (b) mutaci
+        originálu adaptérem/projekcí, (c) ztrátu tune při předání Simu.
+        Falešný výsledek bez klíčových asercí: PASS i kdyby Sim četl
+        originál — brání aserce captured != original + captured ==
+        sim_cfg na přesných hodnotách (ne jen 'metrika existuje').
+        Determinismus: stejný seed + stejný vstup = stejný zachycený
+        obsah (kroky 7/9). Žádný skip, žádná None/slabá podmínka jako
+        jediná aserce, důvod vždy konkrétní hodnota, ne obecné BLOCKED.
+        Kroky: (1) originál s bias 0.62 (záměrně ODLIŠNÝ od cíle 0.70,
+        jinak by záměna nebyla detekovatelná); (2) snapshot originálu;
+        (3) cfg_tune = kopie + explicitní tune BrakeBias=0.70 přes
+        adaptér (NE map_config — ten je za S-02 BLOCKED); (4) adaptér
+        hlásí applied BrakeBias 0.70, patched tune == 0.70, originál
+        beze změny a bez 'tune'; (5) projekce tune->config_path:
+        sim bias_front == 0.70; (6) sim_cfg != originál; (7) zápis na
+        disk a přečtení zpět (přesně to, co Sim dostane); (8) Sim běh
+        nad tímto souborem; (9) zachycený obsah == sim_cfg (Sim dostal
+        patchnutou); (10) NEGATIVNÍ KONTROLA: zachycený obsah !=
+        originál a bias 0.70 != 0.62 (selže při předání originálu);
+        (11) manifest config_id sedí; (12) metriky existují (sekundární).
+        """
+        # (1) Originál záměrně odlišný od cíle patchování.
+        original = demo_config(bias_front=0.62)
+        self.assertNotIn("tune", original["parameters"])
+        # (2) Snapshot proti mutaci.
+        snapshot = copy.deepcopy(original)
+        # (3) Explicitní tune přes adaptér (mapování je za S-02 BLOCKED).
+        cfg_tune = copy.deepcopy(original)
         cfg_tune["parameters"] = dict(cfg_tune["parameters"])
         cfg_tune["parameters"]["tune"] = {"BrakeBias": 0.70}
-        patched = AChassisV1Adapter().apply_config(
-            os.path.join(ROOT, "assets", "chassis-original"), cfg_tune
-        ).to_dict()["patched_config"]
+        # (4) Adaptér aplikuje; originál nesmí změnit.
+        report = AChassisV1Adapter().apply_config(
+            os.path.join(ROOT, "assets", "chassis-original"), cfg_tune)
+        patched = report.to_dict()["patched_config"]
+        self.assertEqual(original, snapshot)
+        self.assertNotIn("tune", original["parameters"])
+        applied = {a["tune_key"]: a["to"] for a in report.applied}
+        self.assertEqual(applied.get("BrakeBias"), 0.70)
+        self.assertEqual(patched["parameters"]["tune"]["BrakeBias"], 0.70)
+        # (5) Projekce tune -> Sim-čtená cesta.
         sim_cfg = sim_input_from_patched(patched)
+        self.assertEqual(sim_cfg["parameters"]["brakes"]["bias_front"],
+                         0.70)
         self.assertEqual(sim_cfg["parameters"]["tune"],
                          patched["parameters"]["tune"])
-        self.assertNotEqual(sim_cfg, config,
+        # (6) Patchnutý vstup se liší od originálu.
+        self.assertNotEqual(sim_cfg, original,
                             "Sim nesmi dostat puvodni vstup bez patch")
-        _, manifest, metrics, written = _run_sim_return_metrics(
-            sim_cfg, SCENARIO, SEED)
-        self.assertEqual(written, sim_cfg)
-        self.assertEqual(manifest["config_id"], config["config_id"])
+        # (7) Zápis na disk = přesně to, co Sim dostane; přečtení zpět.
+        tmp = tempfile.mkdtemp(prefix="f4_c2_")
+        cfg_path = os.path.join(tmp, "config.json")
+        with open(cfg_path, "w", encoding="utf-8") as fh:
+            json.dump(sim_cfg, fh)
+        with open(cfg_path, encoding="utf-8") as fh:
+            captured = json.load(fh)
+        # (8) Sim běh nad zachyceným souborem.
+        csv_path, _, manifest = run_scenario(
+            cfg_path, SCENARIO, DEFAULT_DT, SEED,
+            os.path.join(tmp, "sim"))
+        metrics = compute_metrics(load_telemetry(csv_path))
+        # (9) POZITIVNÍ: Sim dostal patchnutou konfiguraci.
+        self.assertEqual(captured, sim_cfg)
+        self.assertEqual(captured["parameters"]["brakes"]["bias_front"],
+                         0.70)
+        self.assertEqual(captured["parameters"]["tune"]["BrakeBias"],
+                         0.70)
+        # (10) NEGATIVNÍ KONTROLA: obsah NENÍ originál (selže, pokud by
+        # Sim dostal původní vstup: bias 0.62, žádné 'tune').
+        self.assertNotEqual(captured, original)
+        self.assertNotEqual(captured["parameters"]["brakes"]
+                            ["bias_front"],
+                            original["parameters"]["brakes"]
+                            ["bias_front"])
+        # (11) Manifest odkazuje na tentýž config.
+        self.assertEqual(manifest["config_id"], original["config_id"])
+        # (12) Metriky existují (sekundární — citlivost měří jiný test).
         self.assertIsNotNone(metrics["t_0_100_s"])
-        print("RAW patched==sim_input: %s; sim!=original: %s"
-              % (written == sim_cfg, written != config))
+        print("RAW C2 patched==captured: %s; captured!=original: %s; "
+              "bias captured=%s original=%s"
+              % (captured == sim_cfg, captured != original,
+                 captured["parameters"]["brakes"]["bias_front"],
+                 original["parameters"]["brakes"]["bias_front"]))
 
     def test_original_rbxm_sha256_untouched(self):
         """READ-ONLY zásada: verzovaná fixture beze změny (jen sha kontrola).

@@ -26,7 +26,10 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.Chassis.catalog import loader as catalog_loader  # noqa: E402
-from src.Chassis.mapping.gate import gate_catalog_file  # noqa: E402
+from src.Chassis.mapping.gate import (  # noqa: E402
+    gate_catalog_file,
+    gate_catalog_records,
+)
 from src.Chassis.mapping_engine import (  # noqa: E402
     build_search_space,
     map_config,
@@ -362,6 +365,62 @@ class TestF4Mapping(unittest.TestCase):
                         self.catalog_path, "achassis-v1")
         self.assertEqual({c["tune_key"] for c in ok["tune_changes"]},
                          {"Turbochargers", "T_Boost"})
+
+    def test_f4_07_per_param_rejection_acyclic_fixture(self):
+        """C1: per-parametrické odmítnutí na acyklickém fixture.
+
+        Účel: dokázat, že architektura umí odmítnout PRÁVĚ 1 parametr
+        s konkrétním důvodem, zatímco ostatní validní parametry projdou
+        (rozdíl katalog-BLOCKED vs parametr-odmítnutí vs úspěch).
+        Chytá: (a) tiché zahození validních parametrů spolu s nevalidním,
+        (b) odmítnutí bez důvodu / s obecným BLOCKED důvodem za bránou,
+        (c) mutaci vstupu při částečném odmítnutí, (d) únik odmítnuté
+        hodnoty do tune_changes.
+        Falešný výsledek bez klíčových asercí: PASS i kdyby map_config
+        vracel prázdné tune_changes (vše tiše zahozeno) nebo kdyby
+        brána BLOCKED zastínila per-klíč důvod.
+        Klíčové aserce: gate fixture == OK/allowed (nejsme za bránou,
+        takže rejected[0] je skutečně per-klíč, ne *catalog*); přesně 1
+        rejected s param == 'engine.warp_drive' a důvodem 'kategorie
+        UNKNOWN ... pending-studio' (konkrétní, bez 'CYCLE'); tune_changes
+        {Bias, FinalDrive, Horsepower} (validní NEblokovány); vstup
+        nezměněn; determinismus opakováním (identické JSON).
+        Žádný skip, žádná None/slabá podmínka — vše konkrétní hodnoty.
+        """
+        records = _sample_catalog()
+        verdict = gate_catalog_records(records)
+        self.assertTrue(
+            verdict.allowed,
+            "C1 fixture musí projít bránou (jinak by test neměřil "
+            "per-klíč odmítnutí, ale katalog-BLOCKED): %s"
+            % (verdict.reason,))
+        fixture = _write_catalog(records)
+        cfg = _cfg({"engine": {"horsepower": 210, "warp_drive": 5},
+                    "transmission": {"final_drive": 3.2},
+                    "brakes": {"bias_front": 0.62}})
+        snapshot = copy.deepcopy(cfg)
+        res = map_config(cfg, fixture, "achassis-v1")
+        self.assertEqual(cfg, snapshot)  # odmítnutý parametr nemění vstup
+        keys = {c["tune_key"] for c in res["tune_changes"]}
+        self.assertEqual(keys, {"Horsepower", "FinalDrive", "Bias"})
+        self.assertEqual(len(res["rejected"]), 1)  # právě 1 odmítnutý
+        rej = res["rejected"][0]
+        self.assertEqual(rej["param"], "engine.warp_drive")
+        self.assertTrue(rej["reason"], "odmítnutí musí nést důvod")
+        self.assertIn("kategorie UNKNOWN", rej["reason"])
+        self.assertIn("pending-studio", rej["reason"])
+        self.assertNotIn("CYCLE", rej["reason"])
+        self.assertNotEqual(rej["param"], "*catalog*")
+        leaked = [c for c in res["tune_changes"]
+                  if c["tune_key"] == "WarpDrive"]
+        self.assertEqual(leaked, [])  # odmítnutý neprošel do tune
+        again = map_config(_cfg({"engine": {"horsepower": 210,
+                                            "warp_drive": 5},
+                                 "transmission": {"final_drive": 3.2},
+                                 "brakes": {"bias_front": 0.62}}),
+                           fixture, "achassis-v1")
+        self.assertEqual(json.dumps(again, sort_keys=True),
+                         json.dumps(res, sort_keys=True))
 
     def test_f4_07_vstup_neporusen_pri_chybe(self):
         """F4-07: ani úspěšné ani odmítnuté mapování nemění vstupní dict."""
