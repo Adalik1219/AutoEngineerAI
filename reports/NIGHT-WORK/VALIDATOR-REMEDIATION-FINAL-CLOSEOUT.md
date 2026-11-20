@@ -6,7 +6,7 @@ Vlastník: Hermes · Datum: 2026-11-20 · Větev: `fix/normalization-evidence-in
 - Kódový SHA (předchozí vlna): `405db4b53998c332dc193c8bae753ad841efbc67` (CI `44767371214`, success, 4/4).
 - Revidovaný SHA (tato vlna, G-QA): `6332a2df3c81e84cdac2a3e9835d9d03ff0e63c9`.
 - Dokumentační HEAD: HEAD větve po tomto commitu (číslo v předání; doc-commit, žádný produkční kód).
-- CI této vlny: **PENDING — vyžaduje push větve** (spustí se `git push origin fix/normalization-evidence-integrity`; kódový důkaz do té doby: lokální běhy níže na přesném SHA 6332a2d).
+- CI této vlny: run `44776255502`, **success, 4/4 joby** (3.11–3.14) na větvi `fix/normalization-evidence-integrity` (commit `cba72cb`).
 
 ## Testy (lokálně na 6332a2d)
 - `python -m unittest tests.test_normalization_validation` → **51/51 OK** (14 původních + 37 nových).

@@ -38,5 +38,5 @@ Implementační + bezpečnostní požadavky splněny s důkazy (S-02, testy C1�
 - Validátor zpřísněn (E1 bool/duplicity/úplnost, R7 `status==row_stav`, R8 `FR_PAIRS` 12 + `LR_PAIRS` [] bez suffix-pravidla, R3/R6 všech 94 ID, E3 hodnota+lokátor+původ, 60-strict, `ACCEPTED_MAPPED_SET` UNAPPROVED); N-2 `open()` opraveno na 3 místech.
 - Testy normalizace: 14 → **51/51 OK**; `run_all` 495 běhů 491 PASS / 0 FAIL / 4 PENDING (beze změny); kontrakty 24/24; validátor exit 2, fails `[]`.
 - G nezávisle: 12/12 oblastí, 8/8 vlastních mutací FAIL, chráněné oblasti + `normalized_ids.json` diff-prázdné, 0 nových chyb.
-- Nové PENDING: ACCEPTED_MAPPED_SET (čeká uživatele) + 4× ESTIMATED-k-revizi; CI této vlny PENDING (čeká push).
+- Nové PENDING: ACCEPTED_MAPPED_SET (čeká uživatele) + 4× ESTIMATED-k-revizi; CI této vlny: run `44776255502` success 4/4 (větev pushnuta).
 - Detail: `VALIDATOR-REMEDIATION-FINAL-CLOSEOUT.md` (10 reportů vlny). Verdikt vlny: CONDITIONAL PASS.
