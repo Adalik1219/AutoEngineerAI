@@ -33,3 +33,10 @@ Katalog blob `8f4d6bd1…` (diff prázdný) · RBXM blob `417b9f43…` (230 421 
 Implementační + bezpečnostní požadavky splněny s důkazy (S-02, testy C1–C5/vakua, validátor E1–E6, rollback, QA na přesném SHA, CI na přesném SHA). Podmínky: datová PENDING (60), externí PENDING (U1–U6, schémata, katal. data), N-2. Plný PASS až po rozhodnutích uživatele (R1–R5 v CATALOG-PROPOSALS-AND-USER-INPUTS.md).
 
 **Doporučení:** (a) akceptovat NOT_RECONSTRUCTABLE + 94 ID jako výchozí stav, nebo (b) dodat seznam 60; schválit/odmítnout P01–P14 jednotlivě; definovat U1–U6. Bez těchto kroků: žádné katalogové změny, žádné M3.
+
+## G. Dodatek 2026-11-20 — remediační vlna validátoru (větev `fix/normalization-evidence-integrity`, revidovaný SHA `6332a2d`, G-QA CONDITIONAL)
+- Validátor zpřísněn (E1 bool/duplicity/úplnost, R7 `status==row_stav`, R8 `FR_PAIRS` 12 + `LR_PAIRS` [] bez suffix-pravidla, R3/R6 všech 94 ID, E3 hodnota+lokátor+původ, 60-strict, `ACCEPTED_MAPPED_SET` UNAPPROVED); N-2 `open()` opraveno na 3 místech.
+- Testy normalizace: 14 → **51/51 OK**; `run_all` 495 běhů 491 PASS / 0 FAIL / 4 PENDING (beze změny); kontrakty 24/24; validátor exit 2, fails `[]`.
+- G nezávisle: 12/12 oblastí, 8/8 vlastních mutací FAIL, chráněné oblasti + `normalized_ids.json` diff-prázdné, 0 nových chyb.
+- Nové PENDING: ACCEPTED_MAPPED_SET (čeká uživatele) + 4× ESTIMATED-k-revizi; CI této vlny PENDING (čeká push).
+- Detail: `VALIDATOR-REMEDIATION-FINAL-CLOSEOUT.md` (10 reportů vlny). Verdikt vlny: CONDITIONAL PASS.
