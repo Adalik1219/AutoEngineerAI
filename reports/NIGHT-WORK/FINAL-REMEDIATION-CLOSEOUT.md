@@ -55,3 +55,6 @@ Výsledek: `git diff --exit-code 0f4670a -- .` → prázdný (DIFF-EXIT 0), `run
 
 ## Doložka 2026-11-20 (navazující vlna)
 Riziko „3 vakuové testy“ je UZAVŘENO: V1/V2/V3 opraveny (AGENT-C-VACUOUS-TEST-REVIEW) a nezávisle potvrzeny (AGENT-G-TEST-INDEPENDENT-REVIEW, 4/4, 7/7 sabotáží). E-normalizace zůstává PENDING (60 nedoloženo, Varianta B).
+
+## Aktualizace 2026-11-20 (remediační vlna validátoru normalizace)
+Výše uvedené §§8, 12, 14 zmiňují „3 vakuové testy" jako otevřené riziko — to je **historický stav před navazující vlnou**, ponechaný pro auditní kontinuitu. Aktuální stav: V1–V3 opraveny (Agent C) a nezávisle potvrzeny (Agent G, 4/4 základní testy, 7/7 sabotážních kontrol); vakuové testy **nejsou** aktuálním otevřeným rizikem. Trvající PENDING: E-normalizace (ORIGINAL_60_SET=NOT_RECONSTRUCTABLE, Varianta B) + ACCEPTED_MAPPED_SET=UNAPPROVED (čeká na uživatele) + 4× ESTIMATED-k-revizi. Aktuální souhrnný verdikt a důkazy: VALIDATOR-REMEDIATION-FINAL-CLOSEOUT.md (tato vlna).

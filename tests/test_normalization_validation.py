@@ -39,7 +39,7 @@ def _code(fails, pendings):
 
 
 class TestValidatorNegativni(unittest.TestCase):
-    """14 negativních případů E6 — každý musí prokázat FAIL/PENDING."""
+    """51 negativních případů E6 — každý musí prokázat FAIL/PENDING."""
 
     @classmethod
     def setUpClass(cls):
@@ -55,20 +55,35 @@ class TestValidatorNegativni(unittest.TestCase):
         kpath = os.path.join(ROOT, "src", "Chassis", "catalog",
                              "parameters.json")
         with open(kpath, encoding="utf-8") as f:
-            cls.catalog_ids = {e["id"] for e in json.load(f)}
+            kdoc = json.load(f)
+        cls.catalog_ids = {e["id"] for e in kdoc}
+        cls.catalog_tune = {e["id"]: e.get("tune_key") for e in kdoc}
 
     def fresh(self):
         return copy.deepcopy(self.doc)
 
     def evaluate(self, doc):
         return vn.evaluate(doc, self.rows, self.f_blob, self.f_rel,
-                           self.catalog_ids)
+                           self.catalog_ids, self.catalog_tune)
+
+    def by_id(self, doc, lid):
+        return next(e for e in doc["ids"]
+                    if e["logical_id"] == lid)
 
     def assert_fail(self, fails, pendings, klic):
         self.assertTrue(
             any(klic in f for f in fails),
             "očekáván FAIL s klíčem %r, fails=%s" % (klic, fails))
         self.assertEqual(_code(fails, pendings), 1)
+
+    def assert_pending(self, fails, pendings, klic):
+        self.assertEqual(fails, [], "očekáváno fails=[], fails=%s"
+                         % (fails,))
+        self.assertTrue(
+            any(klic in p for p in pendings),
+            "očekáván PENDING s klíčem %r, pendings=%s"
+            % (klic, pendings))
+        self.assertEqual(_code(fails, pendings), 2)
 
     # 1. ID přiřazené k řádku, který ho neobsahuje (E1).
     def test_01_spatny_radek(self):
@@ -198,6 +213,325 @@ class TestValidatorNegativni(unittest.TestCase):
             self.assertIn("FAIL", str(ctx.exception))
         finally:
             os.unlink(tmp)
+
+
+    # ---- E1: zdrojová vazba (6 nových) ----
+    def test_15_source_rows_bool(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["source_rows"] = [True]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "špatné source_rows")
+
+    def test_16_source_rows_duplicita(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["source_rows"] = [52, 52]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "duplicitní source_rows")
+
+    def test_17_radek_bez_id(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["source_rows"] = [53]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "neodpovídá zdrojovému řádku")
+
+    def test_18_chybejici_clen_skupiny(self):
+        doc = self.fresh()
+        doc["ids"] = [e for e in doc["ids"]
+                      if e["logical_id"] != "rev_accel"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "E1-neúplná-vazba")
+
+    def test_19_id_bez_opory(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["source_rows"] = [52, 53]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "E1-ID-bez-opory")
+
+    def test_20_prazdne_source_rows(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["source_rows"] = []
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "špatné source_rows")
+
+    # ---- R7: status dědí zdrojový řádek (4 nové) ----
+    def test_21_r7_prohozeni_statusu(self):
+        doc = self.fresh()
+        a = self.by_id(doc, "drive_config")      # VERIFIED, ř.158
+        b = self.by_id(doc, "differential_type")  # UNKNOWN, ř.159
+        a["status"], b["status"] = b["status"], a["status"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "status-neodpovídá-zdroji")
+
+    def test_22_r7_chybny_status_jednoho_id(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["status"] = "UNKNOWN"  # ř.52 ESTIMATED
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "status-neodpovídá-zdroji")
+
+    def test_23_r7_status_clena_skupiny(self):
+        doc = self.fresh()
+        self.by_id(doc, "downforce_f")["status"] = "PENDING"  # ř.173 UNKNOWN
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "status-neodpovídá-zdroji")
+
+    def test_24_r7_zadne_multi_source_rows(self):
+        doc = self.fresh()
+        multi = [e["logical_id"] for e in doc["ids"]
+                 if isinstance(e.get("source_rows"), list)
+                 and len(e["source_rows"]) > 1]
+        self.assertEqual(multi, [],
+                         "očekáváno: žádný záznam nemá více source_rows")
+        rec = self.by_id(doc, "weight_lb")
+        rec["source_rows"] = [52, 53]  # ESTIMATED vs UNKNOWN řádek
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "konfliktní statusy")
+
+    # ---- R8: F/R a L/R (5 nových) ----
+    def test_25_r8_fr_slouceni(self):
+        doc = self.fresh()
+        doc["ids"] = [e for e in doc["ids"]
+                      if e["logical_id"] not in ("downforce_f",
+                                                 "downforce_r")]
+        vzor = next(e for e in self.doc["ids"]
+                    if e["logical_id"] == "downforce_f")
+        sloucene = copy.deepcopy(vzor)
+        sloucene["logical_id"] = "downforce"
+        sloucene["primary_name"] = "downforce"
+        doc["ids"].append(sloucene)
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "F/R pár sloučen/chybí")
+
+    def test_26_r8_chybejici_clen(self):
+        doc = self.fresh()
+        doc["ids"] = [e for e in doc["ids"]
+                      if e["logical_id"] != "sus_stiffness_r"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "F/R pár sloučen/chybí")
+
+    def test_27_r8_lr_chybejici_clen(self):
+        doc = self.fresh()
+        vzor = self.by_id(self.doc, "weight_lb")
+        novy = copy.deepcopy(vzor)
+        novy["logical_id"] = "zk_test_l"
+        novy["primary_name"] = "ZkTestL"
+        doc["ids"].append(novy)
+        orig_lr = vn.LR_PAIRS
+        vn.LR_PAIRS = [("zk_test_l", "zk_test_r")]  # type: ignore
+        try:
+            fails, pendings, _ = self.evaluate(doc)
+        finally:
+            vn.LR_PAIRS = orig_lr  # type: ignore
+        self.assert_fail(fails, pendings, "L/R pár sloučen/chybí")
+
+    def test_28_r8_falesne_sparovani(self):
+        # front_diff_power / rear_diff_power nejsou R8 pár (odlišné osy
+        # power/coast) — odebrání jednoho nesmí hlásit R8, jen E1/R2.
+        doc = self.fresh()
+        doc["ids"] = [e for e in doc["ids"]
+                      if e["logical_id"] != "front_diff_power"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assertTrue(any("E1-neúplná-vazba" in f for f in fails),
+                        "fails=%s" % fails)
+        self.assertFalse(any("pár sloučen" in f for f in fails),
+                         "falešný R8 pár, fails=%s" % fails)
+        self.assertEqual(_code(fails, pendings), 1)
+
+    def test_29_r8_spravne_oddeleni(self):
+        fails, pendings, _ = self.evaluate(self.fresh())
+        self.assertFalse(any("pár sloučen" in f for f in fails),
+                         "fails=%s" % fails)
+        self.assertFalse(any("nerozlišený klíč" in f for f in fails),
+                         "fails=%s" % fails)
+
+    # ---- R3/R6: názvy a aliasy (8 nových) ----
+    def test_30_r6_primary_bezneho(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["primary_name"] = "Hmotnost"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "R6-název-nesouhlasí")
+
+    def test_31_r6_cizi_alias_bezneho(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["aliases"] = ["Hmotnost-navic"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "R6-cizí-alias")
+
+    def test_32_r6_nazev_chybi_v_aliases(self):
+        doc = self.fresh()
+        rec = self.by_id(doc, "rev_decay")
+        rec["aliases"] = ["RevDecay"]  # bez Název řádku
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "R6 názvy")
+
+    def test_33_r6_prazdne_aliases_clena(self):
+        doc = self.fresh()
+        self.by_id(doc, "downforce_f")["aliases"] = []
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "R6 názvy")
+
+    def test_34_r6_alias_je_cizi_id(self):
+        doc = self.fresh()
+        rec = self.by_id(doc, "clutch_enabled")
+        rec["aliases"] = ["Clutch", "clutch_engage"]
+        if "clutch_engage" not in self.catalog_ids:
+            rec["aliases"] = ["Clutch", "rev_decay"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "alias-je-ID")
+
+    def test_35_r6_cizi_tune_key(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["aliases"] = ["Weight"]
+        rec = self.by_id(doc, "idle_rpm")
+        rec["aliases"] = ["Weight"]  # tune_key weight_lb
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "R6-cizí-alias")
+
+    def test_36_r6_primary_clena_musi_byt_id(self):
+        doc = self.fresh()
+        self.by_id(doc, "downforce_f")["primary_name"] = "Downforce"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "R6 názvy")
+
+    def test_37_r3_cizi_tune_jako_id(self):
+        doc = self.fresh()
+        rec = self.by_id(doc, "weight_lb")
+        rec["logical_id"] = "IdleRPM"  # primary_name, ne Interní ID
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "alias-jako-ID")
+
+    # ---- E3: provenience (8 nových) ----
+    def test_38_e3_verified_vymysl(self):
+        doc = self.fresh()
+        self.by_id(doc, "drive_config")["evidence"]["mustang_cil"] = "xxx"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "VERIFIED-bez-evidence")
+
+    def test_39_e3_verified_bez_hodnoty(self):
+        doc = self.fresh()
+        self.by_id(doc, "drive_config")["evidence"]["mustang_cil"] = "—"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "VERIFIED-bez-evidence")
+
+    def test_40_e3_verified_bez_lokatoru(self):
+        doc = self.fresh()
+        self.by_id(doc, "drive_config")["evidence"]["zdroj_cile"] = \
+            "viz audit"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "VERIFIED-bez-evidence")
+
+    def test_41_e3_verified_odhad_neni_dukaz(self):
+        doc = self.fresh()
+        self.by_id(doc, "drive_config")["evidence"]["puvod"] = "odhad"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "VERIFIED-bez-evidence")
+
+    def test_42_e3_estimated_bez_puvodu(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["evidence"]["puvod"] = "N/A"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ESTIMATED-bez-původu")
+
+    def test_43_e3_estimated_bez_zdroje(self):
+        doc = self.fresh()
+        self.by_id(doc, "weight_lb")["evidence"]["zdroj_cile"] = "—"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ESTIMATED-bez-zdroje")
+
+    def test_44_e3_estimated_slaby_puvod_k_revizi(self):
+        doc = self.fresh()
+        rec = self.by_id(doc, "weight_lb")
+        rec["evidence"]["puvod"] = "odhad"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_pending(fails, pendings, "ESTIMATED-k-revizi")
+
+    def test_45_e3_unknown_konkretni_cil_k_revizi(self):
+        doc = self.fresh()
+        rec = self.by_id(doc, "differential_type")
+        rec["evidence"]["mustang_cil"] = "LSD Torsen?"
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_pending(fails, pendings, "ruční-review")
+
+    # ---- 60/94: oddělené množiny (6 nových) ----
+    def test_46_g60_z_94_se_neprijima(self):
+        doc = self.fresh()
+        doc["meta"]["original_60_set"]["seznam"] = \
+            [e["logical_id"] for e in doc["ids"][:60]]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ORIGINAL_LOGICAL_IDS")
+
+    def test_47_g60_kratky_seznam_se_neprijima(self):
+        doc = self.fresh()
+        doc["meta"]["original_60_set"]["seznam"] = \
+            [e["logical_id"] for e in doc["ids"][:59]]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ORIGINAL_LOGICAL_IDS")
+
+    def test_48_g94_schvaleni_strukturalne_ok(self):
+        import hashlib
+        doc = self.fresh()
+        idset = sorted(e["logical_id"] for e in doc["ids"])
+        doc["meta"]["accepted_mapped_set"] = {
+            "status": "APPROVED",
+            "seznam": idset,
+            "sha_data": hashlib.sha256(",".join(idset).encode("utf-8")
+                                       ).hexdigest(),
+            "rozhodnuti": "test-fixture",
+            "datum": "2026-11-20",
+        }
+        fails, pendings, _ = self.evaluate(doc)
+        self.assertFalse(any("ACCEPTED" in f for f in fails),
+                         "fails=%s" % fails)
+        self.assertTrue(any("ORIGINAL_LOGICAL_IDS" in p
+                            for p in pendings),
+                        "historická 60 zůstává PENDING, pendings=%s"
+                        % pendings)
+        self.assertEqual(_code(fails, pendings), 2)
+
+    def test_49_g94_schvaleni_spatne_sha(self):
+        import hashlib
+        doc = self.fresh()
+        idset = sorted(e["logical_id"] for e in doc["ids"])
+        doc["meta"]["accepted_mapped_set"] = {
+            "status": "APPROVED",
+            "seznam": idset,
+            "sha_data": "0" * 64,
+            "rozhodnuti": "test-fixture",
+            "datum": "2026-11-20",
+        }
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ACCEPTED_MAPPED_SET")
+
+    def test_50_g94_schvaleni_chybi_id(self):
+        import hashlib
+        doc = self.fresh()
+        idset = sorted(e["logical_id"] for e in doc["ids"])[:-1]
+        doc["meta"]["accepted_mapped_set"] = {
+            "status": "APPROVED",
+            "seznam": idset,
+            "sha_data": hashlib.sha256(",".join(idset).encode("utf-8")
+                                       ).hexdigest(),
+            "rozhodnuti": "test-fixture",
+            "datum": "2026-11-20",
+        }
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ACCEPTED_MAPPED_SET")
+
+    def test_51_g94_zmena_dat_po_schvaleni(self):
+        import hashlib
+        doc = self.fresh()
+        idset = sorted(e["logical_id"] for e in doc["ids"])
+        doc["meta"]["accepted_mapped_set"] = {
+            "status": "APPROVED",
+            "seznam": idset,
+            "sha_data": hashlib.sha256(",".join(idset).encode("utf-8")
+                                       ).hexdigest(),
+            "rozhodnuti": "test-fixture",
+            "datum": "2026-11-20",
+        }
+        doc["ids"] = [e for e in doc["ids"]
+                      if e["logical_id"] != "weight_lb"]
+        fails, pendings, _ = self.evaluate(doc)
+        self.assert_fail(fails, pendings, "ACCEPTED_MAPPED_SET")
 
 
 if __name__ == "__main__":
