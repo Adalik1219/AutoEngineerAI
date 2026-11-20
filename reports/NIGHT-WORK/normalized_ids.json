@@ -1,0 +1,1648 @@
+{
+ "meta": {
+  "ukol": "Agent E — normalizace 60 ID / 78 řádků (HEAD 0f4670a, větev wave-e-norm)",
+  "vyhotoveno": "2026-11-20",
+  "zdroj_60_a_78": {
+   "soubor": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md",
+   "blob_sha": "4d4d7650ba4ad095815d3b5caaca711b62138c31",
+   "commit_souboru": "0f7c968 (\tposlední změna souboru; HEAD worktree 0f4670a)",
+   "deklarace_v_souboru": "§1: 60 mapovaných parametrů; stavový rozpad 7/3/21/28 (VERIFIED/ESTIMATED/PENDING/UNKNOWN)"
+  },
+  "doplnkove_vstupy": [
+   "reports/NIGHT-WORK/AGENT-E-MUSTANG-DATA-AUDIT.md@blob:c99af17d33ff3da501f64162515a42140a1f8e2e",
+   "src/Chassis/catalog/parameters.json@blob:8f4d6bd1edcffd9121d0c6bad87fbd97b5285d0b (138 záznamů)",
+   "vehicle-data/references/ford-mustang-gt-2024-eu-manual-standard.json@blob:68832c3462fecbcb5fe5c27759574a0399e0e6a7",
+   "docs/VEHICLE-SPECIFICATIONS.md"
+  ],
+  "deklarovano": {
+   "logickych_id": 60,
+   "radku_tabulky": 78
+  },
+  "odvozeno_strojove": {
+   "radku_tabulky": 78,
+   "stavy_radku": {
+    "ESTIMATED": 7,
+    "UNKNOWN": 45,
+    "PENDING": 20,
+    "VERIFIED": 6
+   },
+   "unikatnich_id": 94,
+   "stavy_id": {
+    "UNKNOWN": 54,
+    "PENDING": 25,
+    "ESTIMATED": 8,
+    "VERIFIED": 7
+   }
+  }
+ },
+ "rules": [
+  "R1 Stejné ID = stejný řetězec v buňce Interní ID (po rozbalení skupinových buněk dle R2). Jeden řádek = jeden zdrojový záznam; skupinová buňka se rozbalí, neruší.",
+  "R2 Skupinová buňka (a / b, a + b, f/r/c, clutch_*) se rozbaluje na jednotlivá katalogová ID; každé dědí stav řádku s poznámkou o sdíleném řádku. Neslučuje se.",
+  "R3 Alias ≠ parametr: sloupec Název (Tune klíč) a tune_key z katalogu jsou aliases; samostatné ID jen pro řetězec z Interní ID / jeho doložené členy.",
+  "R4 Chybějící ID: podnázev bez katalogového ID (clutch rpm/speed/stall) nedostane žádné ID (žádná umělá ID); je veden v unresolved.",
+  "R5 Duplicity: stejné logical_id ve více řádcích = jeden záznam s více source_rows. Strojově ověřeno: žádné duplicity (94/94 unikátních).",
+  "R6 Konfliktní názvy: primary_name je Název z řádku; při rozbalení je primary_name = ID a původní Název je alias. Názvy se nepřepisují.",
+  "R7 Jeden primární stav na ID: přebírá se sloupec Stav řádku (stav mapování/připravenosti, ne čistý stav mustangovského cíle — viz N-F1: např. drive_config VERIFIED vs differential_type UNKNOWN). Cíl je evidován zvlášť v evidence.",
+  "R8 F/R a L/R páry jsou odlišné parametry (odlišné Tune klíče) — neslučují se podle podobnosti."
+ ],
+ "ids": [
+  {
+   "logical_id": "abs_threshold_sps",
+   "source_rows": [
+    122
+   ],
+   "primary_name": "ABSThreshold",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L122",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "ackermann",
+   "source_rows": [
+    106
+   ],
+   "primary_name": "Ackerman",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L106",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "anchor_offset_f",
+   "source_rows": [
+    91
+   ],
+   "primary_name": "FAnchorOffset",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L91",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "anchor_offset_r",
+   "source_rows": [
+    92
+   ],
+   "primary_name": "RAnchorOffset",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L92",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "brake_bias_front",
+   "source_rows": [
+    116
+   ],
+   "primary_name": "BrakeBias",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L116",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (profil: `CHYBÍ`, rozdělení účinku EU GT nepublikováno)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "brake_force",
+   "source_rows": [
+    115
+   ],
+   "primary_name": "BrakeForce",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L115",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (kotouče F 390×36 / R 355×28 Brembo doloženy, ale `BrakeForce` není moment v Nm — škáluje se FPS a režimy; rovnítko zakázáno)",
+    "zdroj_cile": "profil `brakes.*` ([1b]) — INFO",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "camber_caster_toe",
+   "source_rows": [
+    71
+   ],
+   "primary_name": "(odklon/záklon/sbíhavost)",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L71",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "cg_height",
+   "source_rows": [
+    54
+   ],
+   "primary_name": "CGHeight",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L54",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "— (profil: `CHYBÍ`)",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "clutch_enabled",
+   "source_rows": [
+    152
+   ],
+   "primary_name": "clutch_enabled",
+   "aliases": [
+    "Clutch",
+    "Clutch…"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L152",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (rev-matching MT-82 ≠ žádná kit-větev 1:1)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Skupinový řádek Clutch; na ID mapovány jen podnázvy s katalogovým ID. Podnázvy rpm/speed/stall katalogové ID nemají (viz unresolved U1) — žádná umělá ID vytvořena. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "clutch_engage",
+   "source_rows": [
+    152
+   ],
+   "primary_name": "clutch_engage",
+   "aliases": [
+    "ClutchEngage",
+    "Clutch…"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L152",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (rev-matching MT-82 ≠ žádná kit-větev 1:1)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Skupinový řádek Clutch; na ID mapovány jen podnázvy s katalogovým ID. Podnázvy rpm/speed/stall katalogové ID nemají (viz unresolved U1) — žádná umělá ID vytvořena. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "clutch_kick",
+   "source_rows": [
+    152
+   ],
+   "primary_name": "clutch_kick",
+   "aliases": [
+    "ClutchKick",
+    "Clutch…"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L152",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (rev-matching MT-82 ≠ žádná kit-větev 1:1)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Skupinový řádek Clutch; na ID mapovány jen podnázvy s katalogovým ID. Podnázvy rpm/speed/stall katalogové ID nemají (viz unresolved U1) — žádná umělá ID vytvořena. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "compress_lim_f",
+   "source_rows": [
+    87
+   ],
+   "primary_name": "FCompressLim",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L87",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "compress_lim_r",
+   "source_rows": [
+    88
+   ],
+   "primary_name": "RCompressLim",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L88",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "compression_ratio",
+   "source_rows": [
+    135
+   ],
+   "primary_name": "CompressionRatio?",
+   "aliases": [
+    "CompressionRatio"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L135",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (profil: `CHYBÍ`; klíč auditem nepotvrzen, jen ve vzorci HP_T)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "curve_mult",
+   "source_rows": [
+    131
+   ],
+   "primary_name": "CurveMult",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L131",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "damper_f",
+   "source_rows": [
+    79
+   ],
+   "primary_name": "FSusDamping",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L79",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "neověřený předpoklad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "damper_r",
+   "source_rows": [
+    80
+   ],
+   "primary_name": "RSusDamping",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L80",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "neověřený předpoklad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "diff_preload_f",
+   "source_rows": [
+    164
+   ],
+   "primary_name": "FDiffPreload",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L164",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "n/a (RWD)",
+    "zdroj_cile": "odvozeno z RWD",
+    "puvod": "odhad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "diff_preload_r",
+   "source_rows": [
+    165
+   ],
+   "primary_name": "RDiffPreload",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L165",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "differential_type",
+   "source_rows": [
+    159
+   ],
+   "primary_name": "DifferentialType",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L159",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN mapování — LSD potvrzeno obecně, přesný typ UNKNOWN (není automaticky Torsen; Torsen = Dark Horse, do EU profilu nepatří — T18)",
+    "zdroj_cile": "profil `drivetrain.differential_rear` ([1b]) — INFO",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "downforce_f",
+   "source_rows": [
+    173
+   ],
+   "primary_name": "downforce_f",
+   "aliases": [
+    "—"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L173",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje přítlak přední/zadní nápravy; odlišné skriptové konstanty. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "downforce_r",
+   "source_rows": [
+    173
+   ],
+   "primary_name": "downforce_r",
+   "aliases": [
+    "—"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L173",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje přítlak přední/zadní nápravy; odlišné skriptové konstanty. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "drag_coeff",
+   "source_rows": [
+    172
+   ],
+   "primary_name": "(Drag)",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L172",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (profil: Cd `CHYBÍ`, plocha `CHYBÍ`)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "drive_config",
+   "source_rows": [
+    158
+   ],
+   "primary_name": "Config",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L158",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "RWD (\"Front-engine, Rear-wheel drive with limited-slip differential\")",
+    "zdroj_cile": "profil `drivetrain` ([1b])",
+    "puvod": "oficiální zdroj"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "engine_brake_force",
+   "source_rows": [
+    141
+   ],
+   "primary_name": "EBrakeForce",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L141",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "eq_point",
+   "source_rows": [
+    132
+   ],
+   "primary_name": "EqPoint",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L132",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (kit-vnitřní převodní bod HP↔lb-ft)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "extension_lim_f",
+   "source_rows": [
+    85
+   ],
+   "primary_name": "FExtensionLim",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L85",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "extension_lim_r",
+   "source_rows": [
+    86
+   ],
+   "primary_name": "RExtensionLim",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L86",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "final_drive",
+   "source_rows": [
+    148
+   ],
+   "primary_name": "FinalDrive",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L148",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN — kandidáti 3.15:1 / 3.55:1 bez přiřazení k EU 6MT (GUARD T17: null jako definitivu nepoužít)",
+    "zdroj_cile": "profil `transmission.final_drive`",
+    "puvod": "neověřený předpoklad (oba kandidáti)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "final_drive_mult",
+   "source_rows": [
+    149
+   ],
+   "primary_name": "FDMult",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L149",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "1 (neutrál pro Gauges; měnit jen samostatně)",
+    "zdroj_cile": "audit §6",
+    "puvod": "oficiální zdroj (audit)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "flywheel",
+   "source_rows": [
+    137
+   ],
+   "primary_name": "Flywheel",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L137",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "front_diff_coast",
+   "source_rows": [
+    161
+   ],
+   "primary_name": "front_diff_coast",
+   "aliases": [
+    "FDiffCoast",
+    "FDiffPower/Coast"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L161",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "n/a (RWD — přední dif neexistuje)",
+    "zdroj_cile": "odvozeno z RWD",
+    "puvod": "odhad"
+   },
+   "notes": "Buňka slučuje 2 Tune klíče předního diferenciálu; u RWD irelevantní, stav ESTIMATED (odvozeno z RWD). Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "front_diff_power",
+   "source_rows": [
+    161
+   ],
+   "primary_name": "front_diff_power",
+   "aliases": [
+    "FDiffPower",
+    "FDiffPower/Coast"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L161",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "n/a (RWD — přední dif neexistuje)",
+    "zdroj_cile": "odvozeno z RWD",
+    "puvod": "odhad"
+   },
+   "notes": "Buňka slučuje 2 Tune klíče předního diferenciálu; u RWD irelevantní, stav ESTIMATED (odvozeno z RWD). Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "front_wheel_density",
+   "source_rows": [
+    68
+   ],
+   "primary_name": "FWheelDensity",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L68",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (disk 19×9.0J + 255/40 R19 doloženy, ale hustota je kit-vnitřní škálování, ne fyzikální údaj)",
+    "zdroj_cile": "profil `wheels_tires.*` ([1b]) — INFO, ne cíl",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "front_wheel_steer",
+   "source_rows": [
+    107
+   ],
+   "primary_name": "FWSteer",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L107",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "None (S650 nemá 4WS)",
+    "zdroj_cile": "odvozeno z konstrukce vozu",
+    "puvod": "odhad (konstrukčně dáno)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "front_wishbone_len",
+   "source_rows": [
+    93
+   ],
+   "primary_name": "FWsBoneLen",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L93",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "gear_ratios",
+   "source_rows": [
+    147
+   ],
+   "primary_name": "Ratios",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L147",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "1: 3.237 / 2: 2.104 / 3: 1.422 / 4: 1.0 / 5: 0.814 / 6: 0.622 (Getrag MT-82); zpátečka UNKNOWN",
+    "zdroj_cile": "profil `transmission.gear_ratios` ([1]/[1b])",
+    "puvod": "oficiální zdroj"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "horsepower",
+   "source_rows": [
+    128
+   ],
+   "primary_name": "Horsepower",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L128",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN — 328 kW (446 PS) @ 7250 doloženo, ale `peak_power_kw ≠ horsepower` bez definovaného převodu (jiná veličina, jednotka i referenční bod křivky); přepis z",
+    "zdroj_cile": "profil `engine.max_power` ([1b]+[3]) — INFO",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "idle_rpm",
+   "source_rows": [
+    133
+   ],
+   "primary_name": "IdleRPM",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L133",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (profil: `CHYBÍ`)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "lock_thresh_c",
+   "source_rows": [
+    166
+   ],
+   "primary_name": "lock_thresh_c",
+   "aliases": [
+    "CDiffLockThres",
+    "*Diff*Thres"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L166",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (Starý dif ignorován při `DifferentialType=New`; live-klíče potvrzeny F4.3, hodnoty neuvedeny)",
+    "zdroj_cile": "audit §7",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 6 prahových klíčů (slip ×3 + lock ×3); každý je vlastní katalogové ID. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "lock_thresh_f",
+   "source_rows": [
+    166
+   ],
+   "primary_name": "lock_thresh_f",
+   "aliases": [
+    "FDiffLockThres",
+    "*Diff*Thres"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L166",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (Starý dif ignorován při `DifferentialType=New`; live-klíče potvrzeny F4.3, hodnoty neuvedeny)",
+    "zdroj_cile": "audit §7",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 6 prahových klíčů (slip ×3 + lock ×3); každý je vlastní katalogové ID. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "lock_thresh_r",
+   "source_rows": [
+    166
+   ],
+   "primary_name": "lock_thresh_r",
+   "aliases": [
+    "RDiffLockThres",
+    "*Diff*Thres"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L166",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (Starý dif ignorován při `DifferentialType=New`; live-klíče potvrzeny F4.3, hodnoty neuvedeny)",
+    "zdroj_cile": "audit §7",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 6 prahových klíčů (slip ×3 + lock ×3); každý je vlastní katalogové ID. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "lock_to_lock",
+   "source_rows": [
+    101
+   ],
+   "primary_name": "LockToLock",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L101",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "min_steer",
+   "source_rows": [
+    102
+   ],
+   "primary_name": "MinSteer",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L102",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "pbrake_bias",
+   "source_rows": [
+    118
+   ],
+   "primary_name": "PBrakeBias",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L118",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (hodnota 0 ověřena, název live-klíče potvrzen F4.3)",
+    "zdroj_cile": "audit §12",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "pbrake_force",
+   "source_rows": [
+    117
+   ],
+   "primary_name": "PBrakeForce",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L117",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "peak_rpm",
+   "source_rows": [
+    129
+   ],
+   "primary_name": "PeakRPM",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L129",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN — 7250 rpm je bod maxima výkonu, ne vrchol kit-křivky `CurveN`",
+    "zdroj_cile": "profil `engine.max_power_rpm` — INFO",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "peak_sharpness",
+   "source_rows": [
+    130
+   ],
+   "primary_name": "PeakSharpness",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L130",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (křivka nepublikována)",
+    "zdroj_cile": "profil `torque_curve`: `points: []`, status UNKNOWN",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "pre_compress_f",
+   "source_rows": [
+    83
+   ],
+   "primary_name": "FPreCompress",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L83",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "pre_compress_r",
+   "source_rows": [
+    84
+   ],
+   "primary_name": "RPreCompress",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L84",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "rear_diff_coast",
+   "source_rows": [
+    163
+   ],
+   "primary_name": "RDiffCoast",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L163",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (viz výše)",
+    "zdroj_cile": "audit §7",
+    "puvod": "neověřený předpoklad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "rear_diff_power",
+   "source_rows": [
+    162
+   ],
+   "primary_name": "RDiffPower",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L162",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (LSD potvrzeno, hodnoty 40/30 jen zadek-bez-klíčů → live-klíč potvrzen F4.3, hodnota PENDING)",
+    "zdroj_cile": "audit §7",
+    "puvod": "neověřený předpoklad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "rear_wheel_density",
+   "source_rows": [
+    69
+   ],
+   "primary_name": "RWheelDensity",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L69",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (disk 19×9.5J + 275/40 R19 doloženy, viz výše)",
+    "zdroj_cile": "profil `wheels_tires.*` ([1b]) — INFO",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "rear_wishbone_len",
+   "source_rows": [
+    94
+   ],
+   "primary_name": "RWsBoneLen",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L94",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "redline_rpm",
+   "source_rows": [
+    134
+   ],
+   "primary_name": "Redline",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L134",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (profil: `CHYBÍ`)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "return_speed",
+   "source_rows": [
+    104
+   ],
+   "primary_name": "ReturnSpeed",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L104",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "rev_accel",
+   "source_rows": [
+    136
+   ],
+   "primary_name": "rev_accel",
+   "aliases": [
+    "RevAccel",
+    "RevAccel/Decay/Bounce"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L136",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (setrvačnost pohonu S650 nepublikována)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 3 samostatné Tune klíče (RevAccel/Decay/Bounce); každý je vlastní katalogové ID s odlišnou funkcí. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "rev_bounce",
+   "source_rows": [
+    136
+   ],
+   "primary_name": "rev_bounce",
+   "aliases": [
+    "RevBounce",
+    "RevAccel/Decay/Bounce"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L136",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (setrvačnost pohonu S650 nepublikována)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 3 samostatné Tune klíče (RevAccel/Decay/Bounce); každý je vlastní katalogové ID s odlišnou funkcí. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "rev_decay",
+   "source_rows": [
+    136
+   ],
+   "primary_name": "rev_decay",
+   "aliases": [
+    "RevDecay",
+    "RevAccel/Decay/Bounce"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L136",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (setrvačnost pohonu S650 nepublikována)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 3 samostatné Tune klíče (RevAccel/Decay/Bounce); každý je vlastní katalogové ID s odlišnou funkcí. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "shift_down_time",
+   "source_rows": [
+    151
+   ],
+   "primary_name": "shift_down_time",
+   "aliases": [
+    "ShiftDnTime",
+    "ShiftUp/DnTime"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L151",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (manuál řadí řidič; časy DCT neaplikovatelné 1:1)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje časy řazení nahoru/dolů; odlišné Tune klíče. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "shift_up_time",
+   "source_rows": [
+    151
+   ],
+   "primary_name": "shift_up_time",
+   "aliases": [
+    "ShiftUpTime",
+    "ShiftUp/DnTime"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L151",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (manuál řadí řidič; časy DCT neaplikovatelné 1:1)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje časy řazení nahoru/dolů; odlišné Tune klíče. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "slip_thresh_c",
+   "source_rows": [
+    166
+   ],
+   "primary_name": "slip_thresh_c",
+   "aliases": [
+    "CDiffSlipThres",
+    "*Diff*Thres"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L166",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (Starý dif ignorován při `DifferentialType=New`; live-klíče potvrzeny F4.3, hodnoty neuvedeny)",
+    "zdroj_cile": "audit §7",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 6 prahových klíčů (slip ×3 + lock ×3); každý je vlastní katalogové ID. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "slip_thresh_f",
+   "source_rows": [
+    166
+   ],
+   "primary_name": "slip_thresh_f",
+   "aliases": [
+    "FDiffSlipThres",
+    "*Diff*Thres"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L166",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (Starý dif ignorován při `DifferentialType=New`; live-klíče potvrzeny F4.3, hodnoty neuvedeny)",
+    "zdroj_cile": "audit §7",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 6 prahových klíčů (slip ×3 + lock ×3); každý je vlastní katalogové ID. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "slip_thresh_r",
+   "source_rows": [
+    166
+   ],
+   "primary_name": "slip_thresh_r",
+   "aliases": [
+    "RDiffSlipThres",
+    "*Diff*Thres"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L166",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (Starý dif ignorován při `DifferentialType=New`; live-klíče potvrzeny F4.3, hodnoty neuvedeny)",
+    "zdroj_cile": "audit §7",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 6 prahových klíčů (slip ×3 + lock ×3); každý je vlastní katalogové ID. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "steer_axis_offset",
+   "source_rows": [
+    109
+   ],
+   "primary_name": "(StAxisOffset)",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L109",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN — klíč v live Tune **CHYBÍ**, `Initialize:171` ho čte (chyba č. 1)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "steer_decay",
+   "source_rows": [
+    105
+   ],
+   "primary_name": "SteerDecay",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L105",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "steer_ratio",
+   "source_rows": [
+    100
+   ],
+   "primary_name": "SteerRatio",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L100",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "steer_speed",
+   "source_rows": [
+    103
+   ],
+   "primary_name": "SteerSpeed",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L103",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "steering_type",
+   "source_rows": [
+    108
+   ],
+   "primary_name": "SteeringType",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L108",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (kit-vnitřní přepínač, ne vlastnost vozu)",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "supercharger_count",
+   "source_rows": [
+    140
+   ],
+   "primary_name": "Superchargers",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L140",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "0 (atmosféra, shoda s kitem)",
+    "zdroj_cile": "profil `engine.code` ([1b])",
+    "puvod": "oficiální zdroj"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "sus_angle_f",
+   "source_rows": [
+    89
+   ],
+   "primary_name": "FSusAngle",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L89",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "sus_angle_r",
+   "source_rows": [
+    90
+   ],
+   "primary_name": "RSusAngle",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L90",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "sus_length_f",
+   "source_rows": [
+    81
+   ],
+   "primary_name": "FSusLength",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L81",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "sus_length_r",
+   "source_rows": [
+    82
+   ],
+   "primary_name": "RSusLength",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L82",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "sus_stiffness_f",
+   "source_rows": [
+    77
+   ],
+   "primary_name": "FSusStiffness",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L77",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "neověřený předpoklad (kandidátní dekód)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "sus_stiffness_r",
+   "source_rows": [
+    78
+   ],
+   "primary_name": "RSusStiffness",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L78",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "neověřený předpoklad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "target_friction",
+   "source_rows": [
+    70
+   ],
+   "primary_name": "(F/RTargetFriction)",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L70",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN (grip 1.0 v configu je Optimizer-předpoklad bez Tune protějšku)",
+    "zdroj_cile": "—",
+    "puvod": "neověřený předpoklad (0.7 je kit-konstanta)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "tcs_gradient",
+   "source_rows": [
+    120
+   ],
+   "primary_name": "TCSGradient",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L120",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "tcs_limit_pct",
+   "source_rows": [
+    121
+   ],
+   "primary_name": "TCSLimit",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L121",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "tcs_threshold_sps",
+   "source_rows": [
+    119
+   ],
+   "primary_name": "TCSThreshold",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L119",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "throttle_accel",
+   "source_rows": [
+    138
+   ],
+   "primary_name": "throttle_accel",
+   "aliases": [
+    "ThrotAccel",
+    "ThrotAccel/Decel"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L138",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 2 Tune klíče (ThrotAccel/Decel); odlišné směry odezvy plynu. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "throttle_decel",
+   "source_rows": [
+    138
+   ],
+   "primary_name": "throttle_decel",
+   "aliases": [
+    "ThrotDecel",
+    "ThrotAccel/Decel"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L138",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 2 Tune klíče (ThrotAccel/Decel); odlišné směry odezvy plynu. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "torque_vector",
+   "source_rows": [
+    160
+   ],
+   "primary_name": "TorqueVector",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L160",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "0/100 → v RWD režimu irelevantní / k revizi s `drive_config`",
+    "zdroj_cile": "profil `drivetrain.torque_split_f_r` (odvozeno z RWD)",
+    "puvod": "odhad"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "trans_modes",
+   "source_rows": [
+    150
+   ],
+   "primary_name": "TransModes",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L150",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "Manual-first (6MT s rev-matching)",
+    "zdroj_cile": "profil `transmission.type` ([1b])",
+    "puvod": "odhad (odvozeno z typu skříně)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "turbo_boost",
+   "source_rows": [
+    139
+   ],
+   "primary_name": "turbo_boost",
+   "aliases": [
+    "T_Boost",
+    "Turbochargers/T_Boost"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L139",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "0 / n/a — Mustang GT je atmosféra (5.0 Ti-VCT V8 bez turba)",
+    "zdroj_cile": "profil `engine.code` ([1b])",
+    "puvod": "oficiální zdroj"
+   },
+   "notes": "Buňka slučuje počet turbodmychadel a plnicí tlak; odlišné veličiny, společný stav VERIFIED (atmosféra). Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "turbo_count",
+   "source_rows": [
+    139
+   ],
+   "primary_name": "turbo_count",
+   "aliases": [
+    "Turbochargers",
+    "Turbochargers/T_Boost"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L139",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "0 / n/a — Mustang GT je atmosféra (5.0 Ti-VCT V8 bez turba)",
+    "zdroj_cile": "profil `engine.code` ([1b])",
+    "puvod": "oficiální zdroj"
+   },
+   "notes": "Buňka slučuje počet turbodmychadel a plnicí tlak; odlišné veličiny, společný stav VERIFIED (atmosféra). Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "wear_speed",
+   "source_rows": [
+    174
+   ],
+   "primary_name": "wear_speed",
+   "aliases": [
+    "—"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L174",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 3 podpůrné skriptové parametry opotřebení/prokluzu. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "weight_box_size",
+   "source_rows": [
+    55
+   ],
+   "primary_name": "WeightBSize",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L55",
+   "status": "PENDING",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "— (odvozeno od geometrie modelu, ne od Mustangu)",
+    "puvod": "měření"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "weight_dist_pct",
+   "source_rows": [
+    53
+   ],
+   "primary_name": "WeightDist",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L53",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "— (profil: `CHYBÍ`, továrně nepublikováno)",
+    "puvod": "—"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "weight_lb",
+   "source_rows": [
+    52
+   ],
+   "primary_name": "Weight",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L52",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "1808 kg",
+    "zdroj_cile": "profil `mass.curb_weight` ([1b]+[3])",
+    "puvod": "odhad (Ford sám uvádí \"Est.\")"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "wheel_lock_ratio",
+   "source_rows": [
+    174
+   ],
+   "primary_name": "wheel_lock_ratio",
+   "aliases": [
+    "—"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L174",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 3 podpůrné skriptové parametry opotřebení/prokluzu. Stav děděn z řádku (mapovací stav, viz R7)."
+  },
+  {
+   "logical_id": "wheel_radius",
+   "source_rows": [
+    62
+   ],
+   "primary_name": "(poloměr kol)",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L62",
+   "status": "ESTIMATED",
+   "evidence": {
+    "mustang_cil": "F 686.6 / R 702.6 mm (nominální, nezatížené)",
+    "zdroj_cile": "výpočet z designace 255/40 R19, 275/40 R19 (VEHICLE-SPEC §2)",
+    "puvod": "výpočet (±5 mm dezén)"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "wheelbase_etc",
+   "source_rows": [
+    61
+   ],
+   "primary_name": "(rozvor/rozchod/ride-height)",
+   "aliases": [],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L61",
+   "status": "VERIFIED",
+   "evidence": {
+    "mustang_cil": "rozvor 2719; rozchod F 1585 / R 1642 mm",
+    "zdroj_cile": "profil `dimensions.*` ([1b], sl. Mustang GT — nezaměnit Dark Horse)",
+    "puvod": "oficiální zdroj"
+   },
+   "notes": "1 řádek = 1 ID (R1)."
+  },
+  {
+   "logical_id": "wheelspin_ratio",
+   "source_rows": [
+    174
+   ],
+   "primary_name": "wheelspin_ratio",
+   "aliases": [
+    "—"
+   ],
+   "source_reference": "reports/NIGHT-WORK/AGENT-F-MUSTANG-PHYSICS-MAPPING.md@blob:4d4d7650ba4ad095815d3b5caaca711b62138c31#L174",
+   "status": "UNKNOWN",
+   "evidence": {
+    "mustang_cil": "UNKNOWN",
+    "zdroj_cile": "—",
+    "puvod": "—"
+   },
+   "notes": "Buňka slučuje 3 podpůrné skriptové parametry opotřebení/prokluzu. Stav děděn z řádku (mapovací stav, viz R7)."
+  }
+ ],
+ "unresolved": [
+  {
+   "kod": "U1",
+   "popis": "clutch_rpm / clutch_speed / clutch_stall: podnázvy v řádku L152 bez katalogového ID v parameters.json (katalog zná jen clutch_enabled/engage/kick). Žádná umělá ID vytvořena; řádek mapován 3 doloženými ID.",
+   "stav": "UNKNOWN"
+  },
+  {
+   "kod": "U2",
+   "popis": "Řádek weight_box_size (L55) má 10 sloupců místo 11 (chybí oddělovač Ověření/Riziko). Stav PENDING jednoznačný (sloupec 7), formální vada reportována.",
+   "stav": "PENDING"
+  },
+  {
+   "kod": "U3",
+   "popis": "Seznam 60 logických ID není doložen v žádném souboru: F §1 deklaruje jen agregát (60; 7/3/21/28), §4 výběr z katalogu 138 nepopisuje úplně (elektro 9× vs skutečných 11 electric_*; 138−60=78 vyloučených, §4 jmenuje jen ~21). Agregát 60/rozpad proto nelze reprodukovat.",
+   "stav": "UNKNOWN"
+  },
+  {
+   "kod": "U4",
+   "popis": "Počet 78 řádků doložen: strojový počet tabulek §2.1–§2.10 = 78. Stavový součet řádků strojově 6/7/20/45 (VERIFIED/ESTIMATED/PENDING/UNKNOWN) — nesedí s F §1 (7/3/21/28) ani s přepočtem E auditu (6/7/21/44); rozdíl 1 řádku v PENDING/UNKNOWN (compression_ratio překlasifikován na UNKNOWN, součty neaktualizovány).",
+   "stav": "PENDING"
+  }
+ ]
+}
