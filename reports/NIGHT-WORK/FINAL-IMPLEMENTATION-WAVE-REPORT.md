@@ -2,7 +2,7 @@
 
 **Větev:** `feat/m2-m3-geometry`
 **Výchozí SHA (ověřen):** `557ee39cdfe4cd558dd4a1194c81adff6a2968fa`
-**Finální SHA:** doplní remediation commit po pushi a CI
+**Finální SHA:** `0f7c968f4e2da33f105244e13efac25515216fdd` (remediation; přímý potomek integračního SHA)
 **Prostředí testů:** Win 11, Python 3.14.9, local (obě RBXM kopie) · CI = Linux, 1 RBXM kopie (`.gitignore`)
 **Datum:** 20. 11. 2026 · **Koordinátor:** Hermes Agent
 **PR #2:** OPEN, nemergováno · **`main`:** `5b673155e3b7b78ed2cf826814e57be433349681f`, nezměněn
@@ -79,10 +79,10 @@ Tabulka Mustang→A-Chassis (103) · manuál-first · žádné ladění na UNKNO
 | `python tools/validate_contracts.py` | 24 | 24 | 0 | 0 | — |
 
 ## 12. CI run ID
-Výchozí: `44713829758` (success). Remediation commit a jeho CI run doplnit po pushi; CI důkaz musí být pro přesný finální SHA. V čistém lokálním checkoutu `python tests/run_all.py`: 443/438/0/0/5; pět PENDING vypsáno výše.
+Výchozí: `44713829758` (success). Remediation SHA `0f7c968f4e2da33f105244e13efac25515216fdd`: run `44737468908`, event `push`, conclusion `success`, všechny čtyři jobs Python 3.11–3.14 success. V čistém lokálním checkoutu `python tests/run_all.py`: 443/438/0/0/5; pět PENDING vypsáno výše.
 
 ## 13. Nezávislá QA — remediation
-Původní G CONDITIONAL PASS platil pro `bc6f955…` a jeho vlastní lokální strom; jeho tři slabé testy jsou nyní opraveny. Nové vlastní běhy na remediation pracovním stromě: cycle/gate + F4 mapping/integration + F4.3 73/73 (1 skip); plná sada 443/438/0/0/5; kontrakty 24/24. Následuje CI na novém SHA.
+Původní G CONDITIONAL PASS platil pro `bc6f955…` a jeho vlastní lokální strom; jeho tři slabé testy jsou nyní opraveny. Nové vlastní běhy na remediation pracovním stromě: cycle/gate + F4 mapping/integration + F4.3 73/73 (1 skip); plná sada 443/438/0/0/5; kontrakty 24/24. Následuje CI na novém SHA `0f7c968f4e2da33f105244e13efac25515216fdd`: run `44737468908`, success 4/4 (Python 3.11–3.14).
 
 ## 14. Zbývající blokátory (BLOCKED)
 Katalogové cykly (12 SCC, návrhy A §7) · M2 VERIFIED (Mustang RBXM + Studio) · M3 CLOSED · PROPOSED schémata · T-M5-01 min/max · `StAxisOffset` + `magnitude` bugy · final drive 3.15/3.55 · motorová křivka · RWD+dif PENDING.
