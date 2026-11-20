@@ -33,6 +33,18 @@
     "ESTIMATED": 8,
     "VERIFIED": 7
    }
+  },
+  "original_60_set": {
+   "stav": "NOT_RECONSTRUCTABLE",
+   "seznam": null,
+   "verze_validatoru": "E1-E6",
+   "duvod": "Varianta B (AGENT-F-60-ID-RECONSTRUCTION, větev nw-f-60ids): seznam 60 ID neexistuje v žádném commitu/souboru; číslo 60 vzniklo v 557ee39 (AGENT-F-MUSTANG-PHYSICS-MAPPING.md řádky 34–40, blob b5f95b19) jako textová deklarace bez seznamu; 138−78=60 i 94−34=60 jsou koincidence.",
+   "vztah_k_normalizaci": "94 normalizovaných ID se za 60 nevydává; relationship všech záznamů vůči original_60 je UNRESOLVED; ORIGINAL_LOGICAL_IDS=PENDING."
+  },
+  "validator": {
+   "nastroj": "tools/validate_normalization.py",
+   "rozsah": "E1–E6 (vztah záznam–zdroj, R1–R8, provenance statusu, oddělené počty, exit 0/1/2)",
+   "exit_semantika": "0=PASS (vše doloženo), 1=FAIL (mechanická chyba), 2=PENDING (60 nedoloženo)"
   }
  },
  "rules": [
