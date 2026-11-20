@@ -36,8 +36,8 @@ Původ každé hodnoty označen: `oficiální zdroj` / `měření` / `odhad` / `
 - **S doloženým Mustang cílem: 10** (z toho 7 `VERIFIED` oficiálním zdrojem,
   3 `ESTIMATED` — odhad/výpočet s uvedeným postupem).
 - **`UNKNOWN` (bez doloženého cíle): 50.**
-- Rozpad stavů v mapě: `VERIFIED` 7 · `ESTIMATED` 3 · `PENDING` 22 (čeká Studio/odečet) ·
-  `UNKNOWN` 28 (z toho strukturně/skriptově nemapovatelné bez přestavby — viz rizika).
+- Rozpad stavů v mapě: `VERIFIED` 7 · `ESTIMATED` 3 · `PENDING` 21 (čeká na ověření; řádek `compression_ratio` překlasifikován na UNKNOWN) ·
+  `UNKNOWN` 28 (stavové součty 7/3/21/28 nejsou doloženy, protože tabulky slučují ID; viz audit N-F1).
 
 ## 2. Mapovací tabulka
 
@@ -132,7 +132,7 @@ geometrie / dynamika / ovládání / vizuální / podpůrný / neznámý.
 | `eq_point` | EqPoint | 5252 | — | UNKNOWN (kit-vnitřní převodní bod HP↔lb-ft) | — | UNKNOWN | — | neměnný převodní bod, ponechat | NÍZKÉ | podpůrný |
 | `idle_rpm` | IdleRPM | 950 | rpm | UNKNOWN (profil: `CHYBÍ`) | — | UNKNOWN | — | OBD log / dílenský manuál | NÍZKÉ | podpůrný |
 | `redline_rpm` | Redline | 8000 | rpm | UNKNOWN (profil: `CHYBÍ`) | — | UNKNOWN | — | Ford tech specs / OBD log | STŘEDNÍ — omezovač vs 7250 rpm maxima | dynamika |
-| `compression_ratio` | CompressionRatio? | null | — | UNKNOWN (profil: `CHYBÍ`; klíč auditem nepotvrzen, jen ve vzorci HP_T) | — | PENDING | — | Studio odečet Tune | STŘEDNÍ | neznámý |
+| `compression_ratio` | CompressionRatio? | null | — | UNKNOWN (profil: `CHYBÍ`; klíč auditem nepotvrzen, jen ve vzorci HP_T) | — | UNKNOWN | — | dohledat Ford technický list [1]; Tune klíč není potvrzen | STŘEDNÍ | neznámý |
 | `rev_accel` / `rev_decay` / `rev_bounce` | RevAccel/Decay/Bounce | 250/75/250 | — | UNKNOWN (setrvačnost pohonu S650 nepublikována) | — | UNKNOWN | — | OBD log náběhu otáček | NÍZKÉ | podpůrný |
 | `flywheel` | Flywheel | 500 | — | UNKNOWN | — | UNKNOWN | — | viz výše (závislost `flywheel ↔ rev_accel/clutch_engage`) | NÍZKÉ | podpůrný |
 | `throttle_accel` / `throttle_decel` | ThrotAccel/Decel | 0.05/0.2 | — | UNKNOWN | — | UNKNOWN | — | měření odezvy plynu | NÍZKÉ | ovládání |

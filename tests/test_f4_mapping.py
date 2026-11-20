@@ -517,11 +517,21 @@ class TestF4Safety(unittest.TestCase):
         pending = [r for r in records
                    if r["verification_status"] == "PENDING"]
         self.assertEqual(len(pending), 43)
-        real = _write_catalog(records)
+        # Acyklický fixture odděluje per-záznam PENDING guard od reálného
+        # katalogu, který se správně zastaví dříve na S-02 gate.
+        pending_record = next(r for r in records
+                              if r["id"] == "compression_ratio")
+        pending_record = dict(pending_record)
+        pending_record["depends_on"] = []
+        isolated = _write_catalog([pending_record])
         res = map_config(_cfg({"engine": {"compression_ratio": 10.0}}),
-                         real, "achassis-v1")
+                         isolated, "achassis-v1")
         self.assertEqual(res["tune_changes"], [])
         self.assertEqual(len(res["rejected"]), 1)
+        self.assertEqual(res["rejected"][0]["param"],
+                         "engine.compression_ratio")
+        self.assertIn("kategorie UNKNOWN", res["rejected"][0]["reason"])
+        self.assertIn("pending-studio", res["rejected"][0]["reason"])
 
     def test_f4_11_odmitnuti_zaznamenana(self):
         """F4-11: každé odmítnutí (engine i adaptér) nese param/klíč + důvod."""

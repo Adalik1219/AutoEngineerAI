@@ -2,7 +2,7 @@
 
 **Větev:** `feat/m2-m3-geometry`
 **Výchozí SHA (ověřen):** `557ee39cdfe4cd558dd4a1194c81adff6a2968fa`
-**Finální SHA:** HEAD větve po integračním commitu (`git rev-parse HEAD`; číslo v předání v chatu)
+**Finální SHA:** doplní remediation commit po pushi a CI
 **Prostředí testů:** Win 11, Python 3.14.9, local (obě RBXM kopie) · CI = Linux, 1 RBXM kopie (`.gitignore`)
 **Datum:** 20. 11. 2026 · **Koordinátor:** Hermes Agent
 **PR #2:** OPEN, nemergováno · **`main`:** `5b673155e3b7b78ed2cf826814e57be433349681f`, nezměněn
@@ -17,8 +17,8 @@ Výchozí `557ee39` (CI-ověřeno) → finální = nový integrační commit té
 | `src/Chassis/mapping_engine.py` | Agent B | `map_config` + `build_search_space` volají jako první krok `_gate_records`; BLOCKED = nulová změna |
 | `docs/MAPPING.md` | Agent B | nový §10 o bráně |
 | `tests/test_m5_cycle_check.py` | Agent C | 32 → 39 testů (Testy A–G přes skutečný entry point) |
-| `tests/test_f4_mapping.py` | Agent C | 1 řádek test-data fix (`engine.turbo.count`) + 4 BLOCKED přepisy |
-| `tests/test_f4_integration.py` | Agent C | 4 BLOCKED přepisy (chain, brakes, peak_torque, horsepower) |
+| `tests/test_f4_mapping.py` | Agent C + remediation QA | původní gate migrace; remediation měří konkrétní odmítnutí `engine.compression_ratio` na DAG sémanticky vybraném fixture (bez cyklické závislosti) |
+| `tests/test_f4_integration.py` | Agent C + remediation QA | původní BLOCKED přepisy; remediation Sim skutečně spouští nad patched config a final-drive měření provádí po mapování na DAG katalogu (cykly původního katalogu jsou odstraněny jen ve fixture) |
 | `tests/test_f43_reconciliation.py` | Agent C | 1 BLOCKED přepis |
 | `tests/test_f4_optimizer_effect.py` | Agent C | 2 přepisy (prostor BLOCKED; kampaň na explicitním prostoru) |
 
@@ -45,6 +45,14 @@ Výchozí `557ee39` (CI-ověřeno) → finální = nový integrační commit té
 | F fyzika | DONE (VERIFIED) | 103 parametrů: 59 podporováno / 8 adaptér / 31 PENDING / 12+2+1 UNSUPPORTED; kritické mezery (křivka, final drive, RWD+dif, StAxisOffset, magnitude) |
 | G QA | CONDITIONAL PASS (VERIFIED) | vlastní běhy sedí; 3 vakuové testy označeny; podmínky pro další vlnu stanoveny |
 
+## 4a. Remediation QA po auditu
+
+- Výchozí a ověřený tip `feat/m2-m3-geometry`: `bc6f955976ece9901d2209a819d021e8841049b0`, přímý potomek baseline `557ee39cdfe4cd558dd4a1194c81adff6a2968fa`; čistý checkout před změnami. Repositář i větev potvrzeny přes GitHub.
+- Tři slabé testy opraveny: `test_sim_runs_on_patched_config_not_original` nyní spouští `run_scenario` a ověřuje výstupní metriky; `test_f4_11_neoverene_hodnoty_se_neaplikuji` izoluje UNKNOWN/PENDING guard na skutečném `compression_ratio` záznamu a kontroluje důvod odmítnutí, nikoli jen počet; `test_final_drive_change_moves_metric_or_unsupported` kontroluje mapování konkrétního klíče a Sim odezvu přes acyklický fixture, zatímco unsupported větev má explicitní assertion.
+- Čtyři soubory mimo původní implementační rozsah: dva testovací soubory kvůli výše uvedeným vakuím; `AGENT-E-MUSTANG-DATA-AUDIT.md` kvůli stažení nepodložených závěrů N-F1/N-F3 a vyjasnění jmenovatele; `AGENT-F-MUSTANG-PHYSICS-MAPPING.md` kvůli opravě stavu `compression_ratio` na UNKNOWN. Produkční kód ani katalog se tím nemění.
+- 60 logických ID vs 78 tabulkových řádků: řádky slučují více ID; deklarovaný rozpad 7/3/22/28 nelze z agregované tabulky reprodukovat. Původní domněnky o extra ESTIMATED a `weight_box_size` byly staženy. Bez normalizovaného seznamu ID nelze tvrdit přesný rozpad stavů.
+- RBXM evidence: binární `JeepTemplate.rbxm` je v git tree na tomto SHA (230421 B; blob `417b9f43833c8c8b059212bb84e02b163dc09d08`). Původní test fixture očekávaný SHA-256 `dc8747e016e1402cce579e289881426ef8f78fbb4b10855acd7c070c2c1fefdf` odpovídá lokálnímu binárnímu souboru. Historický before/after hash pro tuto vlnu ale nebyl zaznamenán; lze doložit jen aktuální verzovaný blob/hash a absenci změny RBXM v commitu vlny.
+
 ## 5. Stav S-02 (CODE-VERIFIED)
 Detektor čte katalog (138/101) · integrita ≠ cyklus · OBA entry pointy za bránou · cyklus→BLOCKED · integrita→BLOCKED jiným důvodem · nulová změna při BLOCKED (deepcopy + bytes) · acyklický katalog prochází · reálný katalog neprojde (Test G) · testy na produkčním entry pointu (39).
 
@@ -67,14 +75,14 @@ Tabulka Mustang→A-Chassis (103) · manuál-first · žádné ladění na UNKNO
 | Příkaz | Běhy | PASS | FAIL | ERROR | PENDING |
 |---|---|---|---|---|---|
 | `python -m unittest tests.test_m5_cycle_check` | 39 | 39 | 0 | 0 | 0 |
-| `python tests/run_all.py` | 443 | 439 | 0 | 0 | 4 (původní: studio_mereni, schema_conformance, baseline_exists, variant_store) |
+| `python tests/run_all.py` | 443 | 438 | 0 | 0 | 5 (`test_studio_mereni_pending_ne_pass`, `test_limit_single_distinct_model`, `test_schema_conformance_pending`, `test_baseline_exists`, `test_variant_store_append_only`) |
 | `python tools/validate_contracts.py` | 24 | 24 | 0 | 0 | — |
 
 ## 12. CI run ID
-Výchozí: `44713829758` (success). Finální commit: zkontroluj `gh run list --limit 3` po pushi; očekáváno 443/438/0/0/5 v CI (rozdíl +1 PENDING = `test_limit_single_distinct_model`, prostředí). CI důkaz patří přesnému SHA.
+Výchozí: `44713829758` (success). Remediation commit a jeho CI run doplnit po pushi; CI důkaz musí být pro přesný finální SHA. V čistém lokálním checkoutu `python tests/run_all.py`: 443/438/0/0/5; pět PENDING vypsáno výše.
 
-## 13. Nezávislá QA — CONDITIONAL PASS (G, VERIFIED)
-Vlastní čísla sedí (39/39, 443/439/0/0/4, 24/24) · sporné body: (a) PRO C · (b) žádný FAIL neskryt, Sim-krytí reálnými běhy · (c) 3 vakuua označena · (d) CI PENDING = prostředí. Podmínky: vakuua zůstanou označená; s acyklickým katalogem návrat per-klíč odmítnutí + plný chain se Sim/evaluate + mapovací noha final_drive; příští G-report znovu ověří.
+## 13. Nezávislá QA — remediation
+Původní G CONDITIONAL PASS platil pro `bc6f955…` a jeho vlastní lokální strom; jeho tři slabé testy jsou nyní opraveny. Nové vlastní běhy na remediation pracovním stromě: cycle/gate + F4 mapping/integration + F4.3 73/73 (1 skip); plná sada 443/438/0/0/5; kontrakty 24/24. Následuje CI na novém SHA.
 
 ## 14. Zbývající blokátory (BLOCKED)
 Katalogové cykly (12 SCC, návrhy A §7) · M2 VERIFIED (Mustang RBXM + Studio) · M3 CLOSED · PROPOSED schémata · T-M5-01 min/max · `StAxisOffset` + `magnitude` bugy · final drive 3.15/3.55 · motorová křivka · RWD+dif PENDING.

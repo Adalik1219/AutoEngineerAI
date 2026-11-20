@@ -253,14 +253,78 @@ class TestF4Integration(unittest.TestCase):
         if "transmission.final_drive" not in SIM_SUPPORTED_CONFIG_PATHS:
             mapped, _, _ = _map_and_apply(demo_config())
             keys = {c["tune_key"] for c in mapped["tune_changes"]}
-            print("RAW final_drive: UNSUPPORTED backendem "
-                  "(mimo SIM_SUPPORTED_CONFIG_PATHS); "
-                  "FinalDrive v tune_changes: %s" % ("FinalDrive" in keys))
+            self.assertNotIn("FinalDrive", keys)
+            self.assertEqual(mapped["rejected"], [])
             return
-        cfg_lo = demo_config(final_drive=2.6)
-        cfg_hi = demo_config(final_drive=3.2)
-        _, _, patched_lo = _map_and_apply(cfg_lo)
-        _, _, patched_hi = _map_and_apply(cfg_hi)
+        # Reálný katalog je cyklický a gate jej správně zastaví. Izolujeme
+        # downstream mapování na explicitním acyklickém fixture katalogu.
+        with open(CATALOG, encoding="utf-8") as fh:
+            records = json.load(fh)
+        records = records.get("parameters", records) if isinstance(records, dict) else records
+        # Odeber pouze hrany uvnitř SCC (12 komponent podle auditu), ostatní
+        # integritu a metadata zachovej; vytvoří se DAG pro downstream test.
+        cycle_edges = {
+            ("auto_shift_type", "shift_down_time"),
+            ("auto_shift_type", "shift_up_time"),
+            ("shift_down_time", "auto_shift_type"),
+            ("shift_up_time", "auto_shift_type"),
+            ("auto_up_thresh", "peak_rpm"), ("peak_rpm", "auto_up_thresh"),
+            ("clutch_engage", "flywheel"), ("flywheel", "clutch_engage"),
+            ("flywheel", "rev_accel"), ("rev_accel", "flywheel"),
+            ("sus_length_f", "pre_compress_f"),
+            ("sus_length_f", "extension_lim_f"),
+            ("sus_length_f", "compress_lim_f"),
+            ("pre_compress_f", "sus_length_f"),
+            ("extension_lim_f", "sus_length_f"),
+            ("compress_lim_f", "sus_length_f"),
+            ("sus_length_r", "pre_compress_r"),
+            ("sus_length_r", "extension_lim_r"),
+            ("sus_length_r", "compress_lim_r"),
+            ("pre_compress_r", "sus_length_r"),
+            ("extension_lim_r", "sus_length_r"),
+            ("compress_lim_r", "sus_length_r"),
+            ("compression_ratio", "turbo_boost"),
+            ("turbo_boost", "compression_ratio"),
+            ("final_drive", "gear_ratios"), ("gear_ratios", "final_drive"),
+            ("gear_ratios", "final_drive_mult"),
+            ("final_drive_mult", "final_drive"),
+            ("lock_to_lock", "steer_ratio"), ("steer_ratio", "lock_to_lock"),
+            ("pbrake_bias", "pbrake_force"), ("pbrake_force", "pbrake_bias"),
+            ("redline_rpm", "rev_bounce"), ("rev_bounce", "redline_rpm"),
+            ("tcs_gradient", "tcs_threshold_sps"),
+            ("tcs_threshold_sps", "tcs_gradient"),
+            ("tcs_limit_pct", "tcs_threshold_sps"),
+            ("tcs_threshold_sps", "tcs_limit_pct"),
+            ("weight_box_size", "weight_lb"), ("weight_lb", "weight_box_size"),
+        }
+        for rec in records:
+            rec["depends_on"] = [
+                dep for dep in rec.get("depends_on", [])
+                if (rec["id"], dep if isinstance(dep, str) else dep.get("param"))
+                not in cycle_edges]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False,
+                                         encoding="utf-8") as fh:
+            json.dump(records, fh)
+            fixture = fh.name
+        self.addCleanup(lambda: os.path.exists(fixture) and os.unlink(fixture))
+
+        def mapped_config(fd):
+            cfg = demo_config(final_drive=fd)
+            cfg["parameters"] = {"transmission": {"final_drive": fd}}
+            mapped = map_config(cfg, fixture, "achassis-v1")
+            self.assertEqual(mapped["rejected"], [])
+            self.assertEqual(len(mapped["tune_changes"]), 1)
+            self.assertEqual(mapped["tune_changes"][0]["tune_key"], "FinalDrive")
+            self.assertEqual(mapped["tune_changes"][0]["value"], fd)
+            cfg["parameters"] = dict(cfg["parameters"])
+            cfg["parameters"]["tune"] = {"FinalDrive": fd}
+            report = AChassisV1Adapter().apply_config(
+                os.path.join(ROOT, "assets", "chassis-original"), cfg)
+            self.assertEqual(report.rejected, [])
+            return report.to_dict()["patched_config"]
+
+        patched_lo = mapped_config(2.6)
+        patched_hi = mapped_config(3.2)
         sim_lo = sim_input_from_patched(patched_lo)
         sim_hi = sim_input_from_patched(patched_hi)
         self.assertEqual(sim_lo["parameters"]["transmission"]
@@ -319,24 +383,27 @@ class TestF4Integration(unittest.TestCase):
               % mapped["rejected"][0]["reason"])
 
     def test_sim_runs_on_patched_config_not_original(self):
-        """Konfigurace předaná Simu == patched_config (ne původní)."""
+        """Sim se skutečně spustí nad patchnutým tune, ne původním vstupem."""
         config = demo_config(bias_front=0.70)
         self.assertNotIn("tune", config["parameters"])
-        _, _, patched = _map_and_apply(config)
+        cfg_tune = copy.deepcopy(config)
+        cfg_tune["parameters"] = dict(cfg_tune["parameters"])
+        cfg_tune["parameters"]["tune"] = {"BrakeBias": 0.70}
+        patched = AChassisV1Adapter().apply_config(
+            os.path.join(ROOT, "assets", "chassis-original"), cfg_tune
+        ).to_dict()["patched_config"]
         sim_cfg = sim_input_from_patched(patched)
-        tmp = tempfile.mkdtemp(prefix="f4_patched_proof_")
-        cfg_path = os.path.join(tmp, "config.json")
-        with open(cfg_path, "w", encoding="utf-8") as fh:
-            json.dump(sim_cfg, fh)
-        with open(cfg_path, encoding="utf-8") as fh:
-            sim_file = json.load(fh)
-        self.assertEqual(sim_file, sim_cfg)
-        self.assertEqual(sim_file["parameters"]["tune"],
+        self.assertEqual(sim_cfg["parameters"]["tune"],
                          patched["parameters"]["tune"])
-        self.assertNotEqual(sim_file, config,
+        self.assertNotEqual(sim_cfg, config,
                             "Sim nesmi dostat puvodni vstup bez patch")
+        _, manifest, metrics, written = _run_sim_return_metrics(
+            sim_cfg, SCENARIO, SEED)
+        self.assertEqual(written, sim_cfg)
+        self.assertEqual(manifest["config_id"], config["config_id"])
+        self.assertIsNotNone(metrics["t_0_100_s"])
         print("RAW patched==sim_input: %s; sim!=original: %s"
-              % (sim_file == sim_cfg, sim_file != config))
+              % (written == sim_cfg, written != config))
 
     def test_original_rbxm_sha256_untouched(self):
         """READ-ONLY zásada: verzovaná fixture beze změny (jen sha kontrola).
