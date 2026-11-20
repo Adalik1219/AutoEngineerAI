@@ -26,6 +26,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.Chassis.catalog import loader as catalog_loader  # noqa: E402
+from src.Chassis.mapping.gate import gate_catalog_file  # noqa: E402
 from src.Chassis.mapping_engine import (  # noqa: E402
     build_search_space,
     map_config,
@@ -84,7 +85,7 @@ def _sample_catalog() -> list[dict]:
             ["straight_accel"], conflicts=["qa_fd"]),
         rec("qa_bias", "Bias", "MUTABLE_TUNE", "brakes.bias_front",
             "0-1", 0, 1, ["straight_brake_100_0"]),
-        rec("qa_tcount", "Turbochargers", "MUTABLE_TUNE",
+        rec("engine.turbo.count", "Turbochargers", "MUTABLE_TUNE",
             "engine.turbo.count", "ks", 0, 4, ["straight_accel"]),
         rec("qa_tboost", "T_Boost", "MUTABLE_TUNE", "engine.turbo.boost",
             "-", 0, 20, ["straight_accel"],
@@ -297,14 +298,21 @@ class TestF4Mapping(unittest.TestCase):
         self.assertEqual(len(res_kw["rejected"]), 1)
 
     def test_f4_05_peak_torque_nema_tune_protejsek(self):
-        """F4-05/nesoulad: engine.peak_torque_nm není v reálném katalogu
-        (žádný Tune skalár momentu) – map_config ho odmítne jako neznámý."""
+        """F4-05/nesoulad + brána S-02: reálný katalog je cyklický, takže
+        mapování je BLOCKED (*catalog*, CYCLE + svědek) dřív, než by došlo
+        na odmítnutí neznámého klíče. Per-klíč důvod je bránou zastíněn
+        (správně — cyklus blokuje celé mapování, ne jeden klíč)."""
         real = _write_catalog(catalog_loader.load(CATALOG_PATH))
-        res = map_config(_cfg({"engine": {"peak_torque_nm": 205.0}}),
-                         real, "achassis-v1")
+        cfg = _cfg({"engine": {"peak_torque_nm": 205.0}})
+        snapshot = copy.deepcopy(cfg)
+        res = map_config(cfg, real, "achassis-v1")
+        self.assertEqual(cfg, snapshot)  # nulová změna vstupu
         self.assertEqual(res["tune_changes"], [])
         self.assertEqual(len(res["rejected"]), 1)
-        self.assertIn("peak_torque_nm", res["rejected"][0]["param"])
+        self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", res["rejected"][0]["reason"])
+        self.assertIn("tcs_threshold_sps -> tcs_gradient -> tcs_threshold_sps",
+                      res["rejected"][0]["reason"])
         with open(os.path.join(ROOT, "src", "Optimizer", "search_space.py"),
                   encoding="utf-8") as fh:
             self.assertIn("engine.peak_torque_nm", fh.read())
@@ -384,15 +392,22 @@ class TestF4Mapping(unittest.TestCase):
 
 class TestF4Integration(unittest.TestCase):
     def test_retezec_map_config_az_adapter(self):
-        """F4: VehicleConfig → map_config → parameters.tune → apply_config
-        je konzistentní; neznámý klíč adaptér odmítne se záznamem."""
+        """F4 + brána S-02: map_config nad reálným (cyklickým) katalogem je
+        BLOCKED (*catalog*, CYCLE + svědek, vstup nezměněn); adaptér se pak
+        ověřuje samostatně s explicitním tune (neodvozeným z blokovaného
+        mapování): živý klíč projde, neznámý je odmítnut se záznamem."""
         from src.Chassis.adapters.achassis_v1 import AChassisV1Adapter
         real = _write_catalog(catalog_loader.load(CATALOG_PATH))
-        mapped = map_config(_cfg({"engine": {"horsepower": 210}}),
-                            real, "achassis-v1")
-        self.assertEqual(len(mapped["tune_changes"]), 1)
-        tune = {c["tune_key"]: c["value"]
-                for c in mapped["tune_changes"]}
+        cfg = _cfg({"engine": {"horsepower": 210}})
+        snapshot = copy.deepcopy(cfg)
+        mapped = map_config(cfg, real, "achassis-v1")
+        self.assertEqual(cfg, snapshot)  # nulová změna vstupu
+        self.assertEqual(mapped["tune_changes"], [])
+        self.assertEqual(len(mapped["rejected"]), 1)
+        self.assertEqual(mapped["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", mapped["rejected"][0]["reason"])
+        # Adaptér (bránou nezastíněná cesta): explicitní tune dict.
+        tune = {"Horsepower": 210}
         adapter = AChassisV1Adapter()
         params = adapter.list_parameters()
         self.assertEqual(len(params), 138)
@@ -418,27 +433,21 @@ class TestF4Integration(unittest.TestCase):
         self.assertEqual(report.touched_model_files, [])
 
     def test_f4_08_realny_katalog_prostor_sedm_klicu(self):
-        """F4-08: reálný katalog (PASS) + caps adaptéru → 7 klíčů, všechny
-        MUTABLE_TUNE + PASS + min<max + used_in. Statusy sjednotil Agent B
-        (VERIFIED_STATUSES PASS|verified); kanonický je PASS. Zpětná
-        kompatibilita 'verified' (vzorek) se ověřuje také."""
+        """F4-08 + brána S-02: reálný katalog je cyklický → build_search_space
+        vrací [] (BLOCKED, CYCLE + svědek tcs_threshold_sps->tcs_gradient),
+        nikoli 7 klíčů. Per-záznamové kontroly (MUTABLE_TUNE/PASS/rozsah)
+        se ověřují na bránou průchozím vzorku (tail testu)."""
         adapter = _load_adapter()
         caps = [p.tune_key for p in adapter if p.tune_key]
+        verdict = gate_catalog_file(CATALOG_PATH)
+        self.assertEqual(verdict.status, "BLOCKED")
+        self.assertFalse(verdict.allowed)
+        self.assertIn("CYCLE", verdict.reason)
+        self.assertEqual(verdict.witness_path,
+                         ["tcs_threshold_sps", "tcs_gradient",
+                          "tcs_threshold_sps"])
         space = build_search_space(CATALOG_PATH, caps)
-        self.assertEqual(space, ["BrakeBias", "CurveMult", "FDiffCoast",
-                                 "FDiffPower", "FDiffPreload", "TorqueVector",
-                                 "WeightDist"])
-        records = {r["id"]: r for r in catalog_loader.load(CATALOG_PATH)}
-        for tune_key in space:
-            rec = next(r for r in records.values()
-                       if r["tune_key"] == tune_key)
-            self.assertEqual(rec["category"], "MUTABLE_TUNE", tune_key)
-            self.assertEqual(rec["verification_status"], "PASS", tune_key)
-            self.assertLess(rec["min"], rec["max"], tune_key)
-            self.assertTrue(rec["used_in"], tune_key)
-        # mapovatelné, ale bez ověřeného rozsahu → mimo prostor:
-        self.assertNotIn("FinalDrive", space)
-        self.assertNotIn("Horsepower", space)
+        self.assertEqual(space, [])
         # zpětná kompatibilita staršího tvaru 'verified' (vzorek C2):
         sample_path = _write_catalog(_sample_catalog())
         self.assertIn("Horsepower",
@@ -461,9 +470,12 @@ class TestF4Integration(unittest.TestCase):
         self.assertIn("BrakeBias", caps)
         # Sim čte moment/výkon, ne Tune 'Horsepower' (draft D §1.4).
         self.assertNotIn("Horsepower", caps)
+        # Brána S-02: reálný katalog je cyklický → prostor je BLOCKED/[].
+        verdict = gate_catalog_file(CATALOG_PATH)
+        self.assertEqual(verdict.status, "BLOCKED")
+        self.assertIn("CYCLE", verdict.reason)
         tune_space = build_search_space(CATALOG_PATH, caps)
-        self.assertTrue(tune_space)  # neprázdný (dnes ['BrakeBias', ...])
-        self.assertIn("BrakeBias", tune_space)
+        self.assertEqual(tune_space, [])
         cfg = {"schema_version": "1.0.0", "config_id": "cfg_qa_f409",
                "vehicle_profile_id": "vp_qa", "chassis_adapter": "achassis-v1",
                "parameters": {"transmission": {"final_drive": 3.0},
@@ -471,10 +483,9 @@ class TestF4Integration(unittest.TestCase):
                                          "horsepower": 210},
                               "brakes": {"bias_front": 0.62}}}
         space = search_space(cfg, None)
-        self.assertTrue(space)  # neprázdný
-        names = [s["name"] for s in space]
-        self.assertIn("brakes.bias_front", names)
-        self.assertNotIn("engine.peak_torque_nm", names)
+        self.assertEqual(space, [])  # BLOCKED se propaguje i do Optimizeru
+        self.assertNotIn("engine.peak_torque_nm",
+                         [s["name"] for s in space])
         for s in space:
             self.assertLess(s["min"], s["max"])
 

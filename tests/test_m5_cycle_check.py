@@ -10,6 +10,7 @@ Pouzivaji se pouze synteticka data + skutecny katalog parameters.json
 (read-only). Zadna RBXM, zadna sit, zadne VERIFIED hodnoty.
 """
 
+import copy
 import json
 import os
 import sys
@@ -33,6 +34,14 @@ from src.Chassis.mapping.cycle_check import (
     check_known_tables,
     find_witness,
     has_cycle,
+)
+from src.Chassis.mapping.gate import (
+    gate_catalog_file,
+    gate_catalog_records,
+)
+from src.Chassis.mapping_engine import (
+    build_search_space,
+    map_config,
 )
 from src.Chassis.mapping.validate_catalog import (
     STATUS_BLOCKED,
@@ -342,6 +351,217 @@ class TestValidationIntegration(unittest.TestCase):
         self.assertIn("CYCLE", verdict.reason)
         graph = build_graph_from_catalog(CATALOG_PATH)
         assertValidWitness(self, graph, verdict.witness_path)
+
+
+class TestMappingEntryPointIntegration(unittest.TestCase):
+    """Integracni testy SKUTECNEHO mapovaciho entry pointu (Agent C, S-02).
+
+    Kryje oba verejne vstupy z B-reportu §1 (map_config, build_search_space)
+    pres spolecnou branu gate.py: Test A acyklicky OK; B 2-cyklus BLOCKED;
+    C prekryvny graf svedek hranu po hrane; D INTEGRITY (ne cyklus);
+    E neplatny katalog → NOT OK; F nulova zmena cile; G skutecny
+    parameters.json → BLOCKED + svedek (brana neobejitelna).
+    """
+
+    @staticmethod
+    def _mappable(rid, tune_key, config_path, vmin, vmax, depends=()):
+        """Plny mapovatelny zaznam (5 filtru build_search_space + zavislosti)."""
+        return {
+            "id": rid, "tune_key": tune_key, "category": "MUTABLE_TUNE",
+            "config_path": config_path, "value": vmax, "unit": "u",
+            "value_type": "number", "min": vmin, "max": vmax,
+            "default": vmax, "function": "test", "physical_effect": "test",
+            "used_in": ["straight_accel"], "depends_on": list(depends),
+            "conflicts": [], "change_method": "tune", "source": "test",
+            "confidence": 1.0, "verification_status": "verified",
+        }
+
+    @staticmethod
+    def _cfg(parameters):
+        return {"schema_version": "1.0.0", "config_id": "cfg_s02",
+                "vehicle_profile_id": "vp_s02",
+                "chassis_adapter": "achassis-v1",
+                "parameters": parameters}
+
+    def _write_tmp_catalog(self, records):
+        tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".json",
+                                          delete=False, encoding="utf-8")
+        self.addCleanup(
+            lambda: os.path.exists(tmp.name) and os.unlink(tmp.name))
+        with tmp:
+            json.dump(records, tmp)
+        return tmp.name
+
+    def _acyclic_records(self):
+        return [self._mappable("m_a", "T_A", "engine.a", 0, 10, ["m_b"]),
+                self._mappable("m_b", "T_B", "engine.b", 0, 5)]
+
+    def test_a_acyclic_catalog_ok_and_mapping(self):
+        """Test A: acyklicky katalog → OK + mapovani probehne, hodnoty sedi."""
+        records = self._acyclic_records()
+        verdict = gate_catalog_records(records)
+        self.assertEqual(verdict.status, STATUS_OK)
+        self.assertTrue(verdict.allowed)
+        self.assertEqual(verdict.witness_path, [])
+        path = self._write_tmp_catalog(records)
+        self.assertEqual(gate_catalog_file(path), verdict)
+        res = map_config(self._cfg({"engine": {"a": 4, "b": 2}}),
+                         path, "achassis-v1")
+        self.assertEqual(res["rejected"], [])
+        by_tune = {c["tune_key"]: c for c in res["tune_changes"]}
+        self.assertEqual(set(by_tune), {"T_A", "T_B"})
+        self.assertEqual(by_tune["T_A"]["value"], 4)
+        self.assertEqual(by_tune["T_A"]["unit"], "u")
+        self.assertEqual(by_tune["T_B"]["value"], 2)
+        self.assertEqual(build_search_space(path, ["T_A", "T_B", "X"]),
+                         ["T_A", "T_B"])
+
+    def test_b_two_cycle_blocked_with_witness(self):
+        """Test B: cyklicky katalog (2-cyklus) → BLOCKED + svedek, nic se
+        nemapuje."""
+        records = [self._mappable("m_a", "T_A", "engine.a", 0, 10, ["m_b"]),
+                   self._mappable("m_b", "T_B", "engine.b", 0, 5, ["m_a"])]
+        verdict = gate_catalog_records(records)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertFalse(verdict.allowed)
+        self.assertIn("CYCLE", verdict.reason)
+        graph = build_graph_from_records(records)
+        assertValidWitness(self, graph, verdict.witness_path)
+        self.assertIn(" -> ".join(verdict.witness_path), verdict.reason)
+        path = self._write_tmp_catalog(records)
+        cfg = self._cfg({"engine": {"a": 4, "b": 2}})
+        snapshot = copy.deepcopy(cfg)
+        res = map_config(cfg, path, "achassis-v1")
+        self.assertEqual(cfg, snapshot)
+        self.assertEqual(res["tune_changes"], [])
+        self.assertEqual(len(res["rejected"]), 1)
+        self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", res["rejected"][0]["reason"])
+        self.assertEqual(build_search_space(path, ["T_A", "T_B"]), [])
+
+    def test_c_overlap_witness_edge_by_edge(self):
+        """Test C: prekryv a->[b,c], b->[c], c->[a] → BLOCKED, svedek overen
+        hranu po hrane pres souborovy entry point."""
+        records = [self._mappable("m_a", "T_A", "engine.a", 0, 10,
+                                  ["m_b", "m_c"]),
+                   self._mappable("m_b", "T_B", "engine.b", 0, 5, ["m_c"]),
+                   self._mappable("m_c", "T_C", "engine.c", 0, 7, ["m_a"])]
+        path = self._write_tmp_catalog(records)
+        verdict = gate_catalog_file(path)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertIn("CYCLE", verdict.reason)
+        graph = build_graph_from_catalog(path)
+        assertValidWitness(self, graph, verdict.witness_path)
+        res = map_config(self._cfg({"engine": {"a": 1}}), path, "achassis-v1")
+        self.assertEqual(res["tune_changes"], [])
+        self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+
+    def test_d_unknown_id_is_integrity_not_cycle(self):
+        """Test D: hrana na neexistujici id → BLOCKED INTEGRITY (NE cyklus)."""
+        records = [self._mappable("m_a", "T_A", "engine.a", 0, 10, ["ghost"]),
+                   self._mappable("m_b", "T_B", "engine.b", 0, 5)]
+        verdict = gate_catalog_records(records)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertFalse(verdict.allowed)
+        self.assertIn("INTEGRITY", verdict.reason)
+        self.assertNotIn("CYCLE", verdict.reason)
+        self.assertEqual(verdict.integrity_errors, [("m_a", "ghost")])
+        self.assertEqual(verdict.witness_path, [])
+        path = self._write_tmp_catalog(records)
+        res = map_config(self._cfg({"engine": {"a": 1}}), path, "achassis-v1")
+        self.assertEqual(res["tune_changes"], [])
+        self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+        self.assertIn("INTEGRITY", res["rejected"][0]["reason"])
+        self.assertEqual(build_search_space(path, ["T_A", "T_B"]), [])
+
+    def test_e_invalid_catalog_never_ok(self):
+        """Test E: neplatny katalog (chybejici id / spatny typ / duplicitni
+        id / ne-JSON / chybejici soubor) → vzdy BLOCKED/INVALID, nikdy OK,
+        zadna vyjimka nepropadne ven."""
+        bad_cases = [
+            [{"depends_on": []}],  # chybejici id
+            [{"id": "m_a", "depends_on": "m_b"}],  # spatny typ (str misto list)
+            [{"id": "m_a", "depends_on": []},  # duplicitni id
+             {"id": "m_a", "depends_on": []}],
+        ]
+        for records in bad_cases:
+            verdict = gate_catalog_records(records)
+            self.assertEqual(verdict.status, STATUS_BLOCKED, records)
+            self.assertFalse(verdict.allowed)
+            self.assertIn("INVALID", verdict.reason)
+            path = self._write_tmp_catalog(records)
+            res = map_config(self._cfg({"engine": {"a": 1}}), path,
+                             "achassis-v1")
+            self.assertEqual(res["tune_changes"], [])
+            self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+            self.assertIn("INVALID", res["rejected"][0]["reason"])
+            self.assertEqual(build_search_space(path, ["T_A"]), [])
+        d = tempfile.mkdtemp()
+        non_json = os.path.join(d, "bad.json")
+        with open(non_json, "w", encoding="utf-8") as fh:
+            fh.write("neni json {{{")
+        for path in (non_json, os.path.join(d, "chybi.json")):
+            verdict = gate_catalog_file(path)  # nesmi vyhodit
+            self.assertEqual(verdict.status, STATUS_BLOCKED, path)
+            self.assertIn("INVALID", verdict.reason)
+            res = map_config(self._cfg({"engine": {"a": 1}}), path,
+                             "achassis-v1")
+            self.assertEqual(res["tune_changes"], [])
+            self.assertIn("INVALID", res["rejected"][0]["reason"])
+            self.assertEqual(build_search_space(path, ["T_A"]), [])
+
+    def test_f_zero_target_change_when_blocked(self):
+        """Test F: pri BLOCKED nulova zmena cile — vstup deepcopy-shodny,
+        soubor katalogu byte-shodny, 2 behy deterministicky shodne."""
+        records = [self._mappable("m_a", "T_A", "engine.a", 0, 10, ["m_b"]),
+                   self._mappable("m_b", "T_B", "engine.b", 0, 5, ["m_a"])]
+        path = self._write_tmp_catalog(records)
+        with open(path, "rb") as fh:
+            before_bytes = fh.read()
+        cfg = self._cfg({"engine": {"a": 4, "b": 2}})
+        snapshot = copy.deepcopy(cfg)
+        first = map_config(cfg, path, "achassis-v1")
+        second = map_config(cfg, path, "achassis-v1")
+        self.assertEqual(cfg, snapshot)
+        self.assertEqual(first, second)
+        self.assertEqual(first["tune_changes"], [])
+        with open(path, "rb") as fh:
+            self.assertEqual(fh.read(), before_bytes)
+        self.assertEqual(build_search_space(path, ["T_A", "T_B"]), [])
+        self.assertEqual(build_search_space(path, ["T_A", "T_B"]), [])
+
+    def test_g_real_catalog_blocked_unbypassable(self):
+        """Test G: skutecny parameters.json → BLOCKED + platny svedek;
+        brana neobejitelna: OBA entry pointy vraceji blokovano prazdno."""
+        verdict = gate_catalog_file(CATALOG_PATH)
+        self.assertEqual(verdict.status, STATUS_BLOCKED)
+        self.assertFalse(verdict.allowed)
+        self.assertIn("CYCLE", verdict.reason)
+        self.assertEqual(
+            verdict.reason,
+            "CYCLE: katalog obsahuje cyklus depends_on "
+            "(tcs_threshold_sps -> tcs_gradient -> tcs_threshold_sps)")
+        self.assertEqual(verdict.witness_path,
+                         ["tcs_threshold_sps", "tcs_gradient",
+                          "tcs_threshold_sps"])
+        self.assertEqual(verdict.integrity_errors, [])
+        graph = build_graph_from_catalog(CATALOG_PATH)
+        assertValidWitness(self, graph, verdict.witness_path)
+        # Determinismus brany: 2 behy = stejny verdikt.
+        self.assertEqual(gate_catalog_file(CATALOG_PATH), verdict)
+        # Entry point 1: map_config — blokovano, vstup nezmenen.
+        cfg = self._cfg({"engine": {"horsepower": 210},
+                         "brakes": {"bias_front": 0.62}})
+        snapshot = copy.deepcopy(cfg)
+        res = map_config(cfg, CATALOG_PATH, "achassis-v1")
+        self.assertEqual(cfg, snapshot)
+        self.assertEqual(res["tune_changes"], [])
+        self.assertEqual(len(res["rejected"]), 1)
+        self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+        self.assertIn(verdict.reason, res["rejected"][0]["reason"])
+        # Entry point 2: build_search_space — blokovano, prazdny prostor.
+        self.assertEqual(
+            build_search_space(CATALOG_PATH, ["BrakeBias", "WeightDist"]), [])
 
 
 if __name__ == "__main__":

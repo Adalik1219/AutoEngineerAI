@@ -1,82 +1,98 @@
-# Agent G — Nezávislá QA vlny (feat/m2-m3-geometry)
+# Agent G — nezávislá adversariální QA vlny S-02 (20. 11. 2026)
 
-- HEAD SHA: `90a1f63c184ef4dddbc134de47bc627adc8dce46` (= výchozí SHA; změny vlny jsou **necommitnuté** v pracovním stromě)
-- Datum: 2026-11-20. Runner: `unittest`. RBXM pouze čteno. M3 nedotčena.
+**Rozsah:** pouze čtení + vlastní běhy. Zapsán jediný soubor: tento report. Nic jiného neměněno.
+**Větev:** `feat/m2-m3-geometry` · **výchozí SHA:** `557ee39cdfe4cd558dd4a1194c81adff6a2968fa`
+**Finální stav:** HEAD beze změny (`557ee39…`), změny vlny necommitnuty v pracovním stromě.
+**Prostředí vlastních běhů:** Windows 11, Python 3.14.9, `unittest` (repo-runner `tests/run_all.py`).
 
 ## 1. Git status / diff
 
-- `git status --porcelain`: `M src/Chassis/mapping/cycle_check.py`, `M tests/test_m2_scale_calibration.py`,
-  `M tests/test_m5_cycle_check.py`, `?? contracts/proposed/` (4 soubory), `?? src/Chassis/mapping/validate_catalog.py`,
-  `?? reports/NIGHT-WORK/` (6 nových: COORDINATOR-BASELINE, AGENT-A-S02-CATALOG-AUDIT, AGENT-C-S02-TESTS,
-  AGENT-D-CHASSIS-MUSTANG-STRATEGY, AGENT-E-M2-CONTRACTS, AGENT-F-MUSTANG-PHYSICS-MAPPING).
-- Trackované změny = přesně 3 soubory výše. `test_m2_scale_calibration.py` diff = **právě 2 řádky**
-  (`calibrate(vehicle_id="JeepTemplate", …)` ve 2 testech, label-fix P-D1). ✅
-- Existující `.md` / `docs/` / `FINAL-NIGHT-REPORT.md`: **0 úprav** (diff prázdný). ✅
-- `tools/validate_contracts.py` + všech 9 existujících `contracts/*.schema.json`: **nedotčeny** (diff prázdný). ✅
+- `git status --porcelain` (vs `557ee39`): `M docs/MAPPING.md` (§10),
+  `M src/Chassis/mapping_engine.py` (`map_config`+`build_search_space` přes `_gate_records`),
+  `M tests/test_f43_reconciliation.py`, `M tests/test_f4_integration.py` (−182/+~70),
+  `M tests/test_f4_mapping.py`, `M tests/test_f4_optimizer_effect.py`,
+  `M tests/test_m5_cycle_check.py` (+220); `?? src/Chassis/mapping/gate.py` (nová brána S-02)
+  + `?? reports/NIGHT-WORK/` (A/B/C/D/E/F + WAVE-BASELINE).
+- Trackované změny = přesně 7 souborů výše. `main` (`5b67315`, merge PR#1) beze změny,
+  větev vlny do něj nemergována. **PR#2** nedotčeno (base `main`, head `feat/m1-m2-foundation`;
+  žádné nové commity, G nic nepushoval).
+- RBXM: `*.rbxm` git-ignorováno; obě pracovní kopie existují lokálně (230421 B),
+  `git status` bez RBXM změn — READ-ONLY dodrženo.
+- Simulator: žádná změna mimo výše uvedených 7 souborů + `gate.py` (tj. `src/Sim*`,
+  `src/Optimizer`, adaptéry, `testgame/`, `assets/`, `contracts/` beze změny).
 
-## 2. S-02 — nezávislé ověření (vlastní běh, ne opsání testů)
+## 2. S-02 brána — vlastní ověření (ne převzato)
 
-- `parameters.json` načten nezávisle: **138 parametrů / 101 hran** (`depends_on`). Tvrzení 138/101 ✅.
-- `has_cycle` nad katalogem (vlastní běh): `has_cycle=True`,
-  svědek `['tcs_threshold_sps', 'tcs_gradient', 'tcs_threshold_sps']`, `checked_nodes=138`, `checked_edges=101`,
-  `integrity_errors=[]`.
-- Svědek ověřen hranu po hraně proti `parameters.json`:
-  `tcs_threshold_sps -> ['tcs_gradient', 'tcs_limit_pct']` ✅ a `tcs_gradient -> ['tcs_threshold_sps']` ✅.
-  Uzavřená cesta, každá dvojice je skutečná hrana. Jde o **reálný 2-cyklus v katalogu**, ne artefakt.
+- Katalog: **138 záznamů / 101 `depends_on` položek** (smíšené `str` + `{'param':…}` dict).
+- `gate_catalog_file` nad reálným katalogem (vlastní běh): `BLOCKED`, `allowed=False`,
+  reason `CYCLE: … (tcs_threshold_sps -> tcs_gradient -> tcs_threshold_sps)`,
+  witness `['tcs_threshold_sps', 'tcs_gradient', 'tcs_threshold_sps']`.
+- Svědek ověřen hranu po hraně proti surovému grafu:
+  `tcs_threshold_sps -> tcs_gradient` EXISTUJE ✅, `tcs_gradient -> tcs_threshold_sps` EXISTUJE ✅.
+  Uzavřená cesta délky 3. Jde o **reálný 2-cyklus v katalogu**, ne artefakt.
 - Povinný graf `a->[b,c], b->[c], c->[a]` (vlastní běh): `has_cycle=True`, svědek `['a','b','c','a']`,
-  edge-check všech dvojic ✅, uzavřenost ✅.
-- Negativní sondy (vlastní běh přes `validate_records_for_mapping`):
-  cyklický katalog → `BLOCKED` (`CYCLE: …`), ne `PASS` ✅;
-  neexistující id → `BLOCKED` (`INTEGRITY: … (x -> ghost)`) — **jiný důvod než cyklus**, ne `PASS` ✅.
-- Reálný katalog → `validate_catalog_for_mapping` = `BLOCKED` (`CYCLE: … tcs_threshold_sps -> tcs_gradient -> …`),
-  `allowed=False`. Mapování je tedy **správně zablokováno**, dokud se cyklus nerozbije (test
-  `test_real_catalog_blocked_for_mapping` to assertuje — konzistentní, ne rozpor).
-- Poznámka k „12 cyklům" (audit §5): detektor garantuje jen **existenci + 1 svědka**; číslovku 12 jsem
-  nezávisle nepřepočítával (vyžadovalo by enumeraci, kterou API záměrně nedělá — viz §3). Alespoň 1 cyklus
-  je prokázán výše; auditní seznam párů k rozbití (§5, ř. 206) je manuální analýza, ne výstup detektoru.
+  brána `BLOCKED/CYCLE (a -> b -> c -> a)`. ✅
+- Negativní sondy (vlastní běh přes bránu): cyklický katalog → `BLOCKED/CYCLE`, ne `PASS` ✅;
+  neexistující id → `BLOCKED/INTEGRITY (a -> ghost)` — **jiný důvod než cyklus**, ne `PASS` ✅;
+  cyklus+integrita → `INTEGRITY` (integrita první — deterministické pořadí); DAG → `OK`. ✅
+- Nulová změna při BLOCKED (vlastní sonda): `map_config` nad reálným katalogem — vstupní dict
+  bitově nezměněn, `tune_changes=[]`, jediné `rejected=[{param:*catalog*, reason:CYCLE…}]` + warning.
+  Chybějící soubor → `INVALID`, rovněž atomické. ✅
+- Oba entry pointy: `map_config` → `*catalog*/CYCLE BLOCKED`; `build_search_space` → `[]`
+  (důvod přes `gate_catalog_file`). Brána je v obou cestách PRVNÍ, před jakoukoli prací;
+  dict-dep `{'param':…}` se normalizují na hrany (`_normalize_for_detector`) — žádná cesta bez
+  brány, žádná paralelní validace. ✅
+- Poznámka k „12 SCC" (audit A): detektor garantuje existenci + 1 svědka, ne enumeraci;
+  alespoň 1 cyklus je prokázán výše; SCC-seznam je manuální analýza, ne výstup detektoru.
 
-## 3. Žádný slib nad možnosti detektoru
+## 3. Sporné body — rozhodnutí
 
-- `find_cycles` je `DEPRECATED` s `DeprecationWarning` a docstringem, který výslovně říká, že původní
-  naivní DFS s BLACK-řezem některé cykly nenajde a jméno klamalo. ✅
-- `has_cycle`/`find_witness` docstringy: „existence, NE výpočet všech cyklů", „každý dosažitelný cyklus
-  je nalezen (existence…)". Žádný Johnson, žádný slib enumerace v nedeprecovaném API. ✅
-- `grep` po „všechny cykly / all cycles" v `mapping/*.py`: pouze DEPRECATED kontext. ✅
-- `KNOWN_DEPENDS` označen jako pomocná reference (~1 % hran), konflikty vyloučeny z grafu se zdůvodněním
-  (symetrická relace → falešné 2-cykly). ✅
+- **(a) `qa depends_on qa_tcount` → `engine.turbo.count`: ROZHODNUTO PRO C.** Doslovný návrh B
+  byl chybný (fiktivní id `qa_*`); přejmenování na reálné `engine.turbo.count` je správně.
+  Turbo-sémantika ověřena vlastní sondou na acyklickém vzorku: `count=0,boost=10` → boost
+  REJECTED (`hodnota 0 < požadované minimum 1`), count mapován; `count=2` → oba mapovány.
+  **count=0 → boost BLOCKED drží.**
+- **(b) Diff `test_f4_integration` −182: ROZHODNUTO — žádný FAIL neskryt.** `run_all` má
+  0 FAIL/0 ERROR (§5). Sim-krytí není ztraceno: `test_brakes_bias_change_moves_stopping_distance`
+  běží **reálný Sim 2×** (bias 0.62/0.70 → Δ brzdné dráhy > 1 m, vlastní běh prošel);
+  `test_final_drive…` běží reálný Sim 2× (Δ t_0_100 > 0.05 s). Odstraněna je jen Sim/evaluate část
+  `test_chain…`, která za BLOCKED bránou nemá vstup — a je to v testu explicitně zdůvodněno, ne tiše.
+- **(c) 2 vakuové testy: POTVRZENO, oba procházejí vakuově.** `test_sim_runs_on_patched_config_not_original`
+  (prázdný tune → rovnosti triviální; Sim se vůbec nespouští, jen file round-trip) a
+  `test_f4_11_neoverene_hodnoty_se_neaplikuji` (`len(rejected)==1` platí shodou pro `*catalog*`,
+  ne pro tvrzené per-klíč odmítnutí). Agent C je sám eviduje — přiznané, ne skryté.
+  **Navíc třetí částečné vakuum, C nepřiznal:** `test_final_drive_change_moves_metric_or_unsupported` —
+  mapovací noha je za BLOCKED bránou mrtvá (hodnota proteče passthrough, ne mappingem); Sim-noha
+  (citlivost metriky) je pravá. Test prochází a nic neskrývá, ale jméno slibuje víc, než dokazuje.
+- **(d) CI vs local `test_limit_single_distinct_model`: PŘÍČINA = PROSTŘEDÍ, ne kód.** Test SKIPpuje
+  při `<2` kopiích; `*.rbxm` je v `.gitignore`, takže CI checkout druhou kopii nemá (PENDING),
+  lokálně existují obě (PASS). Obě čísla pravdivá ve svém prostředí. Doporučení: do CI reportu psát
+  počet nalezených kopií, ať je SKIP auditovatelný.
 
-## 4. Strategie (Agent D) — Jeep vs. Mustang
+## 4. Strategie — Jeep vs. Mustang, A-Chassis, UNKNOWN, PROPOSED
 
-- `grep JeepTemplate` ve `src/Inspection/scale_calibration.py` a celém `src/Chassis/`: **0 výskytů**. ✅
-- `calibrate` default `vehicle_id = "ford-mustang-gt-2024-eu-manual-standard"`; `src` neobsahuje žádné
-  Jeep hodnoty jako Mustang hodnoty. ✅
-- Výskyty `JeepTemplate` v testech = fixture RBXM (`testgame/.../JeepTemplate.rbxm`),
-  `TestJeepTemplateGroundTruth` (Jeep měření → správně BLOCKED proti mustangovským referencím, rozptyl 7.44 %),
-  a default `vehicle_id` v **testovacím** helperu `_ok_report` (wheel_detect) — žádný aktivní kalibrační
-  odkaz Jeep→Mustang v produkčním kódu. ✅
-- A-Chassis základ: `src/Chassis/adapters/`, `base.py` beze změn (nejsou ve statusu); strategie drží
-  `achassis-v1` a audit jako zdroj. Chybějící Mustang údaj = UNKNOWN (strategie ř. 15, 95, 121–122, 134–135;
-  `calibrate` vrací UNKNOWN při absenci měření). ✅
+- Jeep ≠ Mustang: F-report §8 — „Jeep data: v použitých zdrojích se nevyskytují; nic z nich není
+  převzato"; Mustang cíle z `vehicle-data/references/ford-mustang-gt-2024-…json`. V kódu žádný
+  Jeep→Mustang přenos hodnot nenalezen. ✅
+- A-Chassis nedotčeno: adaptéry (`src/Chassis/adapters/`) beze změny; měněn jen `mapping_engine.py`
+  + nové `gate.py`. ✅
+- Chybějící = UNKNOWN: katalog `PASS 95 / PENDING 43`, kategorie `MUTABLE_TUNE 82 / UNKNOWN 37 / …`;
+  engine default `UNKNOWN` (`mapping_engine.py:61,96,113`). ✅
+- Schémata PROPOSED: `contracts/proposed/*.schema.json` — popis „PROPOSED — čeká na schválení",
+  `git status` beze změny. ✅ (E-report je audit, nic neschválil.)
 
-## 5. M2 schémata
+## 5. Vlastní běhy (nepřebrána žádná čísla)
 
-- `contracts/proposed/`: 4 nové návrhy (`geometry_diff`, `geometry_target`, `inspection_report`,
-  `scale_calibration`), každý obsahuje PROPOSED marker (2 výskyty/soubor). ✅
-- Nevstupují do validační cesty: `validate_contracts.py` + existující schémata nedotčeny (§1). ✅
-
-## 6. Vlastní čísla (nezávislé běhy, HEAD 90a1f63 + necommitnuté změny vlny)
-
-| Sada | Výsledek |
+| Běh | Výsledek |
 |---|---|
-| `python -m unittest tests.test_m5_cycle_check` | **32/32 OK** |
-| `python -m unittest tests.test_m2_scale_calibration` | **31/31 OK** |
-| `python tests/run_all.py` | **běhů 436, PASS 432, FAIL 0, ERROR 0, PENDING 4** (4 PENDING deklarované, nejde o PASS) |
-| `python tools/validate_contracts.py` | **24 kontrol, 0 chyb** |
+| `python -m unittest tests.test_m5_cycle_check` | **39/39 OK** |
+| `python tests/run_all.py` (plná sada) | **běhů 443 / PASS 439 / FAIL 0 / ERROR 0 / PENDING 4** (Studio-měření, schema-conformance, baseline-exists, variant-store-append-only) |
+| `python tools/validate_contracts.py` | **24 kontrol / 0 chyb** |
+| `python -m unittest tests.test_module_contracts` | 45 běhů OK (1 skip) |
 
-Všechna tvrzená čísla (32/32, 436/432/0/0/4, 24/24) **souhlasí** s vlastními běhy.
+Shoda s tvrzenými čísly (443/439/0/0/4, S-02 39/39, kontrakty 24/24) — **ověřena nezávislým během.**
 
-## Verdikt: PASS
+## 6. Verdikt: CONDITIONAL PASS
 
-Se stopou: reálný katalog je dnes pro mapování **BLOCKED** (prokázaný 2-cyklus `tcs_*`) — to je správné
-chování brány, ne vada vlny. Odblokování = rozbití cyklů dle auditu §5 (koordinace s M3, M3 zůstává ZAVŘENÁ).
-Žádná odchylka od tvrzení vlny nenalezena; D-`.md` úpravy 0; M2 label-fix přesně 2 řádky.
+Brána je správná, atomická, krytá z obou entry pointů; svědek platí hrana po hraně; turbo-sémantika drží; strategie držena; čísla sedí; 0 FAIL; Sim-krytí zachováno reálnými běhy. Vakuové testy procházejí, ale nedokazují svá jména.
+**Podmínky:** (1) 2 přiznaná vakuua + mapovací noha `test_final_drive…` zůstávají explicitně označena jako oslabená bránou; (2) s acyklickým katalogem (náprava Agent A) se vrátí per-klíč odmítnutí, plný `test_chain…` včetně Sim/evaluate, a mapovací noha final_drive — do té doby žádný z těchto testů nesmí být citován jako důkaz per-klíč chování; (3) G-report příští vlny ověří (1)–(2) znovu vlastním během.

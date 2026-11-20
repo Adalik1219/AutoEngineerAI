@@ -27,6 +27,7 @@ if ROOT not in sys.path:
 
 from src.Chassis.adapters.achassis_v1 import AChassisV1Adapter  # noqa: E402
 from src.Chassis.catalog import loader as catalog_loader  # noqa: E402
+from src.Chassis.mapping.gate import gate_catalog_file  # noqa: E402
 from src.Chassis.mapping_engine import map_config  # noqa: E402
 
 CATALOG_PATH = os.path.join(
@@ -86,15 +87,21 @@ class TestF43Reconciliation(unittest.TestCase):
               % len(set(tune_keys)))
 
     def test_map_config_odmitne_neexistujici_klic_s_duvodem(self):
-        """F4.3: map_config neexistující klíč odmítne s důvodem (ne tiše)."""
+        """F4.3 + brána S-02: reálný katalog je cyklický, takže map_config
+        je BLOCKED na bráně (*catalog*, CYCLE + svědek) dřív, než by došlo
+        na per-klíč odmítnutí. Anti-no-op tvar zůstává: prázdné tune_changes
+        + právě jeden rejected se *catalog* param a CYCLE důvodem."""
+        verdict = gate_catalog_file(CATALOG_PATH)
+        self.assertEqual(verdict.status, "BLOCKED")
+        self.assertIn("CYCLE", verdict.reason)
         res = map_config(_cfg({"engine": {"warp_drive": 1}}),
                          CATALOG_PATH, "achassis-v1")
         # Anti-no-op: odmítnutí musí být VIDITELNÉ v rejected, ne jen
         # prázdné tune_changes.
         self.assertEqual(res["tune_changes"], [])
         self.assertEqual(len(res["rejected"]), 1)
-        self.assertEqual(res["rejected"][0]["param"], "engine.warp_drive")
-        self.assertTrue(res["rejected"][0]["reason"])
+        self.assertEqual(res["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", res["rejected"][0]["reason"])
         print("RAW F4.3 map_config rejected: %s"
               % res["rejected"][0]["reason"])
 

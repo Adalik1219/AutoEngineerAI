@@ -24,6 +24,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.Chassis.mapping_engine import build_search_space  # noqa: E402
+from src.Chassis.mapping.gate import gate_catalog_file  # noqa: E402
 from src.Optimizer.backend import HARD_LIMITS_DEFAULT  # noqa: E402
 from src.Optimizer.fallback_sim import synth_brake_rows, write_csv  # noqa: E402
 from src.Optimizer.optimizer import (  # noqa: E402
@@ -108,9 +109,20 @@ def _stub_evaluator_factory():
     return evaluate_config
 
 
+def _explicit_bias_space(config):
+    """Jeden knob brakes.bias_front ve tvaru search_space() (meze PARAM_DEFS).
+
+    Brána S-02: dynamický prostor nad reálným katalogem je BLOCKED/[],
+    takže mechanika kampaně (historie/rollback/determinismus) se ověřuje
+    na explicitním prostoru — dynamická cesta je kryta BLOCKED testy."""
+    return [{"name": "brakes.bias_front", "min": 0.55, "max": 0.70,
+             "step": 0.01, "unit": "-",
+             "current": get_param(config, "brakes.bias_front")}]
+
+
 def _run_stub_campaign(out_dir):
     initial = _cfg(BAD_BIAS, "cfg_f4c_base")
-    space = search_space(initial)
+    space = _explicit_bias_space(initial)
     store = VariantStore(out_dir)
     outcome = run_optimization(
         initial, space, _stub_evaluator_factory(), store, [],
@@ -121,23 +133,26 @@ def _run_stub_campaign(out_dir):
 
 class TestF4OptimizerEffect(unittest.TestCase):
     def test_prostor_bias_uvnitr_peak_torque_venku(self):
-        """Dynamicky prostor: bias se ladi, peak_torque_neni v prostoru."""
+        """Brána S-02: dynamický prostor nad reálným (cyklickým) katalogem je
+        BLOCKED/[] (CYCLE + svědek) — bias i peak_torque vypadnou spolu s
+        celým prostorem. backend_caps (bránou nekryté čtení) zůstávají."""
         caps = backend_caps(CATALOG)
         self.assertTrue(caps)
         self.assertIn("BrakeBias", caps)
         self.assertNotIn("Horsepower", caps)  # Sim meri moment/vykon
+        verdict = gate_catalog_file(CATALOG)
+        self.assertEqual(verdict.status, "BLOCKED")
+        self.assertIn("CYCLE", verdict.reason)
         tune_space = build_search_space(CATALOG, caps)
-        self.assertIn("BrakeBias", tune_space)
+        self.assertEqual(tune_space, [])
         space = search_space(_cfg(BAD_BIAS))
-        self.assertTrue(space)
-        names = [e["name"] for e in space]
-        self.assertIn("brakes.bias_front", names)
-        self.assertNotIn("engine.peak_torque_nm", names)
+        self.assertEqual(space, [])
+        self.assertNotIn("engine.peak_torque_nm",
+                         [e["name"] for e in space])
         for entry in space:
             self.assertLess(entry["min"], entry["max"])
             self.assertGreater(entry["step"], 0)
-        print("RAW prostor: caps=%s tune=%s optimizer=%s"
-              % (caps, tune_space, names))
+        print("RAW prostor: BLOCKED %s" % verdict.reason)
 
     def test_bias_meni_metriku_opakovane_behy(self):
         """before/after (0.70 vs 0.62): parovane lepsi ve vsech 5 bezich."""
@@ -217,11 +232,11 @@ class TestF4OptimizerEffect(unittest.TestCase):
                          outcome2["best_stats"]["S"])
 
         # Safety filtr nad zivymi kroky/jednotkami porad strazi meze.
-        entry = {e["name"]: e for e in search_space(_cfg(BAD_BIAS))}
+        entry = {e["name"]: e for e in _explicit_bias_space(_cfg(BAD_BIAS))}
         bad_diff = {"brakes.bias_front": {"from": BAD_BIAS,
                                           "to": entry["brakes.bias_front"]["max"] + 1.0}}
         ok, reason = safety_filter(bad_diff, _cfg(BAD_BIAS),
-                                   search_space(_cfg(BAD_BIAS)))
+                                   _explicit_bias_space(_cfg(BAD_BIAS)))
         self.assertFalse(ok)
         self.assertTrue(reason)
 

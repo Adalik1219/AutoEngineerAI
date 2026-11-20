@@ -177,3 +177,20 @@ a `future-custom-v1` (reserved).
 `used_in` ponese scénáře měření; `backend_caps` ponese Tune klíče.
 **Neznámé (mimo rozsah B):** skutečný `parameters.json`; wiring do Optimizeru
 (Agent D); Studio-verifikace float hodnot (audit §1, §19).
+
+---
+
+## 10. Brána S-02 (Agent B, 2026-11-20)
+
+Oba veřejné vstupy (`map_config`, `build_search_space`) procházejí před
+jakoukoli prací společnou bránou `src/Chassis/mapping/gate.py`
+(`gate_catalog_records` / `gate_catalog_file`) v pořadí načtení katalogu →
+struktura → integrita → detekce cyklu → OK/BLOCKED (nad neměnným API
+`cycle_check` + `validate_catalog`; slovníkové závislosti `{'param': …}`
+se normalizují na hrany, viz `_normalize_for_detector`).
+Při BLOCKED: `map_config` vrací `tune_changes: []` + `rejected:
+[{param: *catalog*, reason: CYCLE/INTEGRITY/INVALID…}]` (vstup nezměněn);
+`build_search_space` vrací `[]` (důvod přes `gate_catalog_file`).
+Skutečný `parameters.json` je cyklický (12 SCC, svědek
+`tcs_threshold_sps -> tcs_gradient -> tcs_threshold_sps`) → reálné
+mapování vrací BLOCKED; to je správně, brána se neobchází.

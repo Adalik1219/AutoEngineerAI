@@ -35,6 +35,15 @@ v `tune_changes`, nebo v `rejected` s důvodem):
 ověřené (verification_status == "verified") + měnitelné
 (MUTABLE_TUNE) + s rozsahem (číselné min < max) + se vztahem k měření
 (neprázdné used_in) + podporované backendem (tune_key ∈ backend_caps).
+
+Brána S-02 (src/Chassis/mapping/gate.py): oba veřejné vstupy
+(`map_config`, `build_search_space`) procházejí před jakoukoli prací
+společnou bránou v pořadí načtení katalogu → struktura → integrita →
+detekce cyklu → OK/BLOCKED. Při BLOCKED: nulová změna (žádné
+`tune_changes`, prázdný prostor, vstupní dict nezměněn), přesný důvod
+(CYCLE + svědek / INTEGRITY + hrana / INVALID), žádný částečný stav.
+Skutečný katalog `parameters.json` je cyklický → reálné mapování vrací
+BLOCKED (správně, není důvod bránu obcházet).
 """
 
 from __future__ import annotations
@@ -149,6 +158,49 @@ def _adapter_warning(adapter_id: str) -> str | None:
 
 
 # --------------------------------------------------------------------------
+# Brána S-02 (společná bezpečná funkce pro všechny veřejné vstupy)
+# --------------------------------------------------------------------------
+
+def _gate_records(records: list[dict]):
+    """Verdikt brány nad načtenými záznamy (OK/BLOCKED); lazy import.
+
+    Jediné místo, kudy prochází `map_config` i `build_search_space` —
+    žádná paralelní validace, žádná cesta bez brány. Stejný try/except
+    vzor jako `_adapter_warning` (funguje i při přímém spuštění skriptu).
+    """
+    try:
+        from src.Chassis.mapping.gate import gate_catalog_records
+    except ImportError:
+        # Přímé spuštění jako skriptu: repo root na sys.path.
+        root = os.path.dirname(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        try:
+            from src.Chassis.mapping.gate import gate_catalog_records  # noqa: E402
+        except Exception as exc:
+            raise RuntimeError(
+                "bránu S-02 nelze načíst (%s); mapování bez brány se "
+                "nesmí provést" % (exc,))
+    return gate_catalog_records(records)
+
+
+def _blocked_mapping(reason: str) -> dict:
+    """Atomický BLOCKED výsledek `map_config`: nulová změna, přesný důvod."""
+    return {
+        "tune_changes": [],
+        "rejected": [{
+            "param": "*catalog*",
+            "reason": "mapování zablokováno bránou S-02: %s" % (reason,),
+        }],
+        "warnings": [
+            "brána S-02 BLOCKED: %s – nic nezapsáno, vstup nezměněn"
+            % (reason,),
+        ],
+    }
+
+
+# --------------------------------------------------------------------------
 # Pomocné funkce
 # --------------------------------------------------------------------------
 
@@ -221,11 +273,21 @@ def map_config(vehicle_config: dict, catalog_path: str, adapter_id: str) -> dict
     tune_changes: list[dict] = []
     rejected: list[dict] = []
 
+    # Brána S-02 první: načtení → struktura → integrita → cyklus → OK/BLOCKED.
+    try:
+        raw_records = _load_catalog(catalog_path)
+    except (OSError, ValueError) as exc:
+        return _blocked_mapping(
+            "INVALID: katalog %r nelze načíst (%s)" % (catalog_path, exc))
+    verdict = _gate_records(raw_records)
+    if not verdict.allowed:
+        return _blocked_mapping(verdict.reason)
+
     note = _adapter_warning(adapter_id)
     if note:
         warnings.append(note)
 
-    entries = [_norm_entry(r) for r in _load_catalog(catalog_path)]
+    entries = [_norm_entry(r) for r in raw_records]
     by_path = {e["config_path"]: e for e in entries if e.get("config_path")}
 
     params = vehicle_config.get("parameters") if isinstance(vehicle_config, dict) else None
@@ -324,13 +386,26 @@ def map_config(vehicle_config: dict, catalog_path: str, adapter_id: str) -> dict
 
 
 def build_search_space(catalog_path: str, backend_caps: list[str]) -> list[str]:
-    """Vrátí seřazené Tune klíče pro optimalizaci (5 filtrů, viz modulový docstring)."""
+    """Vrátí seřazené Tune klíče pro optimalizaci (5 filtrů, viz modulový docstring).
+
+    Brána S-02: při BLOCKED katalogu vrací [] (nulová změna, žádný
+    částečný prostor); přesný důvod (CYCLE + svědek / INTEGRITY + hrana /
+    INVALID) zjistí volající přes `gate_catalog_file(catalog_path)`
+    v `src/Chassis/mapping/gate.py` (společná bezpečná funkce).
+    """
     if not isinstance(backend_caps, list):
         raise TypeError("backend_caps musí být list[str], mám %r"
                         % type(backend_caps).__name__)
+    # Brána S-02 první: načtení → struktura → integrita → cyklus → OK/BLOCKED.
+    try:
+        raw_records = _load_catalog(catalog_path)
+    except (OSError, ValueError):
+        return []
+    if not _gate_records(raw_records).allowed:
+        return []
     caps = set(backend_caps)
     space: list[str] = []
-    for raw in _load_catalog(catalog_path):
+    for raw in raw_records:
         e = _norm_entry(raw)
         if e.get("category") != "MUTABLE_TUNE":
             continue

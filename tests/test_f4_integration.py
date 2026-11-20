@@ -29,6 +29,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.Chassis.adapters.achassis_v1 import AChassisV1Adapter  # noqa: E402
+from src.Chassis.mapping.gate import gate_catalog_file  # noqa: E402
 from src.Chassis.mapping_engine import build_search_space, map_config  # noqa: E402
 from src.Optimizer.search_space import (  # noqa: E402
     SIM_SUPPORTED_CONFIG_PATHS,
@@ -147,112 +148,73 @@ def _map_and_apply(config):
 
 class TestF4Integration(unittest.TestCase):
     def test_chain_vehicleconfig_to_testresult(self):
+        """Brána S-02: řetězec se zastaví na bráně — reálný katalog je
+        cyklický (tcs_threshold_sps <-> tcs_gradient), takže build_search_space
+        je [], Optimizer prostor je [] a map_config je BLOCKED (*catalog*,
+        CYCLE + svědek, vstup nezměněn). Sim/evaluate kroky se za BLOCKED
+        bránou neprovádějí (žádný částečný stav)."""
         config = demo_config()
         orig_snapshot = copy.deepcopy(config)
 
-        # (1) Prostor na realnem katalogu je NEPRÁZDNÝ.
+        # (1) Brána nad reálným katalogem: BLOCKED/CYCLE + platný svědek.
+        verdict = gate_catalog_file(CATALOG)
+        self.assertEqual(verdict.status, "BLOCKED")
+        self.assertFalse(verdict.allowed)
+        self.assertIn("CYCLE", verdict.reason)
+        self.assertEqual(verdict.witness_path,
+                         ["tcs_threshold_sps", "tcs_gradient",
+                          "tcs_threshold_sps"])
+
+        # (2) Prostor na realnem katalogu je BLOCKED → prázdný.
         caps = backend_caps(CATALOG)
         tune_space = build_search_space(CATALOG, caps)
-        self.assertTrue(tune_space, "prostor na realnem katalogu je prazdny")
+        self.assertEqual(tune_space, [])
         space = search_space(config)
-        self.assertTrue(space, "Optimizer prostor je prazdny")
-        self.assertTrue(all(e["name"] != "engine.peak_torque_nm"
-                            for e in space),
-                        "peak_torque_nm nesmi byt optimalizovatelny")
+        self.assertEqual(space, [])
 
-        # (2) map_config: Tune-mapovatelne projde, peak_torque_nm odmítnut.
-        mapped, report, patched = _map_and_apply(config)
-        tune_keys = {c["tune_key"] for c in mapped["tune_changes"]}
-        self.assertIn("BrakeBias", tune_keys)
-        self.assertIn("FinalDrive", tune_keys)
-        rej = {r["param"]: r["reason"] for r in mapped["rejected"]}
-        self.assertIn("engine.peak_torque_nm", rej)
-        self.assertIn("engine.peak_power_kw", rej)
-        self.assertIn("nemapuje", rej["engine.peak_torque_nm"])
-
-        # (3) Adapter: Tune patch se aplikuje (wiring Agent D).
-        applied = {a["tune_key"] for a in report.applied}
-        self.assertIn("BrakeBias", applied)
-        self.assertEqual(patched["parameters"]["tune"]["BrakeBias"], 0.70)
-
-        # (4) Sim běží na patched_config (projekce tune -> Sim cesty),
-        #     NIKOLI na původním vstupu.
-        sim_cfg = sim_input_from_patched(patched)
-        self.assertEqual(sim_cfg["parameters"]["tune"]["BrakeBias"], 0.70)
-        self.assertEqual(sim_cfg["parameters"]["brakes"]["bias_front"], 0.70)
-        self.assertNotEqual(sim_cfg, orig_snapshot,
-                            "Sim-vstup musi nest aplikovany patch")
-        # (4) Sim run -> evaluate -> TestResult (striktne validni pole).
-        tmp = tempfile.mkdtemp(prefix="f4_integration_")
-        cfg_path = os.path.join(tmp, "config.json")
-        with open(cfg_path, "w", encoding="utf-8") as fh:
-            json.dump(sim_cfg, fh)
-        with open(cfg_path, encoding="utf-8") as fh:
-            sim_file = json.load(fh)
-        self.assertEqual(sim_file, sim_cfg,
-                         "Sim cte prave patched-odvozeny vstup")
-        self.assertEqual(
-            sim_file["parameters"]["brakes"]["bias_front"],
-            patched["parameters"]["tune"]["BrakeBias"])
-        out_dir = os.path.join(tmp, "sim")
-        csv_path, _, manifest = run_scenario(
-            cfg_path, SCENARIO, DEFAULT_DT, SEED, out_dir)
-        self.assertTrue(os.path.getsize(csv_path) > 0)
-        profile = {
-            "target_metrics": [
-                {"metric": "t_0_100_s", "target": 8.0, "tolerance": 2.0},
-                {"metric": "v_max_kmh", "target": 210.0, "tolerance": 10.0},
-            ],
-            "config_id": config["config_id"],
-            "scenario_id": SCENARIO,
-            "seed": SEED,
-            "mode": manifest["mode"],
-            "code_version": "f4-integration-test",
-        }
-        result = evaluate(csv_path, profile)
-        for key in ("result_id", "config_id", "scenario_id", "metrics",
-                    "score", "environment", "raw_telemetry_ref"):
-            self.assertIn(key, result)
-        self.assertEqual(result["config_id"], config["config_id"])
-        self.assertEqual(result["scenario_id"], SCENARIO)
-        self.assertIn("t_0_100_s", result["metrics"])
-        self.assertTrue(0.0 <= result["score"] <= 1.0)
-
-        # (5) RAW vystup (akceptace vyzaduje raw).
-        raw = {
-            "backend_caps": caps,
-            "tune_space": tune_space,
-            "optimizer_space": space,
-            "tune_changes": mapped["tune_changes"],
-            "rejected": mapped["rejected"],
-            "adapter_applied": report.applied,
-            "sim_input_bias": sim_cfg["parameters"]["brakes"]["bias_front"],
-            "sim_input_is_patched_not_original":
-                sim_cfg != orig_snapshot,
-            "sim_manifest": {"scenario_id": manifest["scenario_id"],
-                             "rows": manifest["rows"],
-                             "mode": manifest["mode"]},
-            "test_result": {
-                "result_id": result["result_id"],
-                "config_id": result["config_id"],
-                "scenario_id": result["scenario_id"],
-                "score": result["score"],
-                "metrics": {k: result["metrics"].get(k) for k in
-                            ("t_0_100_s", "v_max_kmh",
-                             "brake_distance_100_0_m")},
-            },
-        }
-        print("--- RAW F4 integrace ---")
-        print(json.dumps(raw, ensure_ascii=False, indent=2))
-        print("F4 INTEGRATION OK")
+        # (3) map_config: BLOCKED na bráně, nulová změna, přesný důvod.
+        mapped = map_config(config, CATALOG, "achassis-v1")
+        self.assertEqual(config, orig_snapshot)
+        self.assertEqual(mapped["tune_changes"], [])
+        self.assertEqual(len(mapped["rejected"]), 1)
+        self.assertEqual(mapped["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", mapped["rejected"][0]["reason"])
+        self.assertIn("tcs_threshold_sps -> tcs_gradient -> tcs_threshold_sps",
+                      mapped["rejected"][0]["reason"])
+        print("--- RAW F4 integrace (S-02 BLOCKED) ---")
+        print(json.dumps({"gate_reason": verdict.reason,
+                          "tune_space": tune_space,
+                          "rejected": mapped["rejected"]},
+                         ensure_ascii=False, indent=2))
+        print("F4 INTEGRATION OK (BLOCKED se svedkem)")
 
     def test_brakes_bias_change_moves_stopping_distance(self):
-        """bias 0.62 -> 0.70: Sim na patched_config, dráha se změní."""
+        """bias 0.62 -> 0.70: Sim na patched_config, dráha se změní.
+
+        Brána S-02: map_config nad reálným katalogem je BLOCKED (CYCLE),
+        proto se patched_config staví přímo z explicitního tune přes adaptér
+        (mapovací krok je kryt BLOCKED testy výše); Sim/metrika část je na
+        bráně nezávislá a zůstává beze změny."""
+        gated = map_config(demo_config(bias_front=0.62), CATALOG,
+                           "achassis-v1")
+        self.assertEqual(gated["tune_changes"], [])
+        self.assertEqual(gated["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", gated["rejected"][0]["reason"])
+
+        def _apply_bias(config, bias):
+            cfg_tune = copy.deepcopy(config)
+            cfg_tune["parameters"] = dict(cfg_tune["parameters"])
+            cfg_tune["parameters"]["tune"] = {"BrakeBias": bias}
+            adapter = AChassisV1Adapter()
+            report = adapter.apply_config(
+                os.path.join(ROOT, "assets", "chassis-original"), cfg_tune)
+            return report.to_dict()["patched_config"]
+
         base = demo_config(bias_front=0.62)
         changed = demo_config(bias_front=0.70)
 
-        _, _, patched_before = _map_and_apply(base)
-        _, _, patched_after = _map_and_apply(changed)
+        patched_before = _apply_bias(base, 0.62)
+        patched_after = _apply_bias(changed, 0.70)
         self.assertEqual(patched_before["parameters"]["tune"]["BrakeBias"], 0.62)
         self.assertEqual(patched_after["parameters"]["tune"]["BrakeBias"], 0.70)
 
@@ -319,7 +281,9 @@ class TestF4Integration(unittest.TestCase):
               % (t_lo, met_lo["v_max_kmh"], t_hi, met_hi["v_max_kmh"]))
 
     def test_peak_torque_path_explicitly_rejected(self):
-        """engine.peak_torque_nm nema Tune protejsek -> vzdy rejected s duvodem."""
+        """Brána S-02: engine.peak_torque_nm se za cyklickým katalogem vůbec
+        nedostane k per-klíč vyhodnocení — map_config je BLOCKED (*catalog*,
+        CYCLE + svědek). Odmítnutí nese důvod (anti-no-op tvar zachován)."""
         config = demo_config()
         config["parameters"] = {
             "engine": {"peak_torque_nm": 205.0},
@@ -330,29 +294,29 @@ class TestF4Integration(unittest.TestCase):
         self.assertEqual(len(mapped["rejected"]), 1)
         reason = mapped["rejected"][0]["reason"]
         self.assertEqual(mapped["rejected"][0]["param"],
-                         "engine.peak_torque_nm")
+                         "*catalog*")
+        self.assertIn("CYCLE", reason)
         self.assertTrue(reason, "odmitnuti musi nest duvod")
         print("RAW peak_torque_nm rejected: %s" % reason)
 
     def test_horsepower_kept_as_separate_tune_param(self):
-        """horsepower = samostatný Tune parametr, ne ztotožněn s torque."""
+        """Brána S-02: za cyklickým katalogem je map_config BLOCKED jako celek
+        (*catalog*, CYCLE + svědek) — ani horsepower se nemapuje (žádný
+        částečný stav, vstup nezměněn)."""
         config = demo_config()
         config["parameters"] = {
             "engine": {"peak_torque_nm": 205.0, "horsepower": 210},
             "geometry_overrides": None,
         }
+        snapshot = copy.deepcopy(config)
         mapped = map_config(config, CATALOG, "achassis-v1")
-        by_tune = {c["tune_key"]: c for c in mapped["tune_changes"]}
-        self.assertIn("Horsepower", by_tune)
-        self.assertEqual(by_tune["Horsepower"]["value"], 210)
-        rej = {r["param"] for r in mapped["rejected"]}
-        self.assertIn("engine.peak_torque_nm", rej)
-        # Hodnota Horsepower pochází z horsepower vstupu, ne z torque.
-        self.assertNotEqual(by_tune["Horsepower"]["value"],
-                            config["parameters"]["engine"]
-                            ["peak_torque_nm"])
-        print("RAW horsepower: tune %s; torque rejected"
-              % json.dumps(by_tune["Horsepower"], ensure_ascii=False))
+        self.assertEqual(config, snapshot)
+        self.assertEqual(mapped["tune_changes"], [])
+        self.assertEqual(len(mapped["rejected"]), 1)
+        self.assertEqual(mapped["rejected"][0]["param"], "*catalog*")
+        self.assertIn("CYCLE", mapped["rejected"][0]["reason"])
+        print("RAW horsepower: BLOCKED %s"
+              % mapped["rejected"][0]["reason"])
 
     def test_sim_runs_on_patched_config_not_original(self):
         """Konfigurace předaná Simu == patched_config (ne původní)."""
