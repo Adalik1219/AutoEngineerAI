@@ -158,6 +158,12 @@ convention for continuity.
 
 ## 5. ChatGPT Work Report Reference
 
+### 5.1 Recommended implementation path and justified adaptation
+
+When ChatGPT prepares an execution brief, it should provide the most concrete technically supported route it can establish from repository evidence: ordered steps, affected files/components, dependencies, assumptions, risks, verification procedures, and acceptance evidence. It must distinguish fixed constraints or explicitly binding procedures from recommended implementation choices, and label unknowns rather than inventing certainty.
+
+The coordinator or subagent must first validate and follow the recommended route. A route may be adapted or replaced only for a documented technical reason (for example, a failed feasibility check, a reproduced failure, a newly discovered dependency, or a material risk). The responsible role must investigate the cause, consider proportionate alternatives, compare feasibility and trade-offs, select the best in-scope option, and record the evidence and rationale. It must not change the approved goal, scope, acceptance criteria, protected boundaries, or permissions. Escalation is appropriate only when no safe feasible alternative remains or a decision exceeds delegated authority. This is an internal ChatGPT review standard; execution-team obligations are imposed through `AGENTS.md`, `docs/AGENT-RULES.md`, and the task brief.
+
 When ChatGPT requires a full task-level report, it uses all 17 sections below as its reference structure. ChatGPT may request this complete structure from the coordinator only when it explicitly says so in the task brief; otherwise it requests a proportionate summary.
 If a section does not apply, retain its heading and state why (for example, `Rollback:
 not applicable — read-only analysis, no files changed`). Use `docs/templates/WORK-REPORT-TEMPLATE.md`.
@@ -347,7 +353,8 @@ Any `NO` blocks `DONE`.
       `PENDING` and `NOT RUN` are not passes; no hidden `FAIL`; counts add up.
 - [ ] Every technical claim traces to an evidence entry with a retrievable origin;
       no verification level is misrepresented (section 6).
-- [ ] Uncertainties and assumptions are classified (`ESTIMATED`/`UNKNOWN`/`ASSUMPTION`)
+- [ ] The recommended implementation route was followed, or any deviation has a documented cause, evidence, alternatives considered, and rationale for the selected replacement.
+- [ ] Uncertainties and assumptions are classified (`ESTIMATED`/`UNKNOWN`/`ASSUMPTION`
       with required follow-up verification named.
 - [ ] Rollback is either exact (commands + affected files) or explicitly justified
       as not applicable.
