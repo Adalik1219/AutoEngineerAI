@@ -22,6 +22,11 @@ Měřitelné brány: `docs/ACCEPTANCE_CRITERIA.md`. Cílové auto: `docs/VEHICLE
 9. Nepřepisuj historii F4–F7 na tvrzení o kompletním úspěchu — je experimentální a validační.
 10. Před commitem: testy modulu + `python tests/run_all.py`; 4 PENDING testy se neobcházejí.
 
+## Master Work Protocol
+
+- Závazná hierarchie řízení, plánování, delegování a nezávislé kontroly: `MASTER-WORK-PROTOCOL.md`.
+- Na začátku každého pracovního bloku načti jeho aktuální úplný obsah a dodržuj jej společně s tímto souborem a `docs/AGENT-RULES.md`.
+
 ## Dokumentační standard
 
 - Závazný formát reportů, evidence, statusů a handoverů: `docs/standards/AGENT-DOCUMENTATION-STANDARD.md`.
