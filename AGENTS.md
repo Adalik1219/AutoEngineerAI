@@ -22,15 +22,11 @@ Měřitelné brány: `docs/ACCEPTANCE_CRITERIA.md`. Cílové auto: `docs/VEHICLE
 9. Nepřepisuj historii F4–F7 na tvrzení o kompletním úspěchu — je experimentální a validační.
 10. Před commitem: testy modulu + `python tests/run_all.py`; 4 PENDING testy se neobcházejí.
 
-## Master Work Protocol
+## Interní dokumenty ChatGPT
 
-- Závazná hierarchie řízení, plánování, delegování a nezávislé kontroly: `MASTER-WORK-PROTOCOL.md`.
-- Na začátku každého pracovního bloku načti jeho aktuální úplný obsah a dodržuj jej společně s tímto souborem a `docs/AGENT-RULES.md`.
-
-## Dokumentační standard
-
-- Závazný formát reportů, evidence, statusů a handoverů: `docs/standards/AGENT-DOCUMENTATION-STANDARD.md`.
-- Používej odpovídající šablonu z `docs/templates/`; šablona nerozšiřuje vlastněný rozsah agenta.
+- `MASTER-WORK-PROTOCOL.md` a `docs/standards/AGENT-DOCUMENTATION-STANDARD.md` jsou interní pracovní reference ChatGPT.
+- Nejsou automaticky závaznými instrukcemi pro projektového koordinátora, subagenty ani workery. Realizační tým dodržuje tento soubor, `docs/AGENT-RULES.md` a konkrétní zadání, která obdrží.
+- ChatGPT může z těchto interních dokumentů převést relevantní a konkrétní požadavky do jednotlivého zadání. Samotná existence interního dokumentu nerozšiřuje rozsah ani povinnosti realizačního týmu.
 
 ## Co agent smí / nesmí
 
