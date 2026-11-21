@@ -175,7 +175,7 @@ its own report only when the task brief explicitly assigns that output.
 7. **Technical Details** — solutions, algorithms, changed parameters (old → new
    with units), dependencies, interfaces, compatibility and limitations.
 8. **Tests and Validation** — per test: exact command, environment, actual result
-   (`PASS`/`FAIL`/`ERROR`/`SKIPPED`), `PASS`/`FAIL`/`ERROR`/`SKIPPED` counts,
+   (`PASS`/`FAIL`/`ERROR`/`SKIPPED`/`PENDING`/`NOT RUN`), counts for each result,
    log or CI-run reference; tests that could not run, and why.
 9. **Evidence and Sources** — numbered evidence (`E-01`, …): description, source /
    location (absolute path or URL), what claim it proves. Every technical value
@@ -340,7 +340,7 @@ Any `NO` blocks `DONE`.
 - [ ] Every changed file is listed with exact repo-relative path, correct change type,
       reason, and impact — and `git diff`/`git status` agrees with the table.
 - [ ] Test results are truthful: exact commands, environments, real outcomes;
-      no `PENDING` marked `PASS`; no hidden `FAIL`; counts add up.
+      `PENDING` and `NOT RUN` are not passes; no hidden `FAIL`; counts add up.
 - [ ] Every technical claim traces to an evidence entry with a retrievable origin;
       no verification level is misrepresented (section 6).
 - [ ] Uncertainties and assumptions are classified (`ESTIMATED`/`UNKNOWN`/`ASSUMPTION`)
@@ -448,6 +448,7 @@ of truth in this standard.
 - FAIL:
 - ERROR:
 - SKIPPED:
+- PENDING:
 - NOT RUN:
 
 ### Tests Not Executed
