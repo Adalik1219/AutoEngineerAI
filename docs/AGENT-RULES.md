@@ -9,4 +9,7 @@
 7. Navrhuj řešení s ohledem na celý AutoEngineerAI. Neprováděj změny mimo svůj rozsah.
 8. Narazíš-li na problém, popiš jej a navrhni řešení místo obcházení.
 9. Výstup = soubor, který vlastníš + závěrečné shrnutí: provedená práce, technické poznatky, ověřená fakta, nevyřešené otázky, rizika/omezení, doporučené další kroky.
-10. Subagent si může vytvořit vlastního subagenta pouze uvnitř svého rozsahu a svého vlastněného souboru.
+10. Projektový koordinátor může samostatně vybírat a řídit subagenty podle potřeb úkolu. Subagent může samostatně vybírat a řídit workery uvnitř svěřeného rozsahu. Koordinátor a subagent odpovídají za přesné zadání, rozdělení výstupů, kontrolu a integraci práce podřízených. Delegování nesmí rozšiřovat schválený cíl ani zasahovat do cizího vlastnictví; každý worker dostane jasně určený vlastní výstup. Běžná technická rozhodnutí se řeší autonomně, eskaluje se pouze skutečná překážka nebo rozhodnutí mimo pravomoci. Worker další práci nedeleguje, pokud to jeho zadání výslovně nepovoluje.
+
+
+Poznámka: MASTER-WORK-PROTOCOL.md a docs/standards/AGENT-DOCUMENTATION-STANDARD.md jsou interní pracovní standardy ChatGPT. Nejsou samy o sobě přímými instrukcemi pro realizační agenty; konkrétní požadavky jim ChatGPT předává v jednotlivých zadáních.
