@@ -4,7 +4,7 @@
 | Položka | Hodnota |
 |---|---|
 | Verze | 1.1 |
-| Stav | Návrh v dokumentačním PR; závaznost po schválení a začlenění |
+| Stav | Schválený návrh v dokumentačním PR; interní standard ChatGPT, nikoli pravidlo pro realizační tým |
 | Odpovědnost za používání | ChatGPT |
 | Technický partner a nezávislý kontrolor | ChatGPT |
 | Hlavní realizační koordinátor | Projektový koordinátor |
@@ -316,7 +316,7 @@ Po každém pracovním bloku ChatGPT předloží:
 
 # 15. Závaznost a změny protokolu
 
-Tento dokument je závazným pracovním standardem po schválení a začlenění do aktivní projektové větve podle pravidel projektu.
+Tento dokument je interním pracovním standardem ChatGPT. Jeho schválení ani začlenění do projektové větve nevytváří přímé povinnosti pro projektového koordinátora, subagenty ani workery. Jejich povinnosti vyplývají z AGENTS.md, docs/AGENT-RULES.md a konkrétních zadání, která obdrží.
 
 Každá významná změna protokolu musí být zdůvodněna, verzována a provedena v pracovní větvi. Nesmí být potichu oslabena hierarchie, kontrolní povinnosti, ochrana repozitáře ani schvalovací pravomoci uživatele.
 
