@@ -87,7 +87,7 @@ of the layout — create a directory only when it holds a real document.
 
 | Directory | Contains | Does NOT contain | New vs. update |
 |---|---|---|---|
-| `docs/standards/` | Binding project standards (this file). | Work reports, decisions, guides. | New file per standard; update the standard in place when it changes. |
+| `docs/standards/` | Internal ChatGPT standards and reference material (this file is ChatGPT-only). | Work reports, decisions, guides. | ChatGPT maintains the reference in place; it does not automatically impose its requirements on execution agents. |
 | `docs/architecture/` | Architecture, technical designs, architecture decision records. | Task work reports, test logs. | New file per decision/design; update when the design changes. |
 | `docs/guides/` | How-to guides and working procedures. | Binding rules, task results. | New file per guide; update in place. |
 | `docs/templates/` | Reusable blank templates for reports, QA, audits, decisions, and handovers. | Completed project records or binding policy. | Update the relevant template in place; do not copy templates as completed reports. |
@@ -156,7 +156,7 @@ belongs in the name whenever one exists.
 If the project already uses a concrete convention for a series, keep that series
 convention for continuity.
 
-## 5. Mandatory Work Report Template
+## 5. ChatGPT Work Report Reference
 
 When ChatGPT requires a full task-level report, it uses all 17 sections below as its reference structure. ChatGPT may request this complete structure from the coordinator only when it explicitly says so in the task brief; otherwise it requests a proportionate summary.
 If a section does not apply, retain its heading and state why (for example, `Rollback:
