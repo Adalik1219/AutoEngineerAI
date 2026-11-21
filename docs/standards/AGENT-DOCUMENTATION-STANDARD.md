@@ -30,17 +30,14 @@ mandatory part of task completion. A task without the required documentation is 
 ### 1.2 Scope
 
 This standard applies to every AI agent that analyzes, implements, tests, fixes,
-or audits the AutoEngineerAI project — including subagents operating inside a delegated scope.
+or audits AutoEngineerAI, including subagents. The standard applies to the quality and
+traceability of their outputs; it does **not** grant permission to create or modify files
+outside an agent's explicitly assigned output scope. `AGENTS.md`, `docs/AGENT-RULES.md`,
+and the task brief remain authoritative for ownership and write permissions.
 
-It covers:
-
-- work reports for finished, partial, blocked, or failed tasks,
-- audits and QA/validation reports,
-- architecture and design decisions,
-- test documentation.
-
-It does not cover commit messages or chat summaries; those are pointers to documentation,
-never a replacement for it.
+It covers work reports, technical audits, independent QA/validation, architecture decisions,
+and structured handovers. Commit messages and chat summaries are pointers, never substitutes
+for the required artifact.
 
 ### 1.3 Relation to existing rules
 
@@ -85,6 +82,7 @@ of the layout — create a directory only when it holds a real document.
 | `docs/standards/` | Binding project standards (this file). | Work reports, decisions, guides. | New file per standard; update the standard in place when it changes. |
 | `docs/architecture/` | Architecture, technical designs, architecture decision records. | Task work reports, test logs. | New file per decision/design; update when the design changes. |
 | `docs/guides/` | How-to guides and working procedures. | Binding rules, task results. | New file per guide; update in place. |
+| `docs/templates/` | Reusable blank templates for reports, QA, audits, decisions, and handovers. | Completed project records or binding policy. | Update the relevant template in place; do not copy templates as completed reports. |
 | `reports/` | Work reports and task results (including existing thematic subdirectories). | Standards, guides, architecture. | New file per task; update the same report when continuing the same task. |
 | `reports/audits/` | Technical audit results. | QA validation of a fix, routine task reports. | New file per audit; update when the audit is re-run on the same scope. |
 | `reports/qa/` | Independent QA, validation, and test reports. | The implementation report itself. | New file per validation round. |
@@ -100,15 +98,18 @@ of the layout — create a directory only when it holds a real document.
   existing thematic subdirectory) until `reports/audits/` and `reports/qa/` are
   created for a real document. Do not pre-create them empty.
 
-### 3.3 Related input files an agent must survey before writing
+### 3.3 Related input files to survey before writing
 
-| File | Purpose |
-|---|---|
-| `AGENTS.md` | Binding agent instructions (branch discipline, read-only areas, verification honesty). |
-| `docs/AGENT-RULES.md` | Phase-0 agent rules (language, fact/assumption/unknown split, owned-output discipline). |
-| `docs/IMPLEMENTATION_ROADMAP.md` | What to build and in which order — mandatory reading before implementation. |
-| `docs/PROJECT_STATUS.md` | Current project state. |
-| `docs/ACCEPTANCE_CRITERIA.md` | Measurable gates for completion. |
+Always read `AGENTS.md` and `docs/AGENT-RULES.md` first. Read other project documents
+according to the task scope; do not impose a blanket read of unrelated material.
+
+| File | When it is required | Purpose |
+|---|---|---|
+| `docs/IMPLEMENTATION_ROADMAP.md` | Before implementation or changes to planned module scope. | Approved build order, dependencies, and module constraints. |
+| `docs/PROJECT_STATUS.md` | Before implementation, technical audit, or status claims. | Current implementation and verification state. |
+| `docs/ACCEPTANCE_CRITERIA.md` | Before validation or claiming completion. | Measurable completion gates. |
+| `docs/ARCHITECTURE.md` / relevant `contracts/` | For architecture, interfaces, data-model, or contract work. | Existing design and compatibility boundaries. |
+| Relevant source files and prior reports | For every task that depends on existing behavior or history. | Prevent duplicate work and unsupported claims. |
 
 ## 4. File Naming Convention
 
@@ -149,9 +150,15 @@ convention for continuity.
 
 ## 5. Mandatory Work Report Template
 
-Every agent work report MUST contain all 17 sections below, in this order. If a section
-does not apply, include its heading and state explicitly why (e.g. `Rollback: not
-applicable — read-only analysis, no files changed`), never omit the heading.
+Every **final task-level work report** MUST contain all 17 sections below, in this order.
+If a section does not apply, retain its heading and state why (for example, `Rollback:
+not applicable — read-only analysis, no files changed`). Use `docs/templates/WORK-REPORT-TEMPLATE.md`.
+
+**Subagents:** a subagent follows its assigned output ownership. It does not create an
+extra report by default. Unless separately assigned a report file, it returns a structured
+handover using `docs/templates/SUBAGENT-HANDOVER-TEMPLATE.md` to the coordinator. The
+coordinator integrates relevant findings into the task-level report. A subagent may create
+its own report only when the task brief explicitly assigns that output.
 
 1. **Document Metadata** — task name, task ID, agent ID/name, created date,
    last-updated date, base Git branch, base commit SHA, final commit SHA (or
@@ -190,7 +197,10 @@ applicable — read-only analysis, no files changed`), never omit the heading.
 17. **Independent Verification** — exact commands/steps another agent runs to verify
     the work; expected results; what the procedure does not prove.
 
-The full copy-paste Markdown template is in Appendix A.
+Use the reusable template set in `docs/templates/`: the universal work report, audit and QA
+supplements, architecture decision record, and subagent handover. The work report remains
+the required base for task-level completion; specialized supplements add domain-specific
+fields and do not replace the base report unless the task brief explicitly defines otherwise.
 
 ## 6. Evidence and Verification Rules
 
@@ -204,7 +214,7 @@ The full copy-paste Markdown template is in Appendix A.
 | Static analysis | Linter / type / security scan output | Parser-security scan log | Functional correctness |
 | Local simulation | Python or other off-engine model | Harness run with seed and parameters | Roblox runtime behavior |
 | Studio verification | Observation inside Roblox Studio (edit or play) | Grep/read-back in Studio, measured values | Live-player runtime |
-| Roblox runtime validation | Measurement in the running game | Play-test telemetry via `print`/`LogService` (`execute_luau` cannot see `_G`; MCP reads fail during Play — stop Play first, see project memory) | Simulation output |
+| Roblox runtime validation | Measurement in a running Roblox game | Play-test telemetry with run ID, manifest, environment, and retrievable logs | Local simulation or code inspection |
 
 One level of verification MUST NOT be presented as another. In particular:
 
@@ -231,8 +241,9 @@ Two independent axes. Never mix them.
 |---|---|---|
 | `VERIFIED` | Confirmed by the strongest applicable evidence level in section 6 (runtime-validated where runtime matters). | Use only with the evidence reference. Not a task-completion state. |
 | `CODE-VERIFIED` | Confirmed by code inspection / automated tests / CI, but NOT by runtime where runtime matters. | Do not present as runtime proof. |
-| `ESTIMATED` | Value derived by a stated method, not measured. | Always give the method; never silently promote to fact. |
-| `UNKNOWN` | Value not known; representation is `value: null`. | Never invent a value (per `AGENTS.md` rule 5). |
+| `ESTIMATED` | Value derived by a stated method, not directly measured or sourced as a fact. | State the method, inputs, and uncertainty; never silently promote it to fact. |
+| `ASSUMPTION` | An unverified premise temporarily used to continue reasoning or design. | State why it is needed, its impact, and how/when it will be checked. Do not encode it as a verified value. |
+| `UNKNOWN` | Value not known; representation is `value: null` where the schema supports it. | Never invent a value (per `AGENTS.md` rule 5). |
 | `BLOCKED` | Claim cannot be resolved because a stated dependency is unavailable. | Name the blocker. |
 | `PROPOSED` | Suggested but not yet implemented or tested. | Do not report as performed work. |
 | `PENDING` | Awaiting execution / measurement. | `PENDING` is not `PASS`. |
@@ -266,6 +277,14 @@ An agent may mark work `DONE` only when ALL of the following hold:
 
 If any criterion is unmet, the agent MUST use `PARTIAL`, `BLOCKED`, or `FAILED`
 according to reality, and state exactly which criterion fails and what remains.
+
+A test marked `PENDING` does not automatically make every task incomplete. It blocks
+`DONE` when that test is a required acceptance gate, when it is needed to support a claim,
+or when its absence leaves a material risk unresolved. A non-blocking `PENDING` item may
+remain only when it is explicitly identified, justified, assigned a follow-up owner/action,
+and does not invalidate any completion criterion. `NOT RUN` is never a pass and must
+include a reason; required tests marked `NOT RUN` block `DONE`. `SKIPPED` requires the
+skip condition and its effect on coverage to be stated.
 
 ## 9. Documentation Update Rules
 
@@ -315,6 +334,7 @@ The agent (or coordinator) MUST walk this checklist before closing a task.
 Any `NO` blocks `DONE`.
 
 - [ ] Document is in the correct location per section 3 (not a duplicate, not an orphan).
+- [ ] The agent changed only files within its explicitly assigned output scope.
 - [ ] File name follows section 4 (English, identifier included, no `final2`/`latest`-style tokens).
 - [ ] All 17 mandatory sections from section 5 are present in order.
 - [ ] Every changed file is listed with exact repo-relative path, correct change type,
@@ -336,9 +356,18 @@ Any `NO` blocks `DONE`.
 
 ---
 
-## Appendix A — Copy-paste Work Report Template
+## Appendix A — Template selection
 
-```markdown
+| Work type | Required template(s) | Notes |
+|---|---|---|
+| Normal implementation, fix, or documentation task | `docs/templates/WORK-REPORT-TEMPLATE.md` | One task-level report; all 17 sections. |
+| Technical audit | Work report + `docs/templates/TECHNICAL-AUDIT-TEMPLATE.md` | Audit template is a domain-specific supplement. |
+| Independent QA / validation | Work report + `docs/templates/QA-VALIDATION-TEMPLATE.md` | QA report must be independent of the implementation report. |
+| Architecture decision | `docs/templates/ARCHITECTURE-DECISION-TEMPLATE.md` | Decision record, not a task-completion report. If implementation follows, also create a work report. |
+| Subagent handover | `docs/templates/SUBAGENT-HANDOVER-TEMPLATE.md` | Use within the owned output or return it to the coordinator; do not create an extra file by default. |
+
+The full work report template is maintained separately to avoid duplicating the source
+of truth in this standard.
 # [TASK ID] – [TASK NAME]
 
 ## 1. Document Metadata
