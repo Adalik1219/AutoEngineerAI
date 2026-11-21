@@ -42,7 +42,25 @@
 |---|---|---|
 | [path] | [účel] | [YES/NO] |
 
-## 5. Work Performed
+## 5. Prescribed Route and Actual Execution
+
+- **Recommended route received:** [brief/link / NONE]
+- **Route classification:** [BINDING PROCEDURE / RECOMMENDED PATH / MIXED / N/A]
+- **Initial feasibility check:** [PASS / FAIL / PARTIAL + evidence]
+- **Actual route followed:** [steps / reference]
+- **Deviation from recommended route:** [NONE / description]
+- **Root cause and evidence for deviation:** [details / N/A]
+
+### Alternatives investigated
+
+| Alternative | Feasibility | Benefits | Risks / Costs | Evidence | Decision |
+|---|---|---|---|---|---|
+| [option] | [assessment] | [benefit] | [risk/cost] | [source] | [SELECTED / REJECTED] |
+
+- **Why selected route is best:** [reasoning]
+- **Confirmation that goal, scope, constraints and acceptance criteria remain unchanged:** [YES / NO + explanation]
+
+## 6. Work Performed
 
 ### Step 1 — [název]
 - Action:
@@ -50,17 +68,17 @@
 - Result:
 - Evidence:
 
-## 6. Changed Files
+## 7. Changed Files
 
 | File Path | Change Type | Reason | Impact |
 |---|---|---|---|
 | [repo-relative path] | [CREATED/MODIFIED/DELETED/RENAMED] | [důvod] | [dopad] |
 
-## 7. Technical Details
+## 8. Technical Details
 
 [Implementace, algoritmy, parametry včetně jednotek, rozhraní, závislosti a omezení.]
 
-## 8. Tests and Validation
+## 9. Tests and Validation
 
 | Test | Exact Command / Procedure | Environment + Commit SHA | Result | Evidence |
 |---|---|---|---|---|
@@ -77,29 +95,29 @@
 ### Tests Not Executed
 [Proč nebyly spuštěny a zda jde o povinnou akceptační bránu.]
 
-## 9. Evidence and Sources
+## 10. Evidence and Sources
 
 | Evidence ID | Claim / Description | Exact Source (path, SHA, URL, command) | What It Proves |
 |---|---|---|---|
 | E-01 | [tvrzení] | [dohledatelný zdroj] | [rozsah důkazu] |
 
-## 10. Technical Decisions
+## 11. Technical Decisions
 
 | Decision | Reason | Alternatives | Risks |
 |---|---|---|---|
 | [rozhodnutí] | [důvod] | [alternativy] | [rizika] |
 
-## 11. Problems and Limitations
+## 12. Problems and Limitations
 
 - [problém / omezení / nevyřešená otázka]
 
-## 12. Uncertainties and Assumptions
+## 13. Uncertainties and Assumptions
 
 | Item | Classification | Explanation | Required Verification |
 |---|---|---|---|
 | [položka] | [ESTIMATED/UNKNOWN/ASSUMPTION] | [vysvětlení] | [ověření] |
 
-## 13. Security and Integrity
+## 14. Security and Integrity
 
 - Restricted files modified:
 - Project constraints respected:
@@ -107,13 +125,13 @@
 - Integrity checks and results:
 - Working tree / diff state:
 
-## 14. Rollback
+## 15. Rollback
 
 - **Rollback Required:** [YES/NO]
 - **Procedure:** [přesné kroky/příkazy nebo důvod N/A]
 - **Limitations:** [omezení]
 
-## 15. Final Status
+## 16. Final Status
 
 **Status:** [DONE / PARTIAL / BLOCKED / FAILED]
 
@@ -128,14 +146,14 @@
 
 [Pokud zůstává PENDING/NOT RUN, vysvětli, zda blokuje DONE a proč.]
 
-## 16. Handover and Next Steps
+## 17. Handover and Next Steps
 
 - **Next Agent:** [ID / NONE]
 - **Required Actions:** [konkrétní kroky]
 - **Required Inputs:** [vstupy]
 - **Related Documents:** [odkazy]
 
-## 17. Independent Verification
+## 18. Independent Verification
 
 - **Procedure:** [přesné příkazy nebo kroky]
 - **Expected Results:** [očekávané výsledky]
