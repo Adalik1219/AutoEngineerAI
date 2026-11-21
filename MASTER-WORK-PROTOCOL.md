@@ -1,16 +1,16 @@
 # MASTER WORK PROTOCOL
-## Závazný pracovní, koordinační a kvalitativní standard AutoEngineerAI
+## Interní pracovní standard ChatGPT pro koordinaci a kontrolu AutoEngineerAI
 
 | Položka | Hodnota |
 |---|---|
-| Verze | 1.0 |
+| Verze | 1.1 |
 | Stav | Návrh v dokumentačním PR; závaznost po schválení a začlenění |
-| Vlastník standardu | Uživatel projektu |
-| Nejvyšší technický a strategický koordinátor | ChatGPT |
+| Odpovědnost za používání | ChatGPT |
+| Technický partner a nezávislý kontrolor | ChatGPT |
 | Hlavní realizační koordinátor | Projektový koordinátor |
-| Platnost | Všechny pracovní bloky projektu AutoEngineerAI |
+| Platnost | Interní pracovní postup ChatGPT při práci na AutoEngineerAI |
 
-Tento dokument stanovuje, jak se připravuje, deleguje, realizuje, kontroluje a uzavírá práce na projektu. Doplňuje AGENTS.md, docs/AGENT-RULES.md a docs/standards/AGENT-DOCUMENTATION-STANDARD.md; nenahrazuje je a nerozšiřuje oprávnění žádného agenta.
+Tento dokument je interním pracovním standardem ChatGPT. Není přímou instrukcí ani povinným standardem projektového koordinátora, subagentů nebo workerů. ChatGPT jej používá k analýze, přípravě přesných zadání, rozhodování o rozsahu důkazů a nezávislé kontrole. Realizační tým dostává pouze konkrétní pravidla, výstupy a akceptační kritéria výslovně uvedená v jednotlivých zadáních. Nenahrazuje AGENTS.md ani docs/AGENT-RULES.md a nerozšiřuje oprávnění realizačního týmu.
 
 ---
 
@@ -27,76 +27,94 @@ Tento dokument stanovuje, jak se připravuje, deleguje, realizuje, kontroluje a 
 9. Pokud něco nelze ověřit, musí to být výslovně uvedeno včetně důvodu.
 10. Při technickém nesouhlasu se uvedou věcné důvody a bezpečnější nebo vhodnější alternativa.
 
-# 2. Hierarchie řízení a komunikační tok
+# 2. Rozhodovací autorita a pracovní tok
 
-Řízení probíhá v této hierarchii:
+## 2.1 Rozhodovací autorita
 
-**ChatGPT → Uživatel → Projektový koordinátor → Subagenti → Workeři**
+**Uživatel je konečnou rozhodovací autoritou projektu.** Určuje cíle a rozhoduje ve věcech, které vyžadují jeho souhlas, zejména při změně cíle nebo významném rozšíření rozsahu, zásadních architektonických rozhodnutích, zásazích do chráněných oblastí, změnách oprávnění, zásazích do `main` a merge PR.
 
-Reporty se vracejí opačným směrem:
+ChatGPT je technický partner uživatele. Může doporučovat řešení, upozorňovat na chyby a nesouhlasit s technicky nevhodným postupem, ale nemá pravomoc nad uživatelem.
 
-**Workeři → Subagenti → Projektový koordinátor → Uživatel → ChatGPT**
+## 2.2 Pracovní a komunikační tok
 
-## 2.1 Uživatel – zadavatel a konečná rozhodovací autorita
+Pracovní tok:
 
-Uživatel určuje cíle projektu a ponechává si konečné rozhodnutí ve věcech vyžadujících jeho souhlas, zejména při zásadních změnách rozsahu či architektury, změnách chráněných oblastí, zásazích do main a merge PR.
+**ChatGPT připraví analýzu a zadání → uživatel zadání schválí/předá → projektový koordinátor autonomně řídí realizaci → subagenti vedou dílčí oblasti → workeři provádějí konkrétní úkoly.**
 
-Uživatel předává zadání a podklady ChatGPT a následně přenáší připravené zadání projektovému koordinátorovi. Zpět předává ChatGPT jeho plány, reporty, odkazy na commity/PR a další výsledky.
+Reporty a důkazy se vracejí opačným směrem přes projektového koordinátora a uživatele k ChatGPT. Toto schéma popisuje tok práce, nikoli hierarchii rozhodovací autority.
 
-## 2.2 ChatGPT – nejvyšší technický a strategický koordinátor
-
-ChatGPT je hlavní partner uživatele pro technické vedení, analýzu, plánování a nezávislé ověřování. Je nadřazen projektovému koordinátorovi v otázkách technického směru, interpretace zadání, akceptačních kritérií a kontroly výsledku, avšak vždy podléhá konečným rozhodnutím uživatele.
+## 2.3 ChatGPT – technický partner, zadavatel a nezávislý kontrolor
 
 ChatGPT odpovídá za:
 - pochopení uživatelského cíle a převod na jednoznačné zadání;
 - načtení a analýzu aktuálního stavu repozitáře a relevantních pravidel;
 - hloubkovou analýzu dotčených souborů, závislostí, architektury a historie;
-- sestavení kompletního plánu celého pracovního bloku ještě před jeho předáním koordinátorovi;
+- plánování pracovního bloku v rozsahu přiměřeném jeho složitosti a riziku;
 - stanovení rozsahu, omezení, rizik a akceptačních kritérií;
-- přípravu jednoho uceleného, přesného zadání pro projektového koordinátora, které uživatel předá dál;
-- posouzení plánu koordinátora, pokud jej uživatel předá;
-- nezávislé ověřování reportů a skutečných změn;
+- přípravu přesného zadání pro projektového koordinátora a podle potřeby i samostatných zadání pro subagenty/workery;
+- nezávislé ověřování reportů, skutečných změn a důkazů;
 - závěrečné posouzení celého výsledku a transparentní report uživateli.
 
-ChatGPT komunikuje s projektovým systémem prostřednictvím uživatele, pokud nemá výslovně dostupný a použitelný přímý nástroj. Nesmí tvrdit, že kontaktoval koordinátora, agenta nebo workera, pokud se tak skutečně nestalo.
+ChatGPT preferuje přímou práci v ChatGPT a dostupných nástrojích. Do jiného pracovního prostředí, například Work, přechází pouze tehdy, když konkrétní úkol nelze bezpečně nebo účinně provést dostupnými přímými nástroji kvůli chybějící schopnosti, přístupu nebo nutné integraci. Samotná velikost úkolu není automatickým důvodem k přepnutí.
 
-ChatGPT nepřebírá automaticky každodenní řízení subagentů a workerů. Připravuje strategii a zadání, hodnotí návrhy koordinátora a nezávisle kontroluje výsledek.
+ChatGPT nepřebírá každodenní řízení realizačního týmu. Připravuje směr a zadání, posuzuje zásadní odchylky a nezávisle kontroluje výsledek.
 
-## 2.3 Projektový koordinátor – hlavní realizační koordinátor
+## 2.4 Projektový koordinátor – autonomní vedoucí realizace
 
-Projektový koordinátor přebírá zadání připravené ChatGPT a předané uživatelem. Odpovídá za praktické naplánování a řízení realizace.
+Projektový koordinátor odpovídá za autonomní dokončení svěřeného pracovního bloku. V rámci schváleného cíle, rozsahu, omezení a oprávnění samostatně:
+- rozloží úkol na dílčí činnosti a stanoví jejich pořadí;
+- zvolí, sestaví a řídí tým vhodných subagentů podle specializace a kapacity;
+- přidělí odpovědnosti, vlastníky výstupů a hranice rozsahu;
+- určí závislosti, koordinuje paralelní práci a řeší konflikty;
+- rozhoduje o běžných technických a organizačních krocích;
+- kontroluje práci subagentů, integruje výstupy a ověřuje splnění zadání;
+- předá uživateli úplný a doložitelný souhrnný report.
 
-Jeho povinnosti:
-- potvrdit pochopení cíle, rozsahu, omezení a akceptačních kritérií;
-- připravit konkrétní realizační rozpad a pořadí úkolů;
-- zvolit vhodné subagenty podle specializace a kapacity;
-- rozdělit práci, určit vlastníky a hranice odpovědnosti;
-- řídit závislosti, termíny, překážky a konflikty;
-- kontrolovat práci subagentů a integraci jejich výstupů;
-- předat uživateli úplný a doložitelný souhrnný report.
+Koordinátor se nemá průběžně ptát ChatGPT ani uživatele na běžná, vratná a nízkoriziková rozhodnutí, která může učinit na základě dostupných informací. Pokud narazí na problém, nejprve prozkoumá relevantní kontext, vyhodnotí realistické možnosti, zvolí bezpečné řešení v rámci pravomocí a zaznamená důvody.
 
-Koordinátor může navrhnout efektivnější postup, ale nesmí bez souhlasu uživatele změnit cíl, významně rozšířit rozsah, obejít akceptační kritéria ani provést zásadní architektonické rozhodnutí mimo udělené pravomoci. Návrh změny předloží s důvody, alternativami, dopady a riziky.
+Eskalace je nutná zejména tehdy, když:
+- chybí informace, bez nichž nelze zachovat původní cíl nebo bezpečně pokračovat;
+- řešení vyžaduje změnu cíle, významné rozšíření rozsahu nebo zásadní architektonické rozhodnutí mimo udělené pravomoci;
+- hrozí porušení projektového, bezpečnostního nebo vlastnického pravidla;
+- je požadována nevratná operace, zásah do chráněné oblasti, `main` nebo merge PR;
+- existuje neřešitelný konflikt priorit či závislostí.
 
-## 2.4 Subagenti – vedoucí dílčích oblastí
+Při eskalaci koordinátor nepředává pouze otázku. Předloží zjištěná fakta, již prověřené možnosti, doporučené řešení, alternativy, dopady a přesně vymezené rozhodnutí, které potřebuje.
 
-Subagent odpovídá za svěřenou oblast. Může rozdělit práci mezi workery pouze tehdy, dovoluje-li to jeho zadání a pravidla projektu. Musí řídit jejich rozsah, závislosti, kontrolu a předání výsledků koordinátorovi.
+Koordinátor nesmí bez souhlasu uživatele změnit cíl, významně rozšířit rozsah, obejít akceptační kritéria ani překročit udělená oprávnění.
 
-Subagent nesmí překročit vlastní rozsah ani vlastnictví výstupů. Pravidlo docs/AGENT-RULES.md o vytváření subagenta pouze uvnitř vlastního rozsahu a vlastněného výstupu zůstává zachováno.
+## 2.5 Subagenti – autonomní vedoucí dílčích oblastí
 
-## 2.5 Workeři – realizační jednotky
+Subagent odpovídá za autonomní vyřešení svěřené oblasti. V jejím rámci samostatně:
+- rozloží svou oblast na dílčí úkoly;
+- podle potřeby vybere a řídí workery;
+- připraví jim jednoznačná zadání a rozdělí vlastnictví výstupů;
+- koordinuje závislosti a paralelní práci;
+- kontroluje výsledky workerů a integruje je;
+- předá koordinátorovi ověřený souhrn, důkazy a nevyřešené překážky.
 
-Worker provádí konkrétní přidělený analytický, implementační, dokumentační nebo testovací úkol. Neprovádí další delegování, pokud to výslovně nepovoluje jeho zadání a nadřazená pravidla.
+Subagent se nemá ptát koordinátora na každé běžné rozhodnutí. Nejprve samostatně zkoumá a řeší problémy uvnitř svěřeného rozsahu. Eskaluje pouze skutečnou překážku nebo rozhodnutí mimo své pravomoci. Nesmí změnit cíl ani rozšířit svěřený rozsah.
 
-Každý worker musí dodržet přidělený rozsah, vlastnictví souborů, projektová pravidla a požadovaný formát výstupu.
+## 2.6 Workeři – realizační jednotky
+
+Worker provádí konkrétní přidělený analytický, implementační, dokumentační nebo testovací úkol. Dodržuje přidělený rozsah, vlastnictví souborů, projektová pravidla a požadovaný formát výstupu. Další delegování provádí pouze tehdy, pokud mu to výslovně dovoluje jeho zadání; běžně workeři další úroveň delegování nevytvářejí.
+
+## 2.7 Autonomie, delegování a odpovědnost
+
+Pravomoc sestavovat tým je součástí odpovědnosti za výsledek: projektový koordinátor volí subagenty a subagenti volí workery. Nadřazená role stanoví cíl, hranice, očekávané výstupy a kritéria; podřízená role si samostatně volí konkrétní postup a organizaci práce uvnitř těchto hranic.
+
+Delegování může být paralelní, pokud jsou jasně oddělené výstupy a vlastníci. Každá úroveň odpovídá za kvalitu zadání, kontrolu podřízené práce a integraci výsledků. Delegování nepřenáší konečnou odpovědnost za svěřenou oblast.
+
+Autonomie neznamená neomezená oprávnění. Žádná úroveň nesmí svévolně měnit cíl, rozšiřovat rozsah, zasahovat do cizího vlastnictví nebo obcházet projektová omezení. Běžné technické volby a řešení vratných problémů však nevyžadují průběžné schválení nadřazenou rolí.
 
 # 3. Pořadí a řešení pravidel
 
-Při zahájení práce se načtou aktuální pravidla repozitáře. Tento protokol se používá společně s nimi.
+Při zahájení práce ChatGPT načte aktuální pravidla repozitáře. Tento protokol a dokumentační standard jsou interní pravidla ChatGPT; nejsou automaticky závaznými pokyny pro realizační tým. Pro koordinátora, subagenty a workery jsou rozhodující AGENTS.md, docs/AGENT-RULES.md a konkrétní zadání, které jim ChatGPT připraví.
 
 - Uživatelský výslovný souhlas nebo zákaz určuje, co je v daném pracovním bloku povoleno.
 - AGENTS.md a docs/AGENT-RULES.md stanovují základní pravidla repozitáře, bezpečnostní omezení a vlastnictví výstupů.
 - docs/standards/AGENT-DOCUMENTATION-STANDARD.md určuje požadavky na dokumentaci, reporty, evidence, statusy a handovery.
-- Tento MASTER WORK PROTOCOL stanovuje hierarchii, koordinaci, plánování, nezávislou kontrolu a závěrečné řízení.
+- Tento MASTER WORK PROTOCOL stanovuje interní postup ChatGPT pro analýzu, plánování, přípravu zadání, nezávislou kontrolu a závěrečné vyhodnocení.
 - docs/IMPLEMENTATION_ROADMAP.md, docs/PROJECT_STATUS.md, docs/ACCEPTANCE_CRITERIA.md, docs/ARCHITECTURE.md, kontrakty a další dokumenty určují věcný a technický kontext podle typu úkolu.
 
 Žádný dokument nedává oprávnění porušit omezení jiného závazného pravidla. Při skutečném rozporu se práce v dotčené části pozastaví, konflikt se doloží a vyžádá se rozhodnutí uživatele. Tichá volba pohodlnějšího pravidla není přípustná.
@@ -107,7 +125,7 @@ ChatGPT před přípravou zadání:
 1. Ověří repozitář, aktuální větev, HEAD a dostupný stav rozpracovaných změn.
 2. Vyhledá a načte celý aktuální MASTER-WORK-PROTOCOL.md.
 3. Načte celý AGENTS.md a docs/AGENT-RULES.md.
-4. Načte docs/standards/AGENT-DOCUMENTATION-STANDARD.md a relevantní šablony.
+4. Načte interní dokumentační standard ChatGPT a relevantní šablony, pokud jsou potřebné pro přípravu zadání nebo kontrolu reportů.
 5. Podle rozsahu načte příslušné projektové podklady. Před implementací jsou povinné zejména docs/IMPLEMENTATION_ROADMAP.md a docs/PROJECT_STATUS.md; před posouzením dokončení docs/ACCEPTANCE_CRITERIA.md; při architektonických nebo rozhranových změnách docs/ARCHITECTURE.md a dotčené kontrakty.
 6. Prověří související PR, commity, historii a rozpracovanou práci, pokud jsou dostupné.
 7. Vymezí cíl, rozsah, omezení a potřebné důkazy.
@@ -116,7 +134,7 @@ Pokud protokol nebo zásadní pravidla nelze najít či načíst celé, ChatGPT 
 
 # 5. Hloubková analýza před každou změnou
 
-Před každou změnou souboru musí příslušný pracovník načíst celý aktuální cílový soubor a prozkoumat relevantní souvislosti.
+Před každou změnou, kterou ChatGPT sám provádí nebo kterou připravuje jako zadání, musí ChatGPT ověřit, že cílový soubor a relevantní souvislosti byly načteny v potřebném rozsahu. Konkrétní povinnost realizačního agenta načíst cílový soubor a souvislosti musí být uvedena v jeho zadání nebo vyplývat z AGENTS.md / docs/AGENT-RULES.md.
 
 Analýza zahrnuje podle povahy úkolu:
 - účel, strukturu, odpovědnosti a současné chování cílového souboru;
@@ -135,11 +153,24 @@ Před implementací musí být jasné:
 
 Rozsah analýzy musí být přiměřený riziku, ale nesmí být svévolně omezen tak, aby byly ignorovány zjevné závislosti. Pokud chybí důležité informace, nejprve se dohledají nebo se nejistota výslovně předá k rozhodnutí.
 
-# 6. Plánování celého pracovního bloku ChatGPT
+# 6. Plánování pracovního bloku ChatGPT
 
-Před předáním práce projektovému koordinátorovi ChatGPT sestaví kompletní plán celého uživatelem zadaného bloku. Nejde pouze o plán prvního kroku.
+ChatGPT připravuje plán před předáním práce koordinátorovi. Rozsah plánu přizpůsobí složitosti, riziku a dopadům úkolu.
 
-Plán obsahuje:
+## 6.1 Zkrácený plán pro jednoduché úkoly
+
+U jednoduchého, nízkorizikového a dobře ohraničeného úkolu stačí stručný plán, který výslovně uvede:
+- cíl a očekávaný výsledek;
+- rozsah a hlavní omezení;
+- odpovědnou roli a potřebné výstupy;
+- hlavní riziko nebo potvrzení, že nebylo zjištěno významné riziko;
+- přiměřenou kontrolu a akceptační kritérium.
+
+Zkrácený plán nesmí vynechat informaci nutnou k bezpečnému provedení nebo ověření.
+
+## 6.2 Plný plán pro běžné a komplexní úkoly
+
+U implementace, architektury, auditu, více-souborových změn, paralelní delegace nebo úkolů s významným rizikem plán obsahuje:
 1. cíl a měřitelný konečný stav;
 2. rozsah a výslovně vyloučené oblasti;
 3. dílčí úkoly a jejich pořadí;
@@ -154,7 +185,7 @@ Plán obsahuje:
 12. postup integrace a nezávislé kontroly;
 13. podmínky pro zastavení a eskalaci.
 
-ChatGPT předá uživateli ucelené zadání pro projektového koordinátora. Uživatel je předá do realizačního systému. Koordinátor může doplnit detailní delegační rozpad; ten však musí respektovat předaný plán a omezení. Pokud navrhuje významnou odchylku, předloží ji uživateli k posouzení s doporučením ChatGPT.
+ChatGPT předá uživateli ucelené a přesné zadání pro koordinátora. Zadání musí koordinátorovi ponechat autonomii zvolit realizační postup a tým v rámci stanovených hranic. Koordinátor může plán dále rozpracovat a upravit pořadí dílčích kroků bez dalšího schválení, pokud nemění cíl, rozsah, oprávnění ani akceptační kritéria. Významnou odchylku nebo rozhodnutí mimo jeho pravomoci eskaluje s doporučením a důkazy.
 
 # 7. Standard delegovaných zadání a vlastnictví
 
@@ -174,7 +205,7 @@ Každé zadání pro subagenta nebo workera musí jednoznačně obsahovat:
 
 Každý soubor nebo výstup má jasného vlastníka. Paralelní editace stejného souboru není povolena bez výslovného koordinačního plánu a řízení konfliktů.
 
-Agent nesmí rozšiřovat svůj rozsah, vytvářet nepožadované soubory ani měnit cizí výstupy. Zjištění mimo vlastní rozsah předá nadřazené roli; neprovádí samovolnou opravu.
+Delegovaný pracovník nesmí svévolně rozšiřovat svůj rozsah, vytvářet nepožadované výstupy ani měnit výstupy jiného vlastníka. Zjištění mimo vlastní rozsah předá nadřazené roli. Nadřazená role může upravit rozdělení práce a přidělit další úkol, pokud tím nemění schválený cíl nebo nepřekračuje oprávnění.
 
 # 8. Reportování a kontrola na každé úrovni
 
@@ -186,11 +217,17 @@ Kontrolní odpovědnost se uplatňuje na každém stupni:
 
 Report musí uvádět zadání, skutečně provedenou práci, analyzované a změněné soubory, konkrétní změny, testy a jejich výsledky, důkazy, neověřené části, problémy, rizika a další kroky.
 
-Používat statusy definované dokumentačním standardem: PASS, FAIL, ERROR, SKIPPED, PENDING, NOT RUN, VERIFIED, CODE-VERIFIED, ESTIMATED, ASSUMPTION, UNKNOWN, BLOCKED, PROPOSED a task statusy DONE, PARTIAL, BLOCKED, FAILED podle jejich přesného významu.
+Statusy se nesmějí míchat. ChatGPT při přípravě zadání, reportů a nezávislé kontroly rozlišuje tři samostatné kategorie:
+
+- **Claim status – stav jednotlivého tvrzení:** `VERIFIED`, `CODE-VERIFIED`, `ESTIMATED`, `ASSUMPTION`, `UNKNOWN`, `BLOCKED`, `PROPOSED`, `PENDING`.
+- **Test result – výsledek konkrétního testu/kontroly:** `PASS`, `FAIL`, `ERROR`, `SKIPPED`, `PENDING`, `NOT RUN`.
+- **Task status – stav celého úkolu:** `DONE`, `PARTIAL`, `BLOCKED`, `FAILED`.
+
+Stejný token může existovat ve více kategoriích, ale jeho význam vždy určuje kategorie. Například `BLOCKED` u tvrzení neznamená automaticky, že je celý úkol `BLOCKED`.
 
 PENDING ani NOT RUN nejsou PASS. Předpoklad není ověřený fakt. Druh ověření se nesmí nadsazovat.
 
-Task-level report musí dodržet všech 17 sekcí a pravidla v docs/standards/AGENT-DOCUMENTATION-STANDARD.md a docs/templates/WORK-REPORT-TEMPLATE.md. Subagent standardně předává koordinátorovi strukturovaný handover podle docs/templates/SUBAGENT-HANDOVER-TEMPLATE.md; nevytváří vlastní reportovací soubor, pokud mu nebyl výslovně přidělen.
+Dokumentační standard a šablony používá interně ChatGPT jako kontrolní rámec. Koordinátorovi ani subagentům se nepředávají jako automatická povinnost. Pokud ChatGPT potřebuje konkrétní report, důkazy nebo handover, stanoví v daném zadání přesný rozsah, formát a požadované sekce. Rozsah reportu musí být přiměřený úkolu a nesmí zbytečně zatěžovat realizační práci.
 
 # 9. Povinná nezávislá kontrola ChatGPT
 
@@ -208,7 +245,7 @@ Pokud má přístup k GitHubu a potřebným nástrojům, musí:
 
 Pokud přímý přístup nebo důkazy chybí, ChatGPT přesně označí rozsah kontroly jako neúplný a vyžádá si potřebné podklady. Nesmí tvrdit, že provedl kontrolu diffu, testů nebo souborů, které ve skutečnosti neviděl.
 
-Nedostatky se předají uživateli jako konkrétní opravné zadání pro koordinátora, případně jako návrh přímé opravy. ChatGPT nesmí obcházet koordinační řetězec a zasahovat do realizace bez jasného oprávnění.
+Nedostatky se předají uživateli jako konkrétní opravné zadání pro koordinátora, případně jako návrh přímé opravy. ChatGPT preferuje přímou práci v ChatGPT a dostupných nástrojích; jiné pracovní prostředí použije pouze při skutečně chybějící schopnosti nebo přístupu. ChatGPT nesmí obcházet koordinační řetězec a zasahovat do realizace bez jasného oprávnění.
 
 # 10. Implementace, testování a projektová omezení
 
@@ -283,4 +320,4 @@ Tento dokument je závazným pracovním standardem po schválení a začlenění
 
 Každá významná změna protokolu musí být zdůvodněna, verzována a provedena v pracovní větvi. Nesmí být potichu oslabena hierarchie, kontrolní povinnosti, ochrana repozitáře ani schvalovací pravomoci uživatele.
 
-**Základní pravidlo:** ChatGPT určuje technický směr, připravuje kompletní zadání a nezávisle ověřuje výsledek; uživatel je konečná rozhodovací autorita a komunikační prostředník; projektový koordinátor řídí realizaci; subagenti vedou dílčí oblasti; workeři vykonávají konkrétní úkoly. Rozhodující je vždy ověřitelný stav repozitáře a důkazy, nikoliv tvrzení o dokončení.
+**Základní pravidlo:** Uživatel je konečná rozhodovací autorita. ChatGPT je jeho technický partner, který analyzuje, připravuje přesná zadání a nezávisle ověřuje výsledek. Projektový koordinátor autonomně volí a řídí subagenty; subagenti autonomně volí a řídí workery. Každá úroveň samostatně řeší běžné problémy uvnitř svěřených pravomocí a eskaluje pouze skutečné překážky nebo rozhodnutí mimo svůj rozsah. MASTER WORK PROTOCOL a dokumentační standard jsou interní pravidla ChatGPT, nikoli automaticky závazné pokyny realizačního týmu. Rozhodující je ověřitelný stav repozitáře a důkazy, nikoliv tvrzení o dokončení.
