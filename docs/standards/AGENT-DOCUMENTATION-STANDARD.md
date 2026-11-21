@@ -1,19 +1,24 @@
-# Agent Documentation Standard
+# ChatGPT Internal Documentation Standard
 
 | Field | Value |
 |---|---|
-| Document name | Agent Documentation Standard |
+| Document name | ChatGPT Internal Documentation Standard |
 | Path | `docs/standards/AGENT-DOCUMENTATION-STANDARD.md` |
-| Status | Binding project standard |
-| Applies to | All AI agents that analyze, implement, test, fix, or audit the project |
+| Status | Internal working standard for ChatGPT only |
+| Applies to | ChatGPT when preparing task briefs, authoring/reviewing reports, evaluating evidence, and checking completion |
 | Baseline reference | Branch `fix/normalization-evidence-integrity`, commit `22f535c16143f64db1db412d4742edc19e11ecc0` (survey date 2026-11-21; paths below reflect that state) |
 
 ## 1. Purpose and Scope
 
 ### 1.1 Why this standard exists
 
-Agent work is only finished when another agent can continue it without re-discovering
-what the previous agent did. This standard makes that possible by defining:
+This document is an internal working reference for ChatGPT only. It helps ChatGPT prepare
+precise task briefs, author or assess reports, evaluate evidence, and independently check
+whether work is complete. It does not directly govern the project coordinator, subagents,
+or workers. ChatGPT selects relevant requirements and states them explicitly in an
+individual assignment when it needs the execution team to provide a particular artifact.
+
+ChatGPT uses this standard so that work can be independently understood and verified. It defines:
 
 - what a completed piece of work must document,
 - where each document lives,
@@ -24,16 +29,19 @@ what the previous agent did. This standard makes that possible by defining:
 - when work may be marked `DONE`,
 - how documentation quality and completeness are checked.
 
-This is a **binding project standard**, not a recommendation. Documentation is a
-mandatory part of task completion. A task without the required documentation is not `DONE`.
+This is a **ChatGPT-only internal standard**, not a binding instruction to the execution team. It does not create automatic reporting, documentation, or handover obligations for the coordinator, subagents, or workers. Any requirement imposed on them must be stated explicitly in the task brief.
 
 ### 1.2 Scope
 
-This standard applies to every AI agent that analyzes, implements, tests, fixes,
-or audits AutoEngineerAI, including subagents. The standard applies to the quality and
-traceability of their outputs; it does **not** grant permission to create or modify files
-outside an agent's explicitly assigned output scope. `AGENTS.md`, `docs/AGENT-RULES.md`,
-and the task brief remain authoritative for ownership and write permissions.
+This standard applies only to ChatGPT's own planning, drafting, review, evidence assessment,
+and completion checks. It does not apply directly to the project coordinator, subagents,
+or workers. It grants no permissions and does not override `AGENTS.md`, `docs/AGENT-RULES.md`,
+or an individual task brief.
+
+When ChatGPT wants an execution agent to follow a particular report, evidence, or handover
+requirement described here, ChatGPT must include that requirement in the agent's specific
+assignment. The assignment should request only the sections and evidence relevant to that
+task; this internal standard must not be forwarded as a blanket mandate.
 
 It covers work reports, technical audits, independent QA/validation, architecture decisions,
 and structured handovers. Commit messages and chat summaries are pointers, never substitutes
@@ -150,15 +158,11 @@ convention for continuity.
 
 ## 5. Mandatory Work Report Template
 
-Every **final task-level work report** MUST contain all 17 sections below, in this order.
+When ChatGPT requires a full task-level report, it uses all 17 sections below as its reference structure. ChatGPT may request this complete structure from the coordinator only when it explicitly says so in the task brief; otherwise it requests a proportionate summary.
 If a section does not apply, retain its heading and state why (for example, `Rollback:
 not applicable — read-only analysis, no files changed`). Use `docs/templates/WORK-REPORT-TEMPLATE.md`.
 
-**Subagents:** a subagent follows its assigned output ownership. It does not create an
-extra report by default. Unless separately assigned a report file, it returns a structured
-handover using `docs/templates/SUBAGENT-HANDOVER-TEMPLATE.md` to the coordinator. The
-coordinator integrates relevant findings into the task-level report. A subagent may create
-its own report only when the task brief explicitly assigns that output.
+**Execution-team reporting:** ChatGPT specifies in each assignment what the subagent or worker must return. It may request a concise structured handover or a report file when useful. No template or report format in this internal standard is automatically imposed on subagents or workers.
 
 1. **Document Metadata** — task name, task ID, agent ID/name, created date,
    last-updated date, base Git branch, base commit SHA, final commit SHA (or
@@ -262,7 +266,7 @@ but whose documentation is missing is not `DONE`.
 
 ## 8. Completion Criteria
 
-An agent may mark work `DONE` only when ALL of the following hold:
+ChatGPT may assess or recommend `DONE` only when ALL of the following hold:
 
 1. The required scope is complete.
 2. All changes are recorded in Changed Files (section 5, item 6).
@@ -275,7 +279,7 @@ An agent may mark work `DONE` only when ALL of the following hold:
 7. No project constraint was violated (branch discipline, read-only areas, RBXM
    protection, commit/push orders).
 
-If any criterion is unmet, the agent MUST use `PARTIAL`, `BLOCKED`, or `FAILED`
+If any criterion is unmet, ChatGPT MUST assess the result as `PARTIAL`, `BLOCKED`, or `FAILED`
 according to reality, and state exactly which criterion fails and what remains.
 
 A test marked `PENDING` does not automatically make every task incomplete. It blocks
@@ -330,7 +334,7 @@ require as inputs.
 
 ## 11. Documentation Quality Checklist
 
-The agent (or coordinator) MUST walk this checklist before closing a task.
+ChatGPT MUST use this checklist when independently reviewing a task-level report or assessing whether a task can be considered complete. It is not a mandatory checklist for execution agents unless a task brief explicitly assigns selected checks.
 Any `NO` blocks `DONE`.
 
 - [ ] Document is in the correct location per section 3 (not a duplicate, not an orphan).
@@ -366,5 +370,4 @@ Any `NO` blocks `DONE`.
 | Architecture decision | `docs/templates/ARCHITECTURE-DECISION-TEMPLATE.md` | Decision record, not a task-completion report. If implementation follows, also create a work report. |
 | Subagent handover | `docs/templates/SUBAGENT-HANDOVER-TEMPLATE.md` | Use within the owned output or return it to the coordinator; do not create an extra file by default. |
 
-The full work report template is maintained separately to avoid duplicating the source
-of truth in this standard.
+The full work report template is maintained separately as a reference for ChatGPT. ChatGPT includes it in an execution assignment only when the task genuinely requires that level of reporting.
