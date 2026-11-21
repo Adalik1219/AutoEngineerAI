@@ -113,7 +113,7 @@ Při zahájení práce ChatGPT načte aktuální pravidla repozitáře. Tento pr
 
 - Uživatelský výslovný souhlas nebo zákaz určuje, co je v daném pracovním bloku povoleno.
 - AGENTS.md a docs/AGENT-RULES.md stanovují základní pravidla repozitáře, bezpečnostní omezení a vlastnictví výstupů.
-- docs/standards/AGENT-DOCUMENTATION-STANDARD.md určuje požadavky na dokumentaci, reporty, evidence, statusy a handovery.
+- docs/standards/AGENT-DOCUMENTATION-STANDARD.md je interní kontrolní a dokumentační standard ChatGPT; ChatGPT z něj vybírá konkrétní požadavky podle úkolu a výslovně je uvádí v zadání, pokud je potřebuje od realizačního týmu.
 - Tento MASTER WORK PROTOCOL stanovuje interní postup ChatGPT pro analýzu, plánování, přípravu zadání, nezávislou kontrolu a závěrečné vyhodnocení.
 - docs/IMPLEMENTATION_ROADMAP.md, docs/PROJECT_STATUS.md, docs/ACCEPTANCE_CRITERIA.md, docs/ARCHITECTURE.md, kontrakty a další dokumenty určují věcný a technický kontext podle typu úkolu.
 
