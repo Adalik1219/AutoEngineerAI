@@ -49,10 +49,14 @@
 
 ## 8. Implementation and Validation
 
+- Doporučená cesta realizace a pořadí kroků:
 - Dotčené soubory / rozhraní:
+- Závislosti a předpoklady:
 - Migrační nebo rollout plán:
 - Testy a akceptační důkazy:
 - Rollback / escape hatch:
+- Podmínky, za kterých lze doporučenou cestu adaptovat nebo nahradit:
+- Požadované důkazy a postup při hledání alternativ:
 
 ## 9. Open Questions and Review Triggers
 
