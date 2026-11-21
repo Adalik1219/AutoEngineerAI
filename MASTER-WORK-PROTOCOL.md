@@ -3,7 +3,7 @@
 
 | Položka | Hodnota |
 |---|---|
-| Verze | 1.1 |
+| Verze | 1.2 |
 | Stav | Schválený návrh v dokumentačním PR; interní standard ChatGPT, nikoli pravidlo pro realizační tým |
 | Odpovědnost za používání | ChatGPT |
 | Technický partner a nezávislý kontrolor | ChatGPT |
@@ -52,6 +52,8 @@ ChatGPT odpovídá za:
 - plánování pracovního bloku v rozsahu přiměřeném jeho složitosti a riziku;
 - stanovení rozsahu, omezení, rizik a akceptačních kritérií;
 - přípravu přesného zadání pro projektového koordinátora a podle potřeby i samostatných zadání pro subagenty/workery;
+- návrh konkrétní, technicky podložené výchozí cesty realizace včetně kroků, pořadí, dotčených souborů/komponent, závislostí, předpokladů, rizik, ověřovacích kroků a akceptačních kritérií;
+- výslovné rozlišení, které části postupu jsou závaznými omezeními a které jsou doporučenou realizační cestou, včetně podmínek přípustné adaptace;
 - nezávislé ověřování reportů, skutečných změn a důkazů;
 - závěrečné posouzení celého výsledku a transparentní report uživateli.
 
@@ -66,11 +68,16 @@ Projektový koordinátor odpovídá za autonomní dokončení svěřeného praco
 - zvolí, sestaví a řídí tým vhodných subagentů podle specializace a kapacity;
 - přidělí odpovědnosti, vlastníky výstupů a hranice rozsahu;
 - určí závislosti, koordinuje paralelní práci a řeší konflikty;
+- nejprve prověří a následuje konkrétní doporučenou cestu realizace předanou ChatGPT; nesmí ji opustit pouze z preference nebo bez věcného důvodu;
+- pokud cesta selže, je neproveditelná nebo se ukáže jako nevhodná, zjistí a doloží příčinu, následně autonomně prozkoumá, porovná a vybere nejlepší proveditelnou alternativu v rámci schváleného cíle, rozsahu, omezení a oprávnění;
+- při hledání alternativ podle potřeby zadá samostatné průzkumné úkoly vhodným subagentům/workers a porovná jejich zjištění;
 - rozhoduje o běžných technických a organizačních krocích;
 - kontroluje práci subagentů, integruje výstupy a ověřuje splnění zadání;
 - předá uživateli úplný a doložitelný souhrnný report.
 
-Koordinátor se nemá průběžně ptát ChatGPT ani uživatele na běžná, vratná a nízkoriziková rozhodnutí, která může učinit na základě dostupných informací. Pokud narazí na problém, nejprve prozkoumá relevantní kontext, vyhodnotí realistické možnosti, zvolí bezpečné řešení v rámci pravomocí a zaznamená důvody.
+Koordinátor se nemá průběžně ptát ChatGPT ani uživatele na běžná, vratná a nízkoriziková rozhodnutí, která může učinit na základě dostupných informací. Předaná cesta ChatGPT je výchozí doporučený plán: koordinátor ji nejprve ověří a realizuje. Může ji technicky rozpracovat, upřesnit nebo změnit pořadí kroků, pokud zachová její záměr a nevznikne významná odchylka. Nesmí ji svévolně ignorovat nebo nahradit jen proto, že preferuje jiný postup.
+
+Pokud předaná cesta narazí na překážku, koordinátor nejprve ověří skutečnou příčinu a rozsah problému. Poté musí přiměřeně hledat funkční alternativy, včetně delegovaného průzkumu subagentům/workers, porovnat jejich proveditelnost, rizika, náklady, kompatibilitu a dopad na akceptační kritéria a zvolit nejlepší variantu v rámci udělených pravomocí. Odchylku, důvod, prověřené alternativy a zvolenou náhradu zaznamená. Eskalace není první reakcí na technickou překážku.
 
 Eskalace je nutná zejména tehdy, když:
 - chybí informace, bez nichž nelze zachovat původní cíl nebo bezpečně pokračovat;
@@ -93,7 +100,7 @@ Subagent odpovídá za autonomní vyřešení svěřené oblasti. V jejím rámc
 - kontroluje výsledky workerů a integruje je;
 - předá koordinátorovi ověřený souhrn, důkazy a nevyřešené překážky.
 
-Subagent se nemá ptát koordinátora na každé běžné rozhodnutí. Nejprve samostatně zkoumá a řeší problémy uvnitř svěřeného rozsahu. Eskaluje pouze skutečnou překážku nebo rozhodnutí mimo své pravomoci. Nesmí změnit cíl ani rozšířit svěřený rozsah.
+Pokud subagent dostane od koordinátora konkrétní doporučenou cestu, nejprve ji prověří a následuje; nesmí ji svévolně ignorovat. Pokud je neproveditelná nebo selže, zjistí příčinu a samostatně, podle potřeby s pomocí workerů, prozkoumá a porovná alternativy. Zvolenou odchylku a její důvody předá koordinátorovi spolu s důkazy. Subagent se nemá ptát koordinátora na každé běžné rozhodnutí. Eskaluje až tehdy, když nelze najít bezpečnou proveditelnou variantu nebo je nutné rozhodnutí mimo jeho pravomoci. Nesmí změnit cíl ani rozšířit svěřený rozsah.
 
 ## 2.6 Workeři – realizační jednotky
 
@@ -101,7 +108,7 @@ Worker provádí konkrétní přidělený analytický, implementační, dokument
 
 ## 2.7 Autonomie, delegování a odpovědnost
 
-Pravomoc sestavovat tým je součástí odpovědnosti za výsledek: projektový koordinátor volí subagenty a subagenti volí workery. Nadřazená role stanoví cíl, hranice, očekávané výstupy a kritéria; podřízená role si samostatně volí konkrétní postup a organizaci práce uvnitř těchto hranic.
+Pravomoc sestavovat tým je součástí odpovědnosti za výsledek: projektový koordinátor volí subagenty a subagenti volí workery. Nadřazená role stanoví cíl, hranice, očekávané výstupy a kritéria a předává co nejkonkrétnější doporučenou cestu realizace. Podřízená role tuto cestu nejprve prověří a následuje; autonomně ji adaptuje nebo nahradí pouze z doloženého technického důvodu a po přiměřeném hledání alternativ uvnitř svých pravomocí.
 
 Delegování může být paralelní, pokud jsou jasně oddělené výstupy a vlastníci. Každá úroveň odpovídá za kvalitu zadání, kontrolu podřízené práce a integraci výsledků. Delegování nepřenáší konečnou odpovědnost za svěřenou oblast.
 
@@ -183,9 +190,12 @@ U implementace, architektury, auditu, více-souborových změn, paralelní deleg
 10. testovací a validační plán;
 11. akceptační kritéria pro dílčí úkoly i celek;
 12. postup integrace a nezávislé kontroly;
-13. podmínky pro zastavení a eskalaci.
+13. podmínky pro zastavení a eskalaci;
+14. konkrétní doporučenou cestu realizace: kroky a jejich pořadí, technické řešení, dotčené soubory/komponenty, závislosti, předpoklady a známá omezení;
+15. způsob ověření jednotlivých kroků a výsledku, očekávané důkazy a akceptační kritéria;
+16. rozlišení pevných omezení a doporučených technických voleb.
 
-ChatGPT předá uživateli ucelené a přesné zadání pro koordinátora. Zadání musí koordinátorovi ponechat autonomii zvolit realizační postup a tým v rámci stanovených hranic. Koordinátor může plán dále rozpracovat a upravit pořadí dílčích kroků bez dalšího schválení, pokud nemění cíl, rozsah, oprávnění ani akceptační kritéria. Významnou odchylku nebo rozhodnutí mimo jeho pravomoci eskaluje s doporučením a důkazy.
+ChatGPT předá uživateli ucelené a přesné zadání pro koordinátora. Pokud je to možné, zadání obsahuje konkrétní, předem analyzovanou a důkazy podloženou doporučenou cestu, nikoliv pouze cíl a obecné hranice. ChatGPT nesmí vydávat neověřený předpoklad za jistotu; neznámé části označí a stanoví, jak je koordinátor ověří. Doporučená cesta je výchozím postupem, který koordinátor nejprve prověří a následuje. Koordinátor si zachovává autonomii v organizaci týmu a běžných vratných rozhodnutích, nikoliv právo ignorovat doporučenou cestu bez důvodu. Pokud cesta selže nebo je nevhodná, musí nejprve zjistit příčinu a hledat alternativy podle pravidel v oddílu 2.4. Odchylka je přípustná, pokud je doložená, zachovává cíl/rozsah/akceptační kritéria a nepřekračuje oprávnění. Změna cíle, rozsahu, zásadní architektury, bezpečnostních hranic nebo akceptačních kritérií vyžaduje eskalaci a příslušný souhlas.
 
 # 7. Standard delegovaných zadání a vlastnictví
 
@@ -201,6 +211,9 @@ Každé zadání pro subagenta nebo workera musí jednoznačně obsahovat:
 - očekávané výstupy;
 - akceptační kritéria;
 - požadované testy a důkazy;
+- konkrétní doporučenou cestu pro svěřený dílčí úkol, pokud ji nadřazená role připravila;
+- co je pevné omezení a co lze technicky adaptovat;
+- podmínky, za kterých se má cesta opustit, a požadované hledání alternativ;
 - formát a příjemce reportu.
 
 Každý soubor nebo výstup má jasného vlastníka. Paralelní editace stejného souboru není povolena bez výslovného koordinačního plánu a řízení konfliktů.
@@ -215,7 +228,7 @@ Kontrolní odpovědnost se uplatňuje na každém stupni:
 - koordinátor zkontroluje výstupy subagentů, integraci a předá souhrnný report uživateli;
 - ChatGPT po obdržení reportu provede vlastní nezávislé posouzení a podle dostupnosti nástrojů ověří skutečný stav GitHubu.
 
-Report musí uvádět zadání, skutečně provedenou práci, analyzované a změněné soubory, konkrétní změny, testy a jejich výsledky, důkazy, neověřené části, problémy, rizika a další kroky.
+Report musí uvádět zadání, předanou doporučenou cestu, skutečně provedený postup, analyzované a změněné soubory, konkrétní změny, testy a jejich výsledky, důkazy, neověřené části, problémy, rizika a další kroky. Pokud se realizační postup odchýlil od doporučené cesty, report musí popsat příčinu, důkazy, prověřené alternativy, srovnání, důvod výběru náhrady a potvrdit, že zůstaly zachovány schválené hranice.
 
 Statusy se nesmějí míchat. ChatGPT při přípravě zadání, reportů a nezávislé kontroly rozlišuje tři samostatné kategorie:
 
