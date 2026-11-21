@@ -1,19 +1,24 @@
-# Agent Documentation Standard
+# ChatGPT Internal Documentation Standard
 
 | Field | Value |
 |---|---|
-| Document name | Agent Documentation Standard |
+| Document name | ChatGPT Internal Documentation Standard |
 | Path | `docs/standards/AGENT-DOCUMENTATION-STANDARD.md` |
-| Status | Binding project standard |
-| Applies to | All AI agents that analyze, implement, test, fix, or audit the project |
+| Status | Internal working standard for ChatGPT only |
+| Applies to | ChatGPT when preparing task briefs, authoring/reviewing reports, evaluating evidence, and checking completion |
 | Baseline reference | Branch `fix/normalization-evidence-integrity`, commit `22f535c16143f64db1db412d4742edc19e11ecc0` (survey date 2026-11-21; paths below reflect that state) |
 
 ## 1. Purpose and Scope
 
 ### 1.1 Why this standard exists
 
-Agent work is only finished when another agent can continue it without re-discovering
-what the previous agent did. This standard makes that possible by defining:
+This document is an internal working reference for ChatGPT only. It helps ChatGPT prepare
+precise task briefs, author or assess reports, evaluate evidence, and independently check
+whether work is complete. It does not directly govern the project coordinator, subagents,
+or workers. ChatGPT selects relevant requirements and states them explicitly in an
+individual assignment when it needs the execution team to provide a particular artifact.
+
+ChatGPT uses this standard so that work can be independently understood and verified. It defines:
 
 - what a completed piece of work must document,
 - where each document lives,
@@ -24,23 +29,23 @@ what the previous agent did. This standard makes that possible by defining:
 - when work may be marked `DONE`,
 - how documentation quality and completeness are checked.
 
-This is a **binding project standard**, not a recommendation. Documentation is a
-mandatory part of task completion. A task without the required documentation is not `DONE`.
+This is a **ChatGPT-only internal standard**, not a binding instruction to the execution team. It does not create automatic reporting, documentation, or handover obligations for the coordinator, subagents, or workers. Any requirement imposed on them must be stated explicitly in the task brief.
 
 ### 1.2 Scope
 
-This standard applies to every AI agent that analyzes, implements, tests, fixes,
-or audits the AutoEngineerAI project — including subagents operating inside a delegated scope.
+This standard applies only to ChatGPT's own planning, drafting, review, evidence assessment,
+and completion checks. It does not apply directly to the project coordinator, subagents,
+or workers. It grants no permissions and does not override `AGENTS.md`, `docs/AGENT-RULES.md`,
+or an individual task brief.
 
-It covers:
+When ChatGPT wants an execution agent to follow a particular report, evidence, or handover
+requirement described here, ChatGPT must include that requirement in the agent's specific
+assignment. The assignment should request only the sections and evidence relevant to that
+task; this internal standard must not be forwarded as a blanket mandate.
 
-- work reports for finished, partial, blocked, or failed tasks,
-- audits and QA/validation reports,
-- architecture and design decisions,
-- test documentation.
-
-It does not cover commit messages or chat summaries; those are pointers to documentation,
-never a replacement for it.
+It covers work reports, technical audits, independent QA/validation, architecture decisions,
+and structured handovers. Commit messages and chat summaries are pointers, never substitutes
+for the required artifact.
 
 ### 1.3 Relation to existing rules
 
@@ -82,9 +87,10 @@ of the layout — create a directory only when it holds a real document.
 
 | Directory | Contains | Does NOT contain | New vs. update |
 |---|---|---|---|
-| `docs/standards/` | Binding project standards (this file). | Work reports, decisions, guides. | New file per standard; update the standard in place when it changes. |
+| `docs/standards/` | Internal ChatGPT standards and reference material (this file is ChatGPT-only). | Work reports, decisions, guides. | ChatGPT maintains the reference in place; it does not automatically impose its requirements on execution agents. |
 | `docs/architecture/` | Architecture, technical designs, architecture decision records. | Task work reports, test logs. | New file per decision/design; update when the design changes. |
 | `docs/guides/` | How-to guides and working procedures. | Binding rules, task results. | New file per guide; update in place. |
+| `docs/templates/` | Reusable blank templates for reports, QA, audits, decisions, and handovers. | Completed project records or binding policy. | Update the relevant template in place; do not copy templates as completed reports. |
 | `reports/` | Work reports and task results (including existing thematic subdirectories). | Standards, guides, architecture. | New file per task; update the same report when continuing the same task. |
 | `reports/audits/` | Technical audit results. | QA validation of a fix, routine task reports. | New file per audit; update when the audit is re-run on the same scope. |
 | `reports/qa/` | Independent QA, validation, and test reports. | The implementation report itself. | New file per validation round. |
@@ -100,15 +106,18 @@ of the layout — create a directory only when it holds a real document.
   existing thematic subdirectory) until `reports/audits/` and `reports/qa/` are
   created for a real document. Do not pre-create them empty.
 
-### 3.3 Related input files an agent must survey before writing
+### 3.3 Related input files to survey before writing
 
-| File | Purpose |
-|---|---|
-| `AGENTS.md` | Binding agent instructions (branch discipline, read-only areas, verification honesty). |
-| `docs/AGENT-RULES.md` | Phase-0 agent rules (language, fact/assumption/unknown split, owned-output discipline). |
-| `docs/IMPLEMENTATION_ROADMAP.md` | What to build and in which order — mandatory reading before implementation. |
-| `docs/PROJECT_STATUS.md` | Current project state. |
-| `docs/ACCEPTANCE_CRITERIA.md` | Measurable gates for completion. |
+Always read `AGENTS.md` and `docs/AGENT-RULES.md` first. Read other project documents
+according to the task scope; do not impose a blanket read of unrelated material.
+
+| File | When it is required | Purpose |
+|---|---|---|
+| `docs/IMPLEMENTATION_ROADMAP.md` | Before implementation or changes to planned module scope. | Approved build order, dependencies, and module constraints. |
+| `docs/PROJECT_STATUS.md` | Before implementation, technical audit, or status claims. | Current implementation and verification state. |
+| `docs/ACCEPTANCE_CRITERIA.md` | Before validation or claiming completion. | Measurable completion gates. |
+| `docs/ARCHITECTURE.md` / relevant `contracts/` | For architecture, interfaces, data-model, or contract work. | Existing design and compatibility boundaries. |
+| Relevant source files and prior reports | For every task that depends on existing behavior or history. | Prevent duplicate work and unsupported claims. |
 
 ## 4. File Naming Convention
 
@@ -147,11 +156,19 @@ belongs in the name whenever one exists.
 If the project already uses a concrete convention for a series, keep that series
 convention for continuity.
 
-## 5. Mandatory Work Report Template
+## 5. ChatGPT Work Report Reference
 
-Every agent work report MUST contain all 17 sections below, in this order. If a section
-does not apply, include its heading and state explicitly why (e.g. `Rollback: not
-applicable — read-only analysis, no files changed`), never omit the heading.
+### 5.1 Recommended implementation path and justified adaptation
+
+When ChatGPT prepares an execution brief, it should provide the most concrete technically supported route it can establish from repository evidence: ordered steps, affected files/components, dependencies, assumptions, risks, verification procedures, and acceptance evidence. It must distinguish fixed constraints or explicitly binding procedures from recommended implementation choices, and label unknowns rather than inventing certainty.
+
+The coordinator or subagent must first validate and follow the recommended route. A route may be adapted or replaced only for a documented technical reason (for example, a failed feasibility check, a reproduced failure, a newly discovered dependency, or a material risk). The responsible role must investigate the cause, consider proportionate alternatives, compare feasibility and trade-offs, select the best in-scope option, and record the evidence and rationale. It must not change the approved goal, scope, acceptance criteria, protected boundaries, or permissions. Escalation is appropriate only when no safe feasible alternative remains or a decision exceeds delegated authority. This is an internal ChatGPT review standard; execution-team obligations are imposed through `AGENTS.md`, `docs/AGENT-RULES.md`, and the task brief.
+
+When ChatGPT requires a full task-level report, it uses all 17 sections below as its reference structure. ChatGPT may request this complete structure from the coordinator only when it explicitly says so in the task brief; otherwise it requests a proportionate summary.
+If a section does not apply, retain its heading and state why (for example, `Rollback:
+not applicable — read-only analysis, no files changed`). Use `docs/templates/WORK-REPORT-TEMPLATE.md`.
+
+**Execution-team reporting:** ChatGPT specifies in each assignment what the subagent or worker must return. It may request a concise structured handover or a report file when useful. No template or report format in this internal standard is automatically imposed on subagents or workers.
 
 1. **Document Metadata** — task name, task ID, agent ID/name, created date,
    last-updated date, base Git branch, base commit SHA, final commit SHA (or
@@ -168,7 +185,7 @@ applicable — read-only analysis, no files changed`), never omit the heading.
 7. **Technical Details** — solutions, algorithms, changed parameters (old → new
    with units), dependencies, interfaces, compatibility and limitations.
 8. **Tests and Validation** — per test: exact command, environment, actual result
-   (`PASS`/`FAIL`/`ERROR`/`SKIPPED`), `PASS`/`FAIL`/`ERROR`/`SKIPPED` counts,
+   (`PASS`/`FAIL`/`ERROR`/`SKIPPED`/`PENDING`/`NOT RUN`), counts for each result,
    log or CI-run reference; tests that could not run, and why.
 9. **Evidence and Sources** — numbered evidence (`E-01`, …): description, source /
    location (absolute path or URL), what claim it proves. Every technical value
@@ -190,7 +207,10 @@ applicable — read-only analysis, no files changed`), never omit the heading.
 17. **Independent Verification** — exact commands/steps another agent runs to verify
     the work; expected results; what the procedure does not prove.
 
-The full copy-paste Markdown template is in Appendix A.
+Use the reusable template set in `docs/templates/`: the universal work report, audit and QA
+supplements, architecture decision record, and subagent handover. The work report remains
+the required base for task-level completion; specialized supplements add domain-specific
+fields and do not replace the base report unless the task brief explicitly defines otherwise.
 
 ## 6. Evidence and Verification Rules
 
@@ -204,7 +224,7 @@ The full copy-paste Markdown template is in Appendix A.
 | Static analysis | Linter / type / security scan output | Parser-security scan log | Functional correctness |
 | Local simulation | Python or other off-engine model | Harness run with seed and parameters | Roblox runtime behavior |
 | Studio verification | Observation inside Roblox Studio (edit or play) | Grep/read-back in Studio, measured values | Live-player runtime |
-| Roblox runtime validation | Measurement in the running game | Play-test telemetry via `print`/`LogService` (`execute_luau` cannot see `_G`; MCP reads fail during Play — stop Play first, see project memory) | Simulation output |
+| Roblox runtime validation | Measurement in a running Roblox game | Play-test telemetry with run ID, manifest, environment, and retrievable logs | Local simulation or code inspection |
 
 One level of verification MUST NOT be presented as another. In particular:
 
@@ -231,8 +251,9 @@ Two independent axes. Never mix them.
 |---|---|---|
 | `VERIFIED` | Confirmed by the strongest applicable evidence level in section 6 (runtime-validated where runtime matters). | Use only with the evidence reference. Not a task-completion state. |
 | `CODE-VERIFIED` | Confirmed by code inspection / automated tests / CI, but NOT by runtime where runtime matters. | Do not present as runtime proof. |
-| `ESTIMATED` | Value derived by a stated method, not measured. | Always give the method; never silently promote to fact. |
-| `UNKNOWN` | Value not known; representation is `value: null`. | Never invent a value (per `AGENTS.md` rule 5). |
+| `ESTIMATED` | Value derived by a stated method, not directly measured or sourced as a fact. | State the method, inputs, and uncertainty; never silently promote it to fact. |
+| `ASSUMPTION` | An unverified premise temporarily used to continue reasoning or design. | State why it is needed, its impact, and how/when it will be checked. Do not encode it as a verified value. |
+| `UNKNOWN` | Value not known; representation is `value: null` where the schema supports it. | Never invent a value (per `AGENTS.md` rule 5). |
 | `BLOCKED` | Claim cannot be resolved because a stated dependency is unavailable. | Name the blocker. |
 | `PROPOSED` | Suggested but not yet implemented or tested. | Do not report as performed work. |
 | `PENDING` | Awaiting execution / measurement. | `PENDING` is not `PASS`. |
@@ -251,7 +272,7 @@ but whose documentation is missing is not `DONE`.
 
 ## 8. Completion Criteria
 
-An agent may mark work `DONE` only when ALL of the following hold:
+ChatGPT may assess or recommend `DONE` only when ALL of the following hold:
 
 1. The required scope is complete.
 2. All changes are recorded in Changed Files (section 5, item 6).
@@ -264,8 +285,16 @@ An agent may mark work `DONE` only when ALL of the following hold:
 7. No project constraint was violated (branch discipline, read-only areas, RBXM
    protection, commit/push orders).
 
-If any criterion is unmet, the agent MUST use `PARTIAL`, `BLOCKED`, or `FAILED`
+If any criterion is unmet, ChatGPT MUST assess the result as `PARTIAL`, `BLOCKED`, or `FAILED`
 according to reality, and state exactly which criterion fails and what remains.
+
+A test marked `PENDING` does not automatically make every task incomplete. It blocks
+`DONE` when that test is a required acceptance gate, when it is needed to support a claim,
+or when its absence leaves a material risk unresolved. A non-blocking `PENDING` item may
+remain only when it is explicitly identified, justified, assigned a follow-up owner/action,
+and does not invalidate any completion criterion. `NOT RUN` is never a pass and must
+include a reason; required tests marked `NOT RUN` block `DONE`. `SKIPPED` requires the
+skip condition and its effect on coverage to be stated.
 
 ## 9. Documentation Update Rules
 
@@ -311,19 +340,21 @@ require as inputs.
 
 ## 11. Documentation Quality Checklist
 
-The agent (or coordinator) MUST walk this checklist before closing a task.
+ChatGPT MUST use this checklist when independently reviewing a task-level report or assessing whether a task can be considered complete. It is not a mandatory checklist for execution agents unless a task brief explicitly assigns selected checks.
 Any `NO` blocks `DONE`.
 
 - [ ] Document is in the correct location per section 3 (not a duplicate, not an orphan).
+- [ ] The agent changed only files within its explicitly assigned output scope.
 - [ ] File name follows section 4 (English, identifier included, no `final2`/`latest`-style tokens).
 - [ ] All 17 mandatory sections from section 5 are present in order.
 - [ ] Every changed file is listed with exact repo-relative path, correct change type,
       reason, and impact — and `git diff`/`git status` agrees with the table.
 - [ ] Test results are truthful: exact commands, environments, real outcomes;
-      no `PENDING` marked `PASS`; no hidden `FAIL`; counts add up.
+      `PENDING` and `NOT RUN` are not passes; no hidden `FAIL`; counts add up.
 - [ ] Every technical claim traces to an evidence entry with a retrievable origin;
       no verification level is misrepresented (section 6).
-- [ ] Uncertainties and assumptions are classified (`ESTIMATED`/`UNKNOWN`/`ASSUMPTION`)
+- [ ] The recommended implementation route was followed, or any deviation has a documented cause, evidence, alternatives considered, and rationale for the selected replacement.
+- [ ] Uncertainties and assumptions are classified (`ESTIMATED`/`UNKNOWN`/`ASSUMPTION`
       with required follow-up verification named.
 - [ ] Rollback is either exact (commands + affected files) or explicitly justified
       as not applicable.
@@ -336,172 +367,14 @@ Any `NO` blocks `DONE`.
 
 ---
 
-## Appendix A — Copy-paste Work Report Template
+## Appendix A — Template selection
 
-```markdown
-# [TASK ID] – [TASK NAME]
+| Work type | Required template(s) | Notes |
+|---|---|---|
+| Normal implementation, fix, or documentation task | `docs/templates/WORK-REPORT-TEMPLATE.md` | One task-level report; all 17 sections. |
+| Technical audit | Work report + `docs/templates/TECHNICAL-AUDIT-TEMPLATE.md` | Audit template is a domain-specific supplement. |
+| Independent QA / validation | Work report + `docs/templates/QA-VALIDATION-TEMPLATE.md` | QA report must be independent of the implementation report. |
+| Architecture decision | `docs/templates/ARCHITECTURE-DECISION-TEMPLATE.md` | Decision record, not a task-completion report. If implementation follows, also create a work report. |
+| Subagent handover | `docs/templates/SUBAGENT-HANDOVER-TEMPLATE.md` | Use within the owned output or return it to the coordinator; do not create an extra file by default. |
 
-## 1. Document Metadata
-
-| Field | Value |
-|---|---|
-| Task ID | `[TASK-ID]` |
-| Task Name | `[TASK-NAME]` |
-| Agent | `[AGENT-ID]` |
-| Created | `[YYYY-MM-DD]` |
-| Last Updated | `[YYYY-MM-DD]` |
-| Branch | `[BRANCH]` |
-| Base Commit | `[SHA]` |
-| Final Commit | `[SHA / NOT COMMITTED]` |
-| Status | `[DONE / PARTIAL / BLOCKED / FAILED]` |
-
-## 2. Executive Summary
-
-### Objective
-[What was the task supposed to achieve?]
-
-### Actual Result
-[What was actually completed?]
-
-### Outcome
-[What is the final result?]
-
-## 3. Scope
-
-### Included
-- [Included work]
-
-### Excluded
-- [Excluded work]
-
-### Constraints
-- [Applicable restrictions]
-
-## 4. Initial State
-
-[Describe the initial state of the project and relevant findings.]
-
-### Relevant Input Files
-| File | Purpose |
-|---|---|
-| `[path]` | `[description]` |
-
-## 5. Work Performed
-
-### Step 1 – [Name]
-- Action:
-- Reason:
-- Result:
-
-### Step 2 – [Name]
-- Action:
-- Reason:
-- Result:
-
-## 6. Changed Files
-
-| File Path | Change Type | Reason | Impact |
-|---|---|---|---|
-| `[path]` | `[CREATED/MODIFIED/DELETED/RENAMED]` | `[reason]` | `[impact]` |
-
-## 7. Technical Details
-
-[Describe implementation details, algorithms, dependencies, interfaces, parameters, and technical limitations.]
-
-## 8. Tests and Validation
-
-| Test | Command | Result | Evidence |
-|---|---|---|---|
-| `[test name]` | `[exact command]` | `[PASS/FAIL/ERROR/SKIPPED]` | `[log/reference]` |
-
-### Test Summary
-- PASS:
-- FAIL:
-- ERROR:
-- SKIPPED:
-- NOT RUN:
-
-### Tests Not Executed
-[Explain why.]
-
-## 9. Evidence and Sources
-
-| Evidence ID | Description | Source / Location | What It Proves |
-|---|---|---|---|
-| E-01 | `[description]` | `[path or URL]` | `[claim]` |
-
-## 10. Technical Decisions
-
-| Decision | Reason | Alternatives | Risks |
-|---|---|---|---|
-| `[decision]` | `[reason]` | `[alternatives]` | `[risks]` |
-
-## 11. Problems and Limitations
-
-- [Problem]
-- [Limitation]
-- [Unresolved issue]
-
-## 12. Uncertainties and Assumptions
-
-| Item | Classification | Explanation | Required Verification |
-|---|---|---|---|
-| `[item]` | `[ESTIMATED/UNKNOWN/ASSUMPTION]` | `[details]` | `[verification]` |
-
-## 13. Security and Integrity
-
-- Restricted files modified:
-- Project constraints respected:
-- Security implications:
-- Integrity checks:
-
-## 14. Rollback
-
-### Rollback Required
-[YES / NO]
-
-### Rollback Procedure
-[Exact steps or commands.]
-
-### Rollback Limitations
-[Describe any limitations.]
-
-## 15. Final Status
-
-**Status:** `[DONE / PARTIAL / BLOCKED / FAILED]`
-
-### Completed
-- [Item]
-
-### Not Completed
-- [Item]
-
-### Remaining Blockers
-- [Item]
-
-## 16. Handover and Next Steps
-
-### Next Agent
-[Agent ID or NONE]
-
-### Required Actions
-1. [Action]
-2. [Action]
-
-### Required Inputs
-- [Input]
-
-### Related Documents
-- `[path]`
-
-## 17. Independent Verification
-
-### Verification Procedure
-[Exact commands or steps another agent should perform.]
-
-### Expected Results
-[Expected results.]
-
-### Verification Limitations
-[What this procedure does not prove.]
-```
+The full work report template is maintained separately as a reference for ChatGPT. ChatGPT includes it in an execution assignment only when the task genuinely requires that level of reporting.
